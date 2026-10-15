@@ -1,69 +1,195 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import React, { useState } from 'react';
+import { Header } from '@/components/Header';
+import { WelcomeDropzone } from '@/components/WelcomeDropzone';
+import { ProjectBar } from '@/components/ProjectBar';
+import { SheetBar } from '@/components/SheetBar';
+import { SubTabBar } from '@/components/SubTabBar';
+import { TableView } from '@/components/TableView';
+import { OriginalDocView } from '@/components/OriginalDocView';
+import { SummaryView } from '@/components/SummaryView';
+import { PhoneAuthModal } from '@/components/PhoneAuthModal';
+import { UploadOptionModal } from '@/components/UploadOptionModal';
+import { OriginalFileModal } from '@/components/OriginalFileModal';
+import { RecentFilesModal } from '@/components/RecentFilesModal';
+import { AddColumnModal } from '@/components/AddColumnModal';
+import { useAuth } from '@/hooks/useAuth';
+import { useWorkspace } from '@/hooks/useWorkspace';
+import { useFileUpload } from '@/hooks/useFileUpload';
+import { useFileExport } from '@/hooks/useFileExport';
+
+export default function FileToSheetApp() {
+  const auth = useAuth();
+  const ws = useWorkspace();
+  const upload = useFileUpload({
+    projects: ws.projects,
+    setProjects: ws.setProjects,
+    activeProjectIndex: ws.activeProjectIndex,
+    setActiveProjectIndex: ws.setActiveProjectIndex,
+  });
+  const fileExport = useFileExport({ currentProject: ws.currentProject });
+
+  const [activeSubTab, setActiveSubTab] = useState<'table' | 'original' | 'summary'>('table');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [isTableDragging, setIsTableDragging] = useState<boolean>(false);
+  const [showOriginalModal, setShowOriginalModal] = useState<boolean>(false);
+  const [showRecentFilesModal, setShowRecentFilesModal] = useState<boolean>(false);
+
+  const currentProject = ws.currentProject;
+  const currentSheet = ws.currentSheet;
+
+  const filteredRows = currentSheet
+    ? currentSheet.rows.filter((row) =>
+        !searchQuery.trim() || Object.values(row).some((val) => String(val ?? '').toLowerCase().includes(searchQuery.toLowerCase()))
+      )
+    : [];
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
+    <div className="flex flex-col min-h-screen bg-slate-50 text-slate-800 font-sans selection:bg-blue-100 selection:text-blue-900">
+      <Header
+        currentUser={auth.currentUser}
+        onOpenLoginModal={() => auth.setShowPhoneAuthModal(true)}
+        onLogout={auth.handleLogout}
+        onDownloadXlsx={fileExport.handleDownloadXlsx}
+        onExportGoogleSheets={fileExport.handleExportGoogleSheets}
+        onOpenOriginalModal={() => setShowOriginalModal(true)}
+        hasOriginalFile={Boolean(currentProject?.originalFileUrl)}
+        hasSheetData={Boolean(currentSheet && currentSheet.rows.length > 0)}
+        exportLoading={fileExport.exportLoading}
+        recentFilesCount={upload.recentFiles.length}
+        onOpenRecentFilesModal={() => setShowRecentFilesModal(true)}
+      />
+
+      <main className="flex-1 w-full px-4 sm:px-6 lg:px-8 py-3 flex flex-col gap-3">
+        {ws.projects.length === 0 ? (
+          <WelcomeDropzone
+            isProcessing={upload.isProcessing}
+            processStatus={upload.processStatus}
+            storageProgress={upload.storageProgress}
+            onFileSelect={upload.handleFileDropOrSelect}
+          />
+        ) : (
+          <>
+            <ProjectBar
+              projects={ws.projects}
+              activeProjectIndex={ws.activeProjectIndex}
+              setActiveProjectIndex={ws.setActiveProjectIndex}
+              editingProjectIdx={ws.editingProjectIdx}
+              setEditingProjectIdx={ws.setEditingProjectIdx}
+              editingProjectName={ws.editingProjectName}
+              setEditingProjectName={ws.setEditingProjectName}
+              onSaveProjectName={ws.saveProjectName}
+              onAddNewProject={ws.handleAddNewProject}
+              onCloseProject={ws.handleCloseProject}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+
+            {currentProject && currentSheet && (
+              <div className="flex-1 flex flex-col bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
+                <SheetBar
+                  sheets={currentProject.sheets}
+                  activeSheetIndex={currentProject.activeSheetIndex}
+                  category={currentProject.category}
+                  editingSheetIdx={ws.editingSheetIdx}
+                  setEditingSheetIdx={ws.setEditingSheetIdx}
+                  editingSheetName={ws.editingSheetName}
+                  setEditingSheetName={ws.setEditingSheetName}
+                  onSelectSheet={ws.handleSelectSheet}
+                  onSaveSheetName={ws.saveSheetName}
+                  onAddNewSheet={ws.handleAddNewSheet}
+                  onDeleteSheet={ws.handleDeleteSheet}
+                />
+
+                <SubTabBar
+                  activeSubTab={activeSubTab}
+                  setActiveSubTab={setActiveSubTab}
+                  rowsCount={filteredRows.length}
+                  hasOriginalFile={Boolean(currentProject.originalFileUrl || (currentProject.originalFiles && currentProject.originalFiles.length > 0))}
+                  originalFilesCount={currentProject.originalFiles?.length || (currentProject.originalFileUrl ? 1 : 0)}
+                  searchQuery={searchQuery}
+                  setSearchQuery={setSearchQuery}
+                  onAddRow={ws.handleAddRow}
+                  onOpenAddColumn={() => ws.setIsAddingColumn(true)}
+                />
+
+                {activeSubTab === 'table' && (
+                  <TableView
+                    sheet={currentSheet}
+                    filteredRows={filteredRows}
+                    docFilename={currentProject.name}
+                    isTableDragging={isTableDragging}
+                    setIsTableDragging={setIsTableDragging}
+                    onDropDirectlyToTable={upload.handleDropDirectlyToTable}
+                    isProcessing={upload.isProcessing}
+                    processStatus={upload.processStatus}
+                    storageProgress={upload.storageProgress}
+                    editingCell={ws.editingCell}
+                    setEditingCell={ws.setEditingCell}
+                    editValue={ws.editValue}
+                    setEditValue={ws.setEditValue}
+                    onSaveCellEdit={ws.saveCellEdit}
+                    editingHeaderIdx={ws.editingHeaderIdx}
+                    setEditingHeaderIdx={ws.setEditingHeaderIdx}
+                    editingHeaderValue={ws.editingHeaderValue}
+                    setEditingHeaderValue={ws.setEditingHeaderValue}
+                    onSaveHeaderEdit={ws.saveHeaderEdit}
+                    onDeleteColumn={ws.handleDeleteColumn}
+                    onDeleteRow={ws.handleDeleteRow}
+                  />
+                )}
+
+                {activeSubTab === 'original' && <OriginalDocView project={currentProject} />}
+                {activeSubTab === 'summary' && <SummaryView sheet={currentSheet} />}
+              </div>
+            )}
+          </>
+        )}
       </main>
+
+      <PhoneAuthModal
+        show={auth.showPhoneAuthModal}
+        onClose={() => auth.setShowPhoneAuthModal(false)}
+        authStep={auth.authStep}
+        setAuthStep={auth.setAuthStep}
+        authPhoneNumber={auth.authPhoneNumber}
+        setAuthPhoneNumber={auth.setAuthPhoneNumber}
+        authCode={auth.authCode}
+        setAuthCode={auth.setAuthCode}
+        authLoading={auth.authLoading}
+        authError={auth.authError}
+        setAuthError={auth.setAuthError}
+        timerSeconds={auth.timerSeconds}
+        testCodeHint={auth.testCodeHint}
+        onSendCode={auth.handleSendAuthCode}
+        onVerifyCode={auth.handleVerifyAuthCode}
+      />
+
+      <UploadOptionModal
+        pendingFile={upload.pendingUploadFile}
+        onClose={() => upload.setPendingUploadFile(null)}
+        onSelectOption={upload.processFile}
+      />
+
+      <OriginalFileModal
+        show={showOriginalModal}
+        onClose={() => setShowOriginalModal(false)}
+        project={currentProject}
+      />
+
+      <RecentFilesModal
+        show={showRecentFilesModal}
+        onClose={() => setShowRecentFilesModal(false)}
+        recentFiles={upload.recentFiles}
+        onDeleteFile={upload.handleDeleteUploadedFile}
+      />
+
+      <AddColumnModal
+        show={ws.isAddingColumn}
+        onClose={() => ws.setIsAddingColumn(false)}
+        newColumnName={ws.newColumnName}
+        setNewColumnName={ws.setNewColumnName}
+        onAddColumn={ws.handleAddColumn}
+      />
     </div>
   );
 }
