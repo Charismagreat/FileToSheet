@@ -23,8 +23,6 @@ interface HeaderProps {
   hasOriginalFile: boolean;
   hasSheetData: boolean;
   exportLoading: boolean;
-  recentFilesCount: number;
-  onOpenRecentFilesModal: () => void;
 }
 
 export function Header({
@@ -35,8 +33,6 @@ export function Header({
   onExportGoogleSheets,
   hasSheetData,
   exportLoading,
-  recentFilesCount,
-  onOpenRecentFilesModal,
 }: HeaderProps) {
   return (
     <header className="border-b border-slate-200/80 bg-white/95 backdrop-blur sticky top-0 z-30 px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-4 shadow-xs">
@@ -51,20 +47,6 @@ export function Header({
       </div>
 
       <div className="flex items-center gap-2.5">
-        {/* 보관함 파일 목록 콤팩트 버튼 */}
-        <button
-          onClick={onOpenRecentFilesModal}
-          className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200/80 text-slate-700 border border-slate-200 transition shadow-2xs active:scale-98"
-          title="이전에 작업한 보관 파일 목록 열기"
-        >
-          <FolderOpen className="w-3.5 h-3.5 text-blue-600" />
-          <span>보관함</span>
-          {recentFilesCount > 0 && (
-            <span className="ml-0.5 px-1.5 py-0.2 rounded-full bg-blue-600 text-white font-mono text-[10px] font-bold">
-              {recentFilesCount}
-            </span>
-          )}
-        </button>
 
         {/* 회원 로그인 상태 뱃지 또는 가입 버튼 */}
         {currentUser ? (

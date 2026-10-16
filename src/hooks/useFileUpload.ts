@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { ProjectWorkspace, OriginalDocFile } from '@/types/workspace';
 import { parseFileOnClient } from '@/lib/file-parser-client';
 import {
@@ -8,8 +8,6 @@ import {
   uploadToEgdeskStorage,
   updateFileParseResult,
   saveParsedSheetRows,
-  getRecentFiles,
-  deleteUploadedFile,
 } from '@/lib/egdesk-db';
 
 interface UseFileUploadOptions {
@@ -28,24 +26,10 @@ export function useFileUpload({
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [processStatus, setProcessStatus] = useState<string>('');
   const [storageProgress, setStorageProgress] = useState<number>(0);
-  const [recentFiles, setRecentFiles] = useState<any[]>([]);
   const [pendingUploadFile, setPendingUploadFile] = useState<File | null>(null);
 
   const currentProject = projects[activeProjectIndex] || null;
   const currentSheet = currentProject ? currentProject.sheets[currentProject.activeSheetIndex] : null;
-
-  const refreshRecentFiles = async () => {
-    try {
-      const files = await getRecentFiles(30);
-      setRecentFiles(files || []);
-    } catch (err) {
-      console.error('최근 파일 조회 실패:', err);
-    }
-  };
-
-  useEffect(() => {
-    refreshRecentFiles();
-  }, []);
 
   const handleFileDropOrSelect = (file: File) => {
     if (!file) return;
@@ -157,7 +141,6 @@ export function useFileUpload({
       });
 
       setProcessStatus('완료되었습니다!');
-      refreshRecentFiles();
     } catch (err: any) {
       alert(`오류: ${err.message}`);
     } finally {
@@ -165,26 +148,14 @@ export function useFileUpload({
     }
   };
 
-  const handleDeleteUploadedFile = async (fileId: number, filename: string) => {
-    if (!confirm(`'${filename}' 파일을 보관함에서 영구 삭제하시겠습니까?`)) return;
-    try {
-      await deleteUploadedFile(fileId);
-      await refreshRecentFiles();
-    } catch (e: any) {
-      alert(`파일 삭제 실패: ${e.message}`);
-    }
-  };
-
   return {
     isProcessing,
     processStatus,
     storageProgress,
-    recentFiles,
     pendingUploadFile,
     setPendingUploadFile,
     handleFileDropOrSelect,
     handleDropDirectlyToTable,
     processFile,
-    handleDeleteUploadedFile,
   };
 }

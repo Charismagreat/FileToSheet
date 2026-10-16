@@ -12,7 +12,6 @@ import { SummaryView } from '@/components/SummaryView';
 import { PhoneAuthModal } from '@/components/PhoneAuthModal';
 import { UploadOptionModal } from '@/components/UploadOptionModal';
 import { OriginalFileModal } from '@/components/OriginalFileModal';
-import { RecentFilesModal } from '@/components/RecentFilesModal';
 import { AddColumnModal } from '@/components/AddColumnModal';
 import { useAuth } from '@/hooks/useAuth';
 import { useWorkspace } from '@/hooks/useWorkspace';
@@ -34,7 +33,6 @@ export default function FileToSheetApp() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isTableDragging, setIsTableDragging] = useState<boolean>(false);
   const [showOriginalModal, setShowOriginalModal] = useState<boolean>(false);
-  const [showRecentFilesModal, setShowRecentFilesModal] = useState<boolean>(false);
 
   const currentProject = ws.currentProject;
   const currentSheet = ws.currentSheet;
@@ -57,8 +55,6 @@ export default function FileToSheetApp() {
         hasOriginalFile={Boolean(currentProject?.originalFileUrl)}
         hasSheetData={Boolean(currentSheet && currentSheet.rows.length > 0)}
         exportLoading={fileExport.exportLoading}
-        recentFilesCount={upload.recentFiles.length}
-        onOpenRecentFilesModal={() => setShowRecentFilesModal(true)}
       />
 
       <main className="flex-1 w-full px-4 sm:px-6 lg:px-8 py-3 flex flex-col gap-3">
@@ -174,13 +170,6 @@ export default function FileToSheetApp() {
         show={showOriginalModal}
         onClose={() => setShowOriginalModal(false)}
         project={currentProject}
-      />
-
-      <RecentFilesModal
-        show={showRecentFilesModal}
-        onClose={() => setShowRecentFilesModal(false)}
-        recentFiles={upload.recentFiles}
-        onDeleteFile={upload.handleDeleteUploadedFile}
       />
 
       <AddColumnModal
