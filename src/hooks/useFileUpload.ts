@@ -105,7 +105,7 @@ export function useFileUpload({
             s[proj.activeSheetIndex] = {
               ...target,
               headers: parsedSheets[0]?.headers || target.headers,
-              rows: parsedSheets[0]?.rows || [],
+              rows: (parsedSheets[0]?.rows || []).map((r) => ({ ...r, _fileId: fileId, _fileName: file.name })),
             };
           } else {
             const incoming = parsedSheets.flatMap((sh) => sh.rows);
@@ -114,7 +114,7 @@ export function useFileUpload({
             s[proj.activeSheetIndex] = {
               ...target,
               headers: mergedH,
-              rows: [...target.rows, ...incoming.map((r, i) => ({ ...r, 일련번호: target.rows.length + i + 1, 등록일시: r.등록일시 || nowKst }))],
+              rows: [...target.rows, ...incoming.map((r, i) => ({ ...r, 일련번호: target.rows.length + i + 1, 등록일시: r.등록일시 || nowKst, _fileId: fileId, _fileName: file.name }))],
             };
           }
           const prevDocs = proj.originalFiles || (proj.originalFileUrl ? [{
@@ -132,7 +132,7 @@ export function useFileUpload({
           next[activeProjectIndex] = proj;
         } else if (mode === 'new_sheet' && next[activeProjectIndex]) {
           const proj = { ...next[activeProjectIndex] };
-          proj.sheets = [...proj.sheets, ...parsedSheets];
+          proj.sheets = [...proj.sheets, ...parsedSheets.map((sh) => ({ ...sh, rows: sh.rows.map((r) => ({ ...r, _fileId: fileId, _fileName: file.name })) }))];
           proj.activeSheetIndex = proj.sheets.length - 1;
           const prevDocs = proj.originalFiles || [];
           proj.originalFiles = [...prevDocs, docItem];
@@ -142,7 +142,7 @@ export function useFileUpload({
             id: fileId,
             name: file.name.replace(/\.[^/.]+$/, ''),
             category,
-            sheets: parsedSheets,
+            sheets: parsedSheets.map((sh) => ({ ...sh, rows: sh.rows.map((r) => ({ ...r, _fileId: fileId, _fileName: file.name })) })),
             activeSheetIndex: 0,
             activeSubTab: 'table',
             originalFileUrl: fileBlobUrl,
