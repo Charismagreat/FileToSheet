@@ -30,6 +30,8 @@ export async function fetchUserProjectsFromDb(phoneNumber: string): Promise<Proj
   return rows.map((row: any) => {
     let sheets = [];
     let originalFiles: OriginalDocFile[] = [];
+    let googleSpreadsheetId: string | undefined;
+    let googleSpreadsheetUrl: string | undefined;
 
     try {
       sheets = typeof row.sheets_data === 'string' ? JSON.parse(row.sheets_data) : row.sheets_data || [];
@@ -38,7 +40,14 @@ export async function fetchUserProjectsFromDb(phoneNumber: string): Promise<Proj
     }
 
     try {
-      originalFiles = typeof row.original_files === 'string' ? JSON.parse(row.original_files) : row.original_files || [];
+      const parsedOf = typeof row.original_files === 'string' ? JSON.parse(row.original_files) : row.original_files;
+      if (Array.isArray(parsedOf)) {
+        originalFiles = parsedOf;
+      } else if (parsedOf && typeof parsedOf === 'object') {
+        originalFiles = parsedOf.files || [];
+        googleSpreadsheetId = parsedOf.googleSpreadsheetId;
+        googleSpreadsheetUrl = parsedOf.googleSpreadsheetUrl;
+      }
     } catch (e) {
       console.warn('증빙 파일 JSON 파싱 실패:', e);
     }
@@ -55,6 +64,8 @@ export async function fetchUserProjectsFromDb(phoneNumber: string): Promise<Proj
       originalFileUrl: originalFiles[0]?.url,
       originalFileType: originalFiles[0]?.type,
       originalFileSize: originalFiles[0]?.size,
+      googleSpreadsheetId,
+      googleSpreadsheetUrl,
       uploadedAt: row.created_at || new Date().toLocaleString('ko-KR'),
     };
   });
@@ -71,7 +82,11 @@ export async function saveUserProjectToDb(
 
   const now = new Intl.DateTimeFormat('ko-KR', { dateStyle: 'short', timeStyle: 'medium' }).format(new Date());
   const sheetsJson = JSON.stringify(project.sheets || []);
-  const originalFilesJson = JSON.stringify(project.originalFiles || []);
+  const originalFilesJson = JSON.stringify({
+    files: project.originalFiles || [],
+    googleSpreadsheetId: project.googleSpreadsheetId,
+    googleSpreadsheetUrl: project.googleSpreadsheetUrl,
+  });
 
   if (project.id) {
     // 기존 프로젝트 업데이트

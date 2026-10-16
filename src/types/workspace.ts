@@ -24,6 +24,8 @@ export interface ProjectWorkspace {
   originalFileSize?: number;
   uploadedAt?: string;
   originalFiles?: OriginalDocFile[]; // 다중 원본 증빙 목록
+  googleSpreadsheetId?: string; // 연결된 Google 시트 ID
+  googleSpreadsheetUrl?: string; // 연결된 Google 시트 URL
 }
 
 // 하위 호환성을 위한 별칭

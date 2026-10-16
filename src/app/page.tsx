@@ -13,6 +13,7 @@ import { PhoneAuthModal } from '@/components/PhoneAuthModal';
 import { UploadOptionModal } from '@/components/UploadOptionModal';
 import { OriginalFileModal } from '@/components/OriginalFileModal';
 import { AddColumnModal } from '@/components/AddColumnModal';
+import { ExportOptionModal } from '@/components/ExportOptionModal';
 import { useAuth } from '@/hooks/useAuth';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { useFileUpload } from '@/hooks/useFileUpload';
@@ -27,7 +28,11 @@ export default function FileToSheetApp() {
     activeProjectIndex: ws.activeProjectIndex,
     setActiveProjectIndex: ws.setActiveProjectIndex,
   });
-  const fileExport = useFileExport({ currentProject: ws.currentProject });
+  const fileExport = useFileExport({
+    currentProject: ws.currentProject,
+    setProjects: ws.setProjects,
+    activeProjectIndex: ws.activeProjectIndex,
+  });
 
   const [activeSubTab, setActiveSubTab] = useState<'table' | 'original' | 'summary'>('table');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -178,6 +183,14 @@ export default function FileToSheetApp() {
         newColumnName={ws.newColumnName}
         setNewColumnName={ws.setNewColumnName}
         onAddColumn={ws.handleAddColumn}
+      />
+
+      <ExportOptionModal
+        isOpen={fileExport.isExportOptionModalOpen}
+        onClose={() => fileExport.setIsExportOptionModalOpen(false)}
+        onSelectOption={(mode) => fileExport.executeExportGoogleSheets(mode)}
+        spreadsheetUrl={currentProject?.googleSpreadsheetUrl}
+        loading={fileExport.exportLoading}
       />
     </div>
   );
