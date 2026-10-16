@@ -138,7 +138,7 @@ export default function FileToSheetApp() {
                   />
                 )}
 
-                {activeSubTab === 'original' && <OriginalDocView project={currentProject} onDeleteFile={ws.handleDeleteOriginalFile} />}
+                {activeSubTab === 'original' && <OriginalDocView project={currentProject} onDeleteFile={ws.handleDeleteOriginalFile} onGoToTableTab={() => setActiveSubTab('table')} />}
                 {activeSubTab === 'summary' && <SummaryView sheet={currentSheet} />}
               </div>
             )}

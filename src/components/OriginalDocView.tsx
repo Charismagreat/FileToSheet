@@ -1,16 +1,18 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { FileText, ExternalLink, Download, AlertCircle, FileSpreadsheet, Layers, Maximize2, Minimize2, Trash2 } from 'lucide-react';
+import { FileText, ExternalLink, Download, AlertCircle, FileSpreadsheet, Layers, Maximize2, Minimize2, Trash2, Table } from 'lucide-react';
 import { ProjectWorkspace, OriginalDocFile } from '@/types/workspace';
 import { DeleteProofModal } from './DeleteProofModal';
+import { ProofDataModal } from './ProofDataModal';
 
 interface OriginalDocViewProps {
   project: ProjectWorkspace;
   onDeleteFile?: (fileIdx: number, deleteDataRows: boolean) => void;
+  onGoToTableTab?: () => void;
 }
 
-export function OriginalDocView({ project, onDeleteFile }: OriginalDocViewProps) {
+export function OriginalDocView({ project, onDeleteFile, onGoToTableTab }: OriginalDocViewProps) {
   const files: OriginalDocFile[] =
     project.originalFiles && project.originalFiles.length > 0
       ? project.originalFiles
@@ -21,6 +23,9 @@ export function OriginalDocView({ project, onDeleteFile }: OriginalDocViewProps)
   const [selectedIdx, setSelectedIdx] = useState<number>(0);
   const [isZoomFit, setIsZoomFit] = useState<boolean>(true);
   const [deletingIdx, setDeletingIdx] = useState<number | null>(null);
+  const [showDataModal, setShowDataModal] = useState<boolean>(false);
+
+  const currentSheet = project.sheets[project.activeSheetIndex] || null;
 
   useEffect(() => {
     if (files.length > 0 && selectedIdx >= files.length) {
@@ -33,10 +38,15 @@ export function OriginalDocView({ project, onDeleteFile }: OriginalDocViewProps)
   const isImage = Boolean(currentFile?.type?.includes('image')) || ['png', 'jpg', 'jpeg', 'webp', 'gif'].some((ext) => filename.toLowerCase().endsWith(ext));
   const isPdf = Boolean(currentFile?.type?.includes('pdf')) || filename.toLowerCase().endsWith('.pdf');
 
+  // 현재 선택된 파일에서 적재된 데이터 행 필터링
+  const loadedRows = currentSheet?.rows.filter((r) => {
+    if (r._fileName && currentFile?.name) return r._fileName === currentFile.name;
+    if (r._fileId && currentFile?.id) return r._fileId === currentFile.id;
+    return files.length === 1;
+  }) || [];
+
   const handleDeleteConfirm = (deleteDataRows: boolean) => {
-    if (deletingIdx !== null && onDeleteFile) {
-      onDeleteFile(deletingIdx, deleteDataRows);
-    }
+    if (deletingIdx !== null && onDeleteFile) onDeleteFile(deletingIdx, deleteDataRows);
     setDeletingIdx(null);
   };
 
@@ -52,7 +62,7 @@ export function OriginalDocView({ project, onDeleteFile }: OriginalDocViewProps)
 
   return (
     <div className="flex-1 flex flex-col md:flex-row bg-slate-50 min-h-[600px] h-[calc(100vh-210px)] overflow-hidden">
-      {/* 1. 좌측 사이드바: 세로 방향 파일 목록 나열 */}
+      {/* 1. 좌측 사이드바: 세로 파일 목록 및 각 파일별 적재 행수 뱃지 */}
       <aside className="w-full md:w-64 border-b md:border-b-0 md:border-r border-slate-200 bg-white flex flex-col shrink-0">
         <div className="p-3 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 shrink-0">
           <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
@@ -64,6 +74,7 @@ export function OriginalDocView({ project, onDeleteFile }: OriginalDocViewProps)
         <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
           {files.map((file, idx) => {
             const isSelected = selectedIdx === idx;
+            const count = currentSheet?.rows.filter((r) => (r._fileName && file.name ? r._fileName === file.name : files.length === 1)).length || 0;
             return (
               <div
                 key={idx}
@@ -90,7 +101,7 @@ export function OriginalDocView({ project, onDeleteFile }: OriginalDocViewProps)
                   )}
                 </div>
                 <div className="flex items-center justify-between text-[11px] text-slate-400 pl-0.5">
-                  <span>{file.size ? `${Math.round(file.size / 1024)} KB` : '증빙 파일'}</span>
+                  <span className="px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-700 font-medium text-[10px]">적재 {count}행</span>
                   {file.uploadedAt && <span className="text-[10px] truncate">{file.uploadedAt.split(' ')[0]}</span>}
                 </div>
               </div>
@@ -99,39 +110,41 @@ export function OriginalDocView({ project, onDeleteFile }: OriginalDocViewProps)
         </div>
       </aside>
 
-      {/* 2. 우측 메인 영역: 원본 증빙 뷰어 공간 최대화 */}
+      {/* 2. 우측 메인 영역: 원본 증빙 뷰어 및 적재 데이터 보기 버튼 */}
       <section className="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-slate-100/60">
         <div className="h-11 px-4 border-b border-slate-200 bg-white flex items-center justify-between shrink-0 text-xs">
           <div className="flex items-center gap-2 min-w-0">
             <FileText className="w-4 h-4 text-blue-600 shrink-0" />
-            <span className="font-bold text-slate-800 truncate max-w-xs sm:max-w-md" title={filename}>{filename}</span>
+            <span className="font-bold text-slate-800 truncate max-w-xs" title={filename}>{filename}</span>
             {currentFile.size && <span className="text-slate-400 text-[11px] shrink-0">({Math.round(currentFile.size / 1024)} KB)</span>}
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              onClick={() => setShowDataModal(true)}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 text-indigo-700 text-xs font-bold transition shadow-2xs"
+              title="이 파일에서 적재된 데이터 행 확인"
+            >
+              <Table className="w-3.5 h-3.5" />
+              <span>적재 데이터 ({loadedRows.length}행)</span>
+            </button>
             {isImage && (
               <button
                 onClick={() => setIsZoomFit(!isZoomFit)}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium transition"
+                className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium transition"
                 title={isZoomFit ? '원본 크기로 보기' : '화면 맞춤'}
               >
                 {isZoomFit ? <Maximize2 className="w-3.5 h-3.5" /> : <Minimize2 className="w-3.5 h-3.5" />}
-                <span className="hidden sm:inline">{isZoomFit ? '원본 크기' : '화면 맞춤'}</span>
               </button>
             )}
             <a href={currentFile.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-medium transition shadow-2xs">
-              <ExternalLink className="w-3.5 h-3.5" /><span className="hidden sm:inline">새 탭 열기</span>
+              <ExternalLink className="w-3.5 h-3.5" /><span className="hidden sm:inline">새 탭</span>
             </a>
             <a href={currentFile.url} download={filename} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition shadow-2xs">
               <Download className="w-3.5 h-3.5" /><span>다운로드</span>
             </a>
             {onDeleteFile && (
-              <button
-                onClick={() => setDeletingIdx(selectedIdx)}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-50 border border-rose-200 hover:bg-rose-100 text-rose-700 text-xs font-semibold transition"
-                title="이 원본 증빙 삭제"
-              >
+              <button onClick={() => setDeletingIdx(selectedIdx)} className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition" title="삭제">
                 <Trash2 className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">삭제</span>
               </button>
             )}
           </div>
@@ -158,12 +171,22 @@ export function OriginalDocView({ project, onDeleteFile }: OriginalDocViewProps)
         </div>
       </section>
 
-      {/* 증빙 삭제 시 데이터 유지 여부 선택 모달 */}
+      {/* 모달 1: 증빙 삭제 시 데이터 유지 여부 선택 */}
       <DeleteProofModal
         show={deletingIdx !== null}
         fileName={deletingIdx !== null ? (files[deletingIdx]?.name || '문서') : ''}
         onClose={() => setDeletingIdx(null)}
         onConfirmDelete={handleDeleteConfirm}
+      />
+
+      {/* 모달 2: 원본 파일에서 적재된 데이터 행 조회 */}
+      <ProofDataModal
+        show={showDataModal}
+        onClose={() => setShowDataModal(false)}
+        fileName={filename}
+        headers={currentSheet?.headers || []}
+        rows={loadedRows}
+        onGoToTableTab={onGoToTableTab}
       />
     </div>
   );
