@@ -24,6 +24,7 @@
 .DS_Store
 *.pem
 *.egdesk-backup
+*.backup.*
 
 # debug
 npm-debug.log*
