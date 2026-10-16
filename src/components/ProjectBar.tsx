@@ -65,7 +65,7 @@ export function ProjectBar({
                     if (e.key === 'Enter') onSaveProjectName();
                     if (e.key === 'Escape') setEditingProjectIdx(null);
                   }}
-                  className="bg-white text-slate-900 px-1 py-0.5 rounded text-xs w-28 focus:outline-none border border-blue-400"
+                  className="bg-white text-slate-900 px-1 py-0.5 rounded text-xs w-32 focus:outline-none border border-blue-400"
                 />
               ) : (
                 <span
@@ -75,14 +75,11 @@ export function ProjectBar({
                     setEditingProjectName(displayName);
                   }}
                   title="더블클릭하여 프로젝트 이름 변경"
-                  className="max-w-[160px] truncate"
+                  className="max-w-[220px] truncate"
                 >
                   {displayName}
                 </span>
               )}
-              <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-slate-100 text-slate-500 font-normal">
-                시트 {proj.sheets.length}개
-              </span>
               <button
                 onClick={(e) => onCloseProject(idx, e)}
                 className="p-0.5 rounded-full hover:bg-slate-200 text-slate-400 hover:text-slate-700 transition"
