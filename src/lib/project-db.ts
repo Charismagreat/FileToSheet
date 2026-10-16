@@ -84,7 +84,7 @@ export async function saveUserProjectToDb(
         original_files: originalFilesJson,
         updated_at: now,
       },
-      { id: String(project.id) }
+      { ids: [Number(project.id)] }
     );
     return project.id;
   }
