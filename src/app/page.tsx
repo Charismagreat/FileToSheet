@@ -21,7 +21,7 @@ import { useFileExport } from '@/hooks/useFileExport';
 
 export default function FileToSheetApp() {
   const auth = useAuth();
-  const ws = useWorkspace();
+  const ws = useWorkspace({ phoneNumber: auth.currentUser?.phoneNumber });
   const upload = useFileUpload({
     projects: ws.projects,
     setProjects: ws.setProjects,

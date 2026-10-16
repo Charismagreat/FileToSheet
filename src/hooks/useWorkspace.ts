@@ -1,34 +1,62 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ProjectWorkspace } from '@/types/workspace';
 import { deleteUploadedFile } from '@/lib/egdesk-db';
+import { fetchUserProjectsFromDb, saveUserProjectToDb, deleteUserProjectFromDb } from '@/lib/project-db';
 import { useTableEditor } from './useTableEditor';
 
-export function useWorkspace() {
+interface UseWorkspaceOptions {
+  phoneNumber?: string;
+}
+
+export function useWorkspace({ phoneNumber }: UseWorkspaceOptions = {}) {
   const [projects, setProjects] = useState<ProjectWorkspace[]>([]);
   const [activeProjectIndex, setActiveProjectIndex] = useState<number>(0);
-
   const [editingProjectIdx, setEditingProjectIdx] = useState<number | null>(null);
   const [editingProjectName, setEditingProjectName] = useState<string>('');
   const [editingSheetIdx, setEditingSheetIdx] = useState<number | null>(null);
   const [editingSheetName, setEditingSheetName] = useState<string>('');
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const currentProject = projects[activeProjectIndex] || null;
   const currentSheet = currentProject ? currentProject.sheets[currentProject.activeSheetIndex] : null;
 
-  const saveProjectName = () => {
-    if (editingProjectIdx === null || !editingProjectName.trim()) {
-      setEditingProjectIdx(null);
+  // 1. 실제 DB에서 사용자의 프로젝트 목록 자동 복원
+  useEffect(() => {
+    if (!phoneNumber) {
+      setProjects([]);
+      setActiveProjectIndex(0);
       return;
     }
-    setProjects((prev) => {
-      const next = [...prev];
-      if (next[editingProjectIdx]) {
-        next[editingProjectIdx] = { ...next[editingProjectIdx], name: editingProjectName.trim() };
+    fetchUserProjectsFromDb(phoneNumber).then((dbProjects) => {
+      if (dbProjects && dbProjects.length > 0) {
+        setProjects(dbProjects);
+        setActiveProjectIndex(0);
       }
-      return next;
     });
+  }, [phoneNumber]);
+
+  // 2. 프로젝트 변경 시 실제 DB에 자동 동기화 (디바운스 800ms)
+  useEffect(() => {
+    if (!phoneNumber || !currentProject) return;
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(async () => {
+      const savedId = await saveUserProjectToDb(phoneNumber, currentProject);
+      if (savedId && !currentProject.id) {
+        setProjects((prev) => {
+          const next = [...prev];
+          if (next[activeProjectIndex]) next[activeProjectIndex] = { ...next[activeProjectIndex], id: savedId };
+          return next;
+        });
+      }
+    }, 800);
+    return () => { if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current); };
+  }, [projects, phoneNumber, activeProjectIndex]);
+
+  const saveProjectName = () => {
+    if (editingProjectIdx === null || !editingProjectName.trim()) return setEditingProjectIdx(null);
+    setProjects((prev) => prev.map((p, i) => i === editingProjectIdx ? { ...p, name: editingProjectName.trim() } : p));
     setEditingProjectIdx(null);
   };
 
@@ -48,10 +76,11 @@ export function useWorkspace() {
     });
   };
 
-  const handleCloseProject = (idx: number, e: React.MouseEvent) => {
+  const handleCloseProject = async (idx: number, e: React.MouseEvent) => {
     e.stopPropagation();
-    const projName = projects[idx]?.name || '프로젝트';
-    if (!confirm(`'${projName}' 프로젝트를 삭제하시겠습니까?\n포함된 모든 시트 데이터가 함께 닫힙니다.`)) return;
+    const target = projects[idx];
+    if (!confirm(`'${target?.name || '프로젝트'}'를 삭제하시겠습니까?\nDB에서 영구 삭제됩니다.`)) return;
+    if (target?.id) await deleteUserProjectFromDb(target.id);
     setProjects((prev) => {
       const next = prev.filter((_, i) => i !== idx);
       if (activeProjectIndex >= next.length) setActiveProjectIndex(Math.max(0, next.length - 1));
@@ -61,90 +90,48 @@ export function useWorkspace() {
 
   const handleAddNewSheet = () => {
     if (!currentProject) return;
-    setProjects((prev) => {
-      const next = [...prev];
-      const proj = { ...next[activeProjectIndex] };
-      proj.sheets = [...proj.sheets, { name: `Sheet${proj.sheets.length + 1}`, headers: ['일련번호', '등록일시', '항목', '금액', '비고'], rows: [], rawRows: [] }];
-      proj.activeSheetIndex = proj.sheets.length - 1;
-      next[activeProjectIndex] = proj;
-      return next;
-    });
+    const nextSheets = [...currentProject.sheets, { name: `Sheet${currentProject.sheets.length + 1}`, headers: ['일련번호', '등록일시', '항목', '금액', '비고'], rows: [], rawRows: [] }];
+    setProjects((prev) => prev.map((p, i) => i === activeProjectIndex ? { ...p, sheets: nextSheets, activeSheetIndex: nextSheets.length - 1 } : p));
   };
 
   const saveSheetName = () => {
-    if (editingSheetIdx === null || !currentProject || !editingSheetName.trim()) {
-      setEditingSheetIdx(null);
-      return;
-    }
-    setProjects((prev) => {
-      const next = [...prev];
-      const proj = { ...next[activeProjectIndex] };
-      const s = [...proj.sheets];
-      s[editingSheetIdx] = { ...s[editingSheetIdx], name: editingSheetName.trim() };
-      proj.sheets = s;
-      next[activeProjectIndex] = proj;
-      return next;
-    });
+    if (editingSheetIdx === null || !currentProject || !editingSheetName.trim()) return setEditingSheetIdx(null);
+    const nextSheets = currentProject.sheets.map((s, i) => i === editingSheetIdx ? { ...s, name: editingSheetName.trim() } : s);
+    setProjects((prev) => prev.map((p, i) => i === activeProjectIndex ? { ...p, sheets: nextSheets } : p));
     setEditingSheetIdx(null);
   };
 
   const handleDeleteSheet = (sheetIdx: number, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!currentProject || currentProject.sheets.length <= 1) {
-      alert('최소 1개의 시트가 존재해야 합니다.');
-      return;
-    }
-    setProjects((prev) => {
-      const next = [...prev];
-      const proj = { ...next[activeProjectIndex] };
-      proj.sheets = proj.sheets.filter((_, i) => i !== sheetIdx);
-      if (proj.activeSheetIndex >= proj.sheets.length) proj.activeSheetIndex = Math.max(0, proj.sheets.length - 1);
-      next[activeProjectIndex] = proj;
-      return next;
-    });
+    if (!currentProject || currentProject.sheets.length <= 1) return alert('최소 1개의 시트가 존재해야 합니다.');
+    const nextSheets = currentProject.sheets.filter((_, i) => i !== sheetIdx);
+    const nextIdx = currentProject.activeSheetIndex >= nextSheets.length ? Math.max(0, nextSheets.length - 1) : currentProject.activeSheetIndex;
+    setProjects((prev) => prev.map((p, i) => i === activeProjectIndex ? { ...p, sheets: nextSheets, activeSheetIndex: nextIdx } : p));
   };
 
   const handleSelectSheet = (idx: number) => {
-    setProjects((prev) => {
-      const next = [...prev];
-      next[activeProjectIndex] = { ...next[activeProjectIndex], activeSheetIndex: idx };
-      return next;
-    });
+    setProjects((prev) => prev.map((p, i) => i === activeProjectIndex ? { ...p, activeSheetIndex: idx } : p));
   };
 
-  // 원본 증빙 삭제 (표 데이터 함께 삭제 여부 반영)
   const handleDeleteOriginalFile = async (fileIdx: number, deleteDataRows: boolean) => {
     if (!currentProject) return;
-    const files = currentProject.originalFiles || (currentProject.originalFileUrl ? [{
-      name: currentProject.name,
-      url: currentProject.originalFileUrl,
-      id: currentProject.id || undefined,
-    }] : []);
+    const files = currentProject.originalFiles || (currentProject.originalFileUrl ? [{ name: currentProject.name, url: currentProject.originalFileUrl, id: currentProject.id || undefined }] : []);
     const target = files[fileIdx];
     if (!target) return;
 
-    setProjects((prev) => {
-      const next = [...prev];
-      const proj = { ...next[activeProjectIndex] };
+    setProjects((prev) => prev.map((proj, pIdx) => {
+      if (pIdx !== activeProjectIndex) return proj;
+      let sheets = proj.sheets;
       if (deleteDataRows) {
-        proj.sheets = proj.sheets.map((sheet) => {
-          const filtered = sheet.rows.filter((r) => {
-            if (r._fileName) return r._fileName !== target.name;
-            if (target.id && r._fileId) return r._fileId !== target.id;
-            return files.length > 1;
-          });
-          return { ...sheet, rows: filtered.map((r, i) => ({ ...r, 일련번호: i + 1 })) };
-        });
+        sheets = sheets.map((s) => ({
+          ...s,
+          rows: s.rows.filter((r) => r._fileName ? r._fileName !== target.name : (target.id && r._fileId ? r._fileId !== target.id : files.length > 1)).map((r, i) => ({ ...r, 일련번호: i + 1 })),
+        }));
       }
       const nextFiles = files.filter((_, idx) => idx !== fileIdx);
-      proj.originalFiles = nextFiles;
-      proj.originalFileUrl = nextFiles[0]?.url;
-      proj.originalFileType = nextFiles[0]?.type;
-      proj.originalFileSize = nextFiles[0]?.size;
-      next[activeProjectIndex] = proj;
-      return next;
-    });
-    if (target.id) deleteUploadedFile(target.id).catch((e) => console.warn('파일 삭제 무시:', e));
+      return { ...proj, sheets, originalFiles: nextFiles, originalFileUrl: nextFiles[0]?.url, originalFileType: nextFiles[0]?.type, originalFileSize: nextFiles[0]?.size };
+    }));
+    if (target.id) deleteUploadedFile(target.id).catch((e) => console.warn('스토리지 파일 삭제 무시:', e));
   };
 
   const tableEditor = useTableEditor({ projects, setProjects, activeProjectIndex });

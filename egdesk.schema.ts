@@ -91,6 +91,22 @@ export const TABLES = {
     columnCount: 5,
     rowCount: 0,
   },
+  user_projects: {
+    name: 'user_projects',
+    displayName: '사용자 프로젝트 목록',
+    description: '사용자별 작업 프로젝트 워크스페이스(시트, 헤더, 데이터 행, 원본 증빙 파일 메타데이터) 영구 관리 테이블',
+    columns: [
+      'phone_number',
+      'project_name',
+      'category',
+      'sheets_data',
+      'original_files',
+      'created_at',
+      'updated_at',
+    ],
+    columnCount: 7,
+    rowCount: 0,
+  },
 } as const;
 
 export type TableName = keyof typeof TABLES;
