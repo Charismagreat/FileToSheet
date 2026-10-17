@@ -15,6 +15,7 @@ import { OriginalFileModal } from '@/components/OriginalFileModal';
 import { AddColumnModal } from '@/components/AddColumnModal';
 import { ExportOptionModal } from '@/components/ExportOptionModal';
 import { ShareModal } from '@/components/ShareModal';
+import { PlanLimitModal } from '@/components/PlanLimitModal';
 import { useAuth } from '@/hooks/useAuth';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { useFileUpload } from '@/hooks/useFileUpload';
@@ -23,12 +24,21 @@ import { getSheetOriginalFiles } from '@/lib/sheet-helpers';
 
 export default function FileToSheetApp() {
   const auth = useAuth();
-  const ws = useWorkspace({ phoneNumber: auth.currentUser?.phoneNumber });
+  const [limitNotice, setLimitNotice] = useState<{ title: string; reason: string } | null>(null);
+  const handlePlanLimit = (title: string, reason: string) => setLimitNotice({ title, reason });
+
+  const ws = useWorkspace({
+    phoneNumber: auth.currentUser?.phoneNumber,
+    plan: auth.currentUser?.plan,
+    onPlanLimit: handlePlanLimit,
+  });
   const upload = useFileUpload({
     projects: ws.projects,
     setProjects: ws.setProjects,
     activeProjectIndex: ws.activeProjectIndex,
     setActiveProjectIndex: ws.setActiveProjectIndex,
+    plan: auth.currentUser?.plan,
+    onPlanLimit: handlePlanLimit,
   });
   const fileExport = useFileExport({
     currentProject: ws.currentProject,
@@ -104,6 +114,7 @@ export default function FileToSheetApp() {
                   onSaveSheetName={ws.saveSheetName}
                   onAddNewSheet={ws.handleAddNewSheet}
                   onDeleteSheet={ws.handleDeleteSheet}
+                  plan={auth.currentUser?.plan}
                 />
 
                 <SubTabBar
@@ -171,17 +182,12 @@ export default function FileToSheetApp() {
         onVerifyCode={auth.handleVerifyAuthCode}
       />
 
-      <UploadOptionModal
-        pendingFile={upload.pendingUploadFile}
-        onClose={() => upload.setPendingUploadFile(null)}
-        onSelectOption={upload.processFile}
-      />
-
+      <UploadOptionModal pendingFile={upload.pendingUploadFile} onClose={() => upload.setPendingUploadFile(null)} onSelectOption={upload.processFile} />
       <OriginalFileModal show={showOriginalModal} onClose={() => setShowOriginalModal(false)} project={currentProject} />
-
       <AddColumnModal show={ws.isAddingColumn} onClose={() => ws.setIsAddingColumn(false)} newColumnName={ws.newColumnName} setNewColumnName={ws.setNewColumnName} onAddColumn={ws.handleAddColumn} />
       <ExportOptionModal isOpen={fileExport.isExportOptionModalOpen} onClose={() => fileExport.setIsExportOptionModalOpen(false)} onSelectOption={(mode) => fileExport.executeExportGoogleSheets(mode)} spreadsheetUrl={currentProject?.googleSpreadsheetUrl} loading={fileExport.exportLoading} />
       <ShareModal isOpen={showShareModal} onClose={() => setShowShareModal(false)} projects={ws.projects} initialProjectIndex={ws.activeProjectIndex} />
+      <PlanLimitModal isOpen={Boolean(limitNotice)} onClose={() => setLimitNotice(null)} title={limitNotice?.title} reason={limitNotice?.reason || ''} plan={auth.currentUser?.plan} />
     </div>
   );
 }

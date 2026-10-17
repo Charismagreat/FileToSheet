@@ -2,14 +2,17 @@
 
 import { useState } from 'react';
 import { ProjectWorkspace } from '@/types/workspace';
+import { getPlanLimits } from '@/lib/plan-limits';
 
 interface UseTableEditorOptions {
   projects: ProjectWorkspace[];
   setProjects: React.Dispatch<React.SetStateAction<ProjectWorkspace[]>>;
   activeProjectIndex: number;
+  plan?: string;
+  onPlanLimit?: (title: string, reason: string) => void;
 }
 
-export function useTableEditor({ projects, setProjects, activeProjectIndex }: UseTableEditorOptions) {
+export function useTableEditor({ projects, setProjects, activeProjectIndex, plan, onPlanLimit }: UseTableEditorOptions) {
   const [editingCell, setEditingCell] = useState<{ rowIdx: number; colKey: string } | null>(null);
   const [editValue, setEditValue] = useState<string>('');
   const [editingHeaderIdx, setEditingHeaderIdx] = useState<number | null>(null);
@@ -92,6 +95,13 @@ export function useTableEditor({ projects, setProjects, activeProjectIndex }: Us
 
   const handleAddRow = () => {
     if (!currentSheet) return;
+    const policy = getPlanLimits(plan);
+    if (currentSheet.rows.length >= policy.maxRowsPerSheet) {
+      const msg = `[${policy.name}] 정책상 시트당 최대 ${policy.maxRowsPerSheet}행까지만 추가할 수 있습니다. (PRO 플랜은 최대 10,000행 지원)`;
+      if (onPlanLimit) onPlanLimit('시트 데이터 한도 도달', msg);
+      else alert(msg);
+      return;
+    }
     const nowKst = new Intl.DateTimeFormat('ko-KR', { dateStyle: 'short', timeStyle: 'medium' }).format(new Date());
     const newRow: Record<string, any> = {};
     currentSheet.headers.forEach((h) => {

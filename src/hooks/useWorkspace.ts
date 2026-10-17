@@ -4,13 +4,16 @@ import { useState, useEffect, useRef } from 'react';
 import { ProjectWorkspace, OriginalDocFile } from '@/types/workspace';
 import { deleteUploadedFile } from '@/lib/egdesk-db';
 import { fetchUserProjectsFromDb, saveUserProjectToDb, deleteUserProjectFromDb } from '@/lib/project-db';
+import { checkSheetLimit } from '@/lib/plan-limits';
 import { useTableEditor } from './useTableEditor';
 
 interface UseWorkspaceOptions {
   phoneNumber?: string;
+  plan?: string;
+  onPlanLimit?: (title: string, reason: string) => void;
 }
 
-export function useWorkspace({ phoneNumber }: UseWorkspaceOptions = {}) {
+export function useWorkspace({ phoneNumber, plan, onPlanLimit }: UseWorkspaceOptions = {}) {
   const [projects, setProjects] = useState<ProjectWorkspace[]>([]);
   const [activeProjectIndex, setActiveProjectIndex] = useState<number>(0);
   const [editingProjectIdx, setEditingProjectIdx] = useState<number | null>(null);
@@ -109,6 +112,12 @@ export function useWorkspace({ phoneNumber }: UseWorkspaceOptions = {}) {
 
   const handleAddNewSheet = () => {
     if (!currentProject) return;
+    const check = checkSheetLimit(plan, currentProject.sheets.length);
+    if (!check.allowed) {
+      if (onPlanLimit) onPlanLimit('시트 생성 한도 도달', check.message);
+      else alert(check.message);
+      return;
+    }
     const nextSheets = [...currentProject.sheets, { name: `Sheet${currentProject.sheets.length + 1}`, headers: ['일련번호', '등록일시', '항목', '금액', '비고'], rows: [], rawRows: [] }];
     setProjects((prev) => prev.map((p, i) => i === activeProjectIndex ? { ...p, sheets: nextSheets, activeSheetIndex: nextSheets.length - 1 } : p));
   };
@@ -153,7 +162,7 @@ export function useWorkspace({ phoneNumber }: UseWorkspaceOptions = {}) {
     if (target.id) deleteUploadedFile(target.id).catch((e) => console.warn('스토리지 파일 삭제 무시:', e));
   };
 
-  const tableEditor = useTableEditor({ projects, setProjects, activeProjectIndex });
+  const tableEditor = useTableEditor({ projects, setProjects, activeProjectIndex, plan, onPlanLimit });
 
   return {
     projects,

@@ -16,6 +16,7 @@ interface SheetBarProps {
   onSaveSheetName: () => void;
   onAddNewSheet: () => void;
   onDeleteSheet: (idx: number, e: React.MouseEvent) => void;
+  plan?: string;
 }
 
 export function SheetBar({
@@ -30,7 +31,11 @@ export function SheetBar({
   onSaveSheetName,
   onAddNewSheet,
   onDeleteSheet,
+  plan,
 }: SheetBarProps) {
+  const maxSheets = plan === 'pro' ? 30 : 5;
+  const isLimitReached = sheets.length >= maxSheets;
+
   return (
     <div className="border-b border-slate-200 bg-slate-50/90 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3">
       <div className="flex items-center gap-1.5 overflow-x-auto">
@@ -111,11 +116,14 @@ export function SheetBar({
 
         <button
           onClick={onAddNewSheet}
-          className="flex items-center gap-1 text-xs px-2.5 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg transition font-medium shadow-2xs"
-          title="새 빈 시트 추가"
+          className={`flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg transition font-medium shadow-2xs border ${
+            isLimitReached ? 'bg-slate-100 text-slate-400 border-slate-200 hover:bg-slate-200' : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200'
+          }`}
+          title={`새 빈 시트 추가 (${sheets.length}/${maxSheets})`}
         >
           <Plus className="w-3 h-3 text-blue-600" />
           <span>시트 추가</span>
+          <span className="text-[10px] text-slate-400 font-mono">({sheets.length}/{maxSheets})</span>
         </button>
       </div>
 

@@ -9,12 +9,15 @@ import {
   updateFileParseResult,
   saveParsedSheetRows,
 } from '@/lib/egdesk-db';
+import { getPlanLimits, checkSheetLimit, truncateRowsToLimit } from '@/lib/plan-limits';
 
 interface UseFileUploadOptions {
   projects: ProjectWorkspace[];
   setProjects: React.Dispatch<React.SetStateAction<ProjectWorkspace[]>>;
   activeProjectIndex: number;
   setActiveProjectIndex: (idx: number) => void;
+  plan?: string;
+  onPlanLimit?: (title: string, reason: string) => void;
 }
 
 export function useFileUpload({
@@ -22,6 +25,8 @@ export function useFileUpload({
   setProjects,
   activeProjectIndex,
   setActiveProjectIndex,
+  plan,
+  onPlanLimit,
 }: UseFileUploadOptions) {
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [processStatus, setProcessStatus] = useState<string>('');
@@ -90,20 +95,22 @@ export function useFileUpload({
           const s = [...proj.sheets];
           const target = s[proj.activeSheetIndex];
           if (!target.rows || target.rows.length === 0) {
+            const tr = truncateRowsToLimit(plan, 0, parsedSheets[0]?.rows || []);
             s[proj.activeSheetIndex] = {
               ...target,
               headers: parsedSheets[0]?.headers || target.headers,
-              rows: (parsedSheets[0]?.rows || []).map((r) => ({ ...r, _fileId: fileId, _fileName: file.name })),
+              rows: tr.rows.map((r) => ({ ...r, _fileId: fileId, _fileName: file.name })),
               originalFiles: [...(target.originalFiles || []), docItem],
             };
           } else {
-            const incoming = parsedSheets.flatMap((sh) => sh.rows);
+            const rawIncoming = parsedSheets.flatMap((sh) => sh.rows);
+            const tr = truncateRowsToLimit(plan, target.rows.length, rawIncoming);
             const curSet = new Set(target.headers);
             const mergedH = [...target.headers, ...parsedSheets.flatMap((sh) => sh.headers).filter((h) => !curSet.has(h))];
             s[proj.activeSheetIndex] = {
               ...target,
               headers: mergedH,
-              rows: [...target.rows, ...incoming.map((r, i) => ({ ...r, 일련번호: target.rows.length + i + 1, 등록일시: r.등록일시 || nowKst, _fileId: fileId, _fileName: file.name }))],
+              rows: [...target.rows, ...tr.rows.map((r, i) => ({ ...r, 일련번호: target.rows.length + i + 1, 등록일시: r.등록일시 || nowKst, _fileId: fileId, _fileName: file.name }))],
               originalFiles: [...(target.originalFiles || []), docItem],
             };
           }
@@ -122,17 +129,32 @@ export function useFileUpload({
           next[activeProjectIndex] = proj;
         } else if (mode === 'new_sheet' && next[activeProjectIndex]) {
           const proj = { ...next[activeProjectIndex] };
-          proj.sheets = [...proj.sheets, ...parsedSheets.map((sh) => ({ ...sh, originalFiles: [docItem], rows: sh.rows.map((r) => ({ ...r, _fileId: fileId, _fileName: file.name })) }))];
+          const check = checkSheetLimit(plan, proj.sheets.length);
+          if (!check.allowed) {
+            if (onPlanLimit) onPlanLimit('시트 생성 한도 도달', check.message);
+            else alert(check.message);
+            return prev;
+          }
+          const incomingSheets = parsedSheets.map((sh) => {
+            const tr = truncateRowsToLimit(plan, 0, sh.rows);
+            return { ...sh, originalFiles: [docItem], rows: tr.rows.map((r) => ({ ...r, _fileId: fileId, _fileName: file.name })) };
+          });
+          proj.sheets = [...proj.sheets, ...incomingSheets];
           proj.activeSheetIndex = proj.sheets.length - 1;
           const prevDocs = proj.originalFiles || [];
           proj.originalFiles = [...prevDocs, docItem];
           next[activeProjectIndex] = proj;
         } else {
+          const maxSheets = getPlanLimits(plan).maxSheetsPerProject;
+          const createdSheets = parsedSheets.slice(0, maxSheets).map((sh) => {
+            const tr = truncateRowsToLimit(plan, 0, sh.rows);
+            return { ...sh, originalFiles: [docItem], rows: tr.rows.map((r) => ({ ...r, _fileId: fileId, _fileName: file.name })) };
+          });
           next.push({
             id: null,
             name: file.name.replace(/\.[^/.]+$/, ''),
             category,
-            sheets: parsedSheets.map((sh) => ({ ...sh, originalFiles: [docItem], rows: sh.rows.map((r) => ({ ...r, _fileId: fileId, _fileName: file.name })) })),
+            sheets: createdSheets,
             activeSheetIndex: 0,
             activeSubTab: 'table',
             originalFileUrl: fileBlobUrl,
