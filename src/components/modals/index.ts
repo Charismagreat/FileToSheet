@@ -9,4 +9,6 @@ export { PricingModal } from '../PricingModal';
 export { EnterpriseInquiryModal } from '../EnterpriseInquiryModal';
 export { DuplicateFileModal } from '../DuplicateFileModal';
 export { AccountTransferModal } from '../AccountTransferModal';
+export { ShareToManagerModal } from '../ShareToManagerModal';
+export { ConsolidatedStatsModal } from '../ConsolidatedStatsModal';
 

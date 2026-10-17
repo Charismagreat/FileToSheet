@@ -12,7 +12,7 @@ import { SummaryView } from '@/components/SummaryView';
 import {
   PhoneAuthModal, UploadOptionModal, OriginalFileModal, AddColumnModal,
   ExportOptionModal, ShareModal, PlanLimitModal, PricingModal, EnterpriseInquiryModal, DuplicateFileModal,
-  AccountTransferModal,
+  AccountTransferModal, ShareToManagerModal, ConsolidatedStatsModal,
 } from '@/components/modals';
 import { useAuth } from '@/hooks/useAuth';
 import { useWorkspace } from '@/hooks/useWorkspace';
@@ -26,6 +26,8 @@ export default function FileToSheetApp() {
   const [showPricingModal, setShowPricingModal] = useState<boolean>(false);
   const [showEnterpriseModal, setShowEnterpriseModal] = useState<boolean>(false);
   const [showTransferModal, setShowTransferModal] = useState<boolean>(false);
+  const [showShareToManagerModal, setShowShareToManagerModal] = useState<boolean>(false);
+  const [showConsolidatedModal, setShowConsolidatedModal] = useState<boolean>(false);
   const handlePlanLimit = (title: string, reason: string) => setLimitNotice({ title, reason });
 
   const ws = useWorkspace({
@@ -71,6 +73,8 @@ export default function FileToSheetApp() {
         onDownloadSqlite={fileExport.handleDownloadSqlite}
         onOpenPricingModal={() => setShowPricingModal(true)}
         onOpenTransferModal={() => setShowTransferModal(true)}
+        onOpenShareToManagerModal={() => setShowShareToManagerModal(true)}
+        onOpenConsolidatedModal={() => setShowConsolidatedModal(true)}
         onOpenPlanModal={() => setLimitNotice({
           title: 'PRO 전용 기능',
           reason: 'SQLite DB 직접 다운로드 및 데이터 행 수 무제한 처리는 PRO 플랜 회원 혜택입니다.'
@@ -281,6 +285,21 @@ export default function FileToSheetApp() {
           auth.setCurrentUser(newUser);
           alert(`새로운 담당자(${newUser.phoneNumber})로 성공적으로 승계되었습니다!`);
         }}
+      />
+
+      {/* 12. 사업소 시트 -> 본사 총괄 담당자에게 공유 전송 모달 */}
+      <ShareToManagerModal
+        isOpen={showShareToManagerModal}
+        onClose={() => setShowShareToManagerModal(false)}
+        currentProject={currentProject}
+        currentUser={auth.currentUser}
+      />
+
+      {/* 13. 본사 총괄 전사용 사업소 공유 수신함 & 롤업 통계 대시보드 모달 */}
+      <ConsolidatedStatsModal
+        isOpen={showConsolidatedModal}
+        onClose={() => setShowConsolidatedModal(false)}
+        currentUser={auth.currentUser}
       />
     </div>
   );

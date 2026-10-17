@@ -3,7 +3,7 @@
 import React, { useState, useRef } from 'react';
 import {
   FileSpreadsheet, Download, Share2, RefreshCw, Smartphone, LogOut,
-  User, Database, Crown, UploadCloud, Zap, ChevronDown,
+  User, Database, Crown, UploadCloud, Zap, ChevronDown, Building2, BarChart3,
 } from 'lucide-react';
 import { UserSession, ProjectWorkspace } from '@/types/workspace';
 import { UserUsagePopover } from './UserUsagePopover';
@@ -19,6 +19,8 @@ interface HeaderProps {
   onOpenPlanModal?: () => void;
   onOpenPricingModal?: () => void;
   onOpenTransferModal?: () => void;
+  onOpenShareToManagerModal?: () => void;
+  onOpenConsolidatedModal?: () => void;
   onExportGoogleSheets: () => void;
   onOpenOriginalModal: () => void;
   onOpenShareModal: () => void;
@@ -38,6 +40,8 @@ export function Header({
   onOpenPlanModal,
   onOpenPricingModal,
   onOpenTransferModal,
+  onOpenShareToManagerModal,
+  onOpenConsolidatedModal,
   onExportGoogleSheets,
   onOpenShareModal,
   onUploadFile,
@@ -182,14 +186,37 @@ export function Header({
           Google 시트로 내보내기
         </button>
 
+        {onOpenShareToManagerModal && currentUser && (
+          <button
+            onClick={onOpenShareToManagerModal}
+            disabled={!hasSheetData}
+            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-100 disabled:opacity-40 disabled:hover:bg-blue-50 shadow-2xs transition active:scale-98"
+            title="소속 사업소의 시트 데이터를 본사 총괄 담당자에게 전송"
+          >
+            <Building2 className="w-3.5 h-3.5 text-blue-600" />
+            <span>본사에 공유</span>
+          </button>
+        )}
+
+        {onOpenConsolidatedModal && currentUser && (
+          <button
+            onClick={onOpenConsolidatedModal}
+            className="flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-xl bg-indigo-50 border border-indigo-300 text-indigo-700 hover:bg-indigo-100 shadow-2xs transition active:scale-98"
+            title="각 사업소에서 공유받은 시트들을 모아서 통계 분석 및 통합 엑셀 다운로드"
+          >
+            <BarChart3 className="w-3.5 h-3.5 text-indigo-600" />
+            <span>사업소 취합함</span>
+          </button>
+        )}
+
         <button
           onClick={onOpenShareModal}
           disabled={!hasSheetData}
-          className="flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 disabled:opacity-40 disabled:hover:bg-indigo-50 shadow-xs transition active:scale-98"
+          className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:hover:bg-slate-50 shadow-2xs transition active:scale-98"
           title="시트 및 탭을 선택하여 읽기 전용 링크로 공유"
         >
           <Share2 className="w-3.5 h-3.5" />
-          공유
+          <span>링크 공유</span>
         </button>
       </div>
     </header>
