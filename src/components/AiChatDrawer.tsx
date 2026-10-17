@@ -13,7 +13,10 @@ import {
   Layers,
   FileSpreadsheet,
   FolderOpen,
-  HelpCircle,
+  Plus,
+  Maximize2,
+  Minimize2,
+  Table as TableIcon,
 } from 'lucide-react';
 import { ProjectWorkspace } from '@/types/workspace';
 import { apiFetch } from '@/lib/api';
@@ -32,6 +35,7 @@ interface AiChatDrawerProps {
   onClose: () => void;
   projects: ProjectWorkspace[];
   activeProjectIndex: number;
+  onAddNewSheetFromAi?: (sheet: { name: string; headers: string[]; rows: Record<string, any>[] }) => void;
 }
 
 const QUICK_CHIPS = [
@@ -41,23 +45,117 @@ const QUICK_CHIPS = [
   '⚠️ 누락되거나 비어있는 필드가 있는지 점검해줘',
 ];
 
+/**
+ * 마크다운 텍스트에서 표 구조를 파싱하여 시트 데이터 객체로 추출
+ */
+function extractMarkdownTable(content: string): { headers: string[]; rows: Record<string, any>[] } | null {
+  const lines = content.split('\n').map((l) => l.trim()).filter(Boolean);
+  const tableLines = lines.filter((l) => l.startsWith('|') && l.endsWith('|'));
+  if (tableLines.length < 3) return null;
+
+  const parseRow = (line: string) =>
+    line.slice(1, -1).split('|').map((c) => c.trim());
+
+  const headers = parseRow(tableLines[0]);
+  if (!tableLines[1].includes('---')) return null;
+
+  const dataLines = tableLines.slice(2);
+  const rows: Record<string, any>[] = [];
+
+  for (const line of dataLines) {
+    if (!line.includes('|')) continue;
+    const cells = parseRow(line);
+    const rowObj: Record<string, any> = {};
+    headers.forEach((h, idx) => {
+      rowObj[h] = cells[idx] ?? '';
+    });
+    rows.push(rowObj);
+  }
+
+  if (headers.length === 0 || rows.length === 0) return null;
+  return { headers, rows };
+}
+
 export function AiChatDrawer({
   isOpen,
   onClose,
   projects,
   activeProjectIndex,
+  onAddNewSheetFromAi,
 }: AiChatDrawerProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState<string>('');
   const [scope, setScope] = useState<ChatScope>('current_sheet');
   const [loading, setLoading] = useState<boolean>(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [createdSheetMsgId, setCreatedSheetMsgId] = useState<string | null>(null);
+
+  // 🌟 1. 대화창 가로폭 조절 상태 (기본 480px, 최소 380px, 로컬 저장)
+  const [drawerWidth, setDrawerWidth] = useState<number>(480);
+  const [isResizing, setIsResizing] = useState<boolean>(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const currentProject = projects[activeProjectIndex] || null;
   const currentSheet = currentProject ? currentProject.sheets[currentProject.activeSheetIndex] : null;
+
+  // 🌟 3. 프로젝트별 대화 이력 영구 보존 (localStorage)
+  const storageKey = `filetosheet_ai_chat_${currentProject?.id || 'default'}`;
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const savedWidth = localStorage.getItem('filetosheet_ai_drawer_width');
+    if (savedWidth) {
+      setDrawerWidth(Math.max(380, Math.min(Number(savedWidth), window.innerWidth - 60)));
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        setMessages(JSON.parse(saved));
+      } else {
+        setMessages([]);
+      }
+    } catch {
+      setMessages([]);
+    }
+  }, [storageKey]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (messages.length > 0) {
+      localStorage.setItem(storageKey, JSON.stringify(messages));
+    } else {
+      localStorage.removeItem(storageKey);
+    }
+  }, [messages, storageKey]);
+
+  // 마우스 드래그 가로폭 조절 이벤트
+  useEffect(() => {
+    if (!isResizing) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const newWidth = window.innerWidth - e.clientX;
+      const clamped = Math.max(380, Math.min(newWidth, window.innerWidth - 40));
+      setDrawerWidth(clamped);
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      localStorage.setItem('filetosheet_ai_drawer_width', String(drawerWidth));
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing, drawerWidth]);
 
   // 자동 스크롤
   useEffect(() => {
@@ -74,7 +172,6 @@ export function AiChatDrawer({
         sheetName: currentSheet.name,
         headers: currentSheet.headers,
         totalRows: currentSheet.rows.length,
-        // 상위 최대 100개 행 데이터 전달 (토큰 효율화)
         rows: currentSheet.rows.slice(0, 100),
       };
     } else if (scope === 'current_project' && currentProject) {
@@ -89,7 +186,6 @@ export function AiChatDrawer({
         })),
       };
     } else {
-      // all_projects
       return {
         totalProjects: projects.length,
         projects: projects.map((p) => ({
@@ -119,6 +215,9 @@ export function AiChatDrawer({
 
     setMessages((prev) => [...prev, userMsg]);
     setInputMessage('');
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+    }
     setLoading(true);
 
     try {
@@ -158,6 +257,39 @@ export function AiChatDrawer({
     }
   };
 
+  // 🌟 2. 텍스트 입력창 높이 자동 조절
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInputMessage(e.target.value);
+    e.target.style.height = 'auto';
+    e.target.style.height = `${Math.min(e.target.scrollHeight, 180)}px`;
+  };
+
+  // 🌟 4. AI 답변 표를 새 시트로 추가
+  const handleAddTableToSheet = (msgId: string, content: string) => {
+    const tableData = extractMarkdownTable(content);
+    if (!tableData) {
+      alert('표 형식의 데이터를 찾을 수 없습니다.');
+      return;
+    }
+    if (!onAddNewSheetFromAi) {
+      alert('시트 추가 핸들러가 연결되지 않았습니다.');
+      return;
+    }
+
+    const timeStr = new Date().toISOString().slice(11, 16).replace(':', '');
+    const sheetName = `AI분석_${timeStr}`;
+
+    onAddNewSheetFromAi({
+      name: sheetName,
+      headers: tableData.headers,
+      rows: tableData.rows,
+    });
+
+    setCreatedSheetMsgId(msgId);
+    setTimeout(() => setCreatedSheetMsgId(null), 3000);
+    alert(`AI 분석 결과가 새로운 시트 ['${sheetName}'](${tableData.rows.length}행)로 생성되었습니다!`);
+  };
+
   const handleCopyText = (id: string, text: string) => {
     navigator.clipboard.writeText(text);
     setCopiedId(id);
@@ -165,8 +297,9 @@ export function AiChatDrawer({
   };
 
   const handleResetChat = () => {
-    if (confirm('대화 내용을 모두 지우고 새 대화를 시작할까요?')) {
+    if (confirm('현재 프로젝트의 AI 대화 이력을 모두 비우고 새 대화를 시작할까요?')) {
       setMessages([]);
+      localStorage.removeItem(storageKey);
     }
   };
 
@@ -178,10 +311,22 @@ export function AiChatDrawer({
         className="fixed inset-0 bg-slate-900/30 backdrop-blur-2xs transition-opacity sm:hidden"
       />
 
-      {/* Drawer 패널 */}
-      <div className="relative w-screen sm:w-[480px] bg-white shadow-2xl flex flex-col border-l border-slate-200 z-10 animate-in slide-in-from-right duration-200">
+      {/* Drawer 패널 (폭 동적 조절) */}
+      <div
+        style={{ width: `${drawerWidth}px` }}
+        className="relative bg-white shadow-2xl flex flex-col border-l border-slate-200 z-10 animate-in slide-in-from-right duration-200 max-w-[95vw]"
+      >
+        {/* 🌟 좌측 드래그 너비 조절 핸들 바 */}
+        <div
+          onMouseDown={startResizing}
+          className="absolute left-0 inset-y-0 w-2.5 -translate-x-1.5 cursor-ew-resize group hover:bg-blue-500/20 active:bg-blue-600/40 z-30 transition-colors flex items-center justify-center"
+          title="좌우로 드래그하여 대화창 폭을 조절하세요"
+        >
+          <div className="w-1 h-10 rounded-full bg-slate-300 group-hover:bg-blue-500 group-active:bg-blue-600 transition-colors" />
+        </div>
+
         {/* 헤더 */}
-        <div className="px-5 py-3.5 bg-gradient-to-r from-blue-50/80 via-indigo-50/60 to-purple-50/80 border-b border-slate-200 flex items-center justify-between">
+        <div className="px-5 py-3.5 bg-gradient-to-r from-blue-50/80 via-indigo-50/60 to-purple-50/80 border-b border-slate-200 flex items-center justify-between select-none">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-xs">
               <Sparkles className="w-4 h-4" />
@@ -198,12 +343,26 @@ export function AiChatDrawer({
           </div>
 
           <div className="flex items-center gap-1">
+            {/* 너비 프리셋 버튼 */}
+            <button
+              type="button"
+              onClick={() => {
+                const target = drawerWidth >= 700 ? 480 : 760;
+                setDrawerWidth(target);
+                localStorage.setItem('filetosheet_ai_drawer_width', String(target));
+              }}
+              className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-white/60 rounded-lg transition"
+              title={drawerWidth >= 700 ? '기본 너비(480px)로 축소' : '넓은 화면(760px)으로 확장'}
+            >
+              {drawerWidth >= 700 ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+            </button>
+
             {messages.length > 0 && (
               <button
                 type="button"
                 onClick={handleResetChat}
-                className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-white/60 rounded-lg transition"
-                title="새 대화 시작"
+                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-white/60 rounded-lg transition"
+                title="새 대화 시작 (이력 비우기)"
               >
                 <RotateCcw className="w-4 h-4" />
               </button>
@@ -244,7 +403,7 @@ export function AiChatDrawer({
               }`}
             >
               <Layers className="w-3 h-3" />
-              <span>현재 프로젝트 전체</span>
+              <span>현재 프로젝트</span>
             </button>
             <button
               type="button"
@@ -292,65 +451,87 @@ export function AiChatDrawer({
             </div>
           ) : (
             <>
-              {messages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`flex gap-2.5 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
-                  {msg.role === 'assistant' && (
-                    <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
-                      <Bot className="w-4 h-4" />
-                    </div>
-                  )}
+              {messages.map((msg) => {
+                const hasTable = msg.role === 'assistant' && extractMarkdownTable(msg.content) !== null;
 
+                return (
                   <div
-                    className={`max-w-[85%] rounded-2xl p-3.5 shadow-xs ${
-                      msg.role === 'user'
-                        ? 'bg-blue-600 text-white rounded-tr-xs'
-                        : 'bg-slate-50 border border-slate-200 text-slate-800 rounded-tl-xs'
-                    }`}
+                    key={msg.id}
+                    className={`flex gap-2.5 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
-                    <div className="whitespace-pre-wrap leading-relaxed font-sans">
-                      {msg.content}
-                    </div>
+                    {msg.role === 'assistant' && (
+                      <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
+                        <Bot className="w-4 h-4" />
+                      </div>
+                    )}
 
                     <div
-                      className={`flex items-center justify-between mt-2 pt-1 border-t text-[10px] ${
+                      className={`max-w-[90%] rounded-2xl p-3.5 shadow-xs ${
                         msg.role === 'user'
-                          ? 'border-blue-500/60 text-blue-200'
-                          : 'border-slate-200 text-slate-400'
+                          ? 'bg-blue-600 text-white rounded-tr-xs'
+                          : 'bg-slate-50 border border-slate-200 text-slate-800 rounded-tl-xs'
                       }`}
                     >
-                      <span>{msg.timestamp}</span>
-                      {msg.role === 'assistant' && (
-                        <button
-                          type="button"
-                          onClick={() => handleCopyText(msg.id, msg.content)}
-                          className="flex items-center gap-1 hover:text-slate-700 transition"
-                        >
-                          {copiedId === msg.id ? (
-                            <>
-                              <Check className="w-3 h-3 text-emerald-600" />
-                              <span className="text-emerald-600">복사됨</span>
-                            </>
-                          ) : (
-                            <>
-                              <Copy className="w-3 h-3" />
-                              <span>복사</span>
-                            </>
-                          )}
-                        </button>
-                      )}
-                    </div>
-                  </div>
+                      <div className="whitespace-pre-wrap leading-relaxed font-sans overflow-x-auto">
+                        {msg.content}
+                      </div>
 
-                  {msg.role === 'user' && (
-                    <div className="w-7 h-7 rounded-lg bg-slate-200 text-slate-600 flex items-center justify-center shrink-0 mt-0.5">
-                      <User className="w-4 h-4" />
+                      {/* 🌟 마크다운 표가 있을 때: [📥 새 시트로 추가] 버튼 */}
+                      {hasTable && onAddNewSheetFromAi && (
+                        <div className="mt-3 pt-2.5 border-t border-slate-200/80 flex items-center justify-between">
+                          <button
+                            type="button"
+                            onClick={() => handleAddTableToSheet(msg.id, msg.content)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-[11px] rounded-lg shadow-xs transition active:scale-95"
+                            title="이 표 분석 결과를 프로젝트의 새로운 시트 탭으로 추가합니다"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>
+                              {createdSheetMsgId === msg.id ? '✓ 시트 추가 완료!' : '📥 이 표를 새 시트로 추가'}
+                            </span>
+                          </button>
+                          <span className="text-[10px] text-slate-400">표 데이터 자동 파싱</span>
+                        </div>
+                      )}
+
+                      <div
+                        className={`flex items-center justify-between mt-2 pt-1 border-t text-[10px] ${
+                          msg.role === 'user'
+                            ? 'border-blue-500/60 text-blue-200'
+                            : 'border-slate-200 text-slate-400'
+                        }`}
+                      >
+                        <span>{msg.timestamp}</span>
+                        {msg.role === 'assistant' && (
+                          <button
+                            type="button"
+                            onClick={() => handleCopyText(msg.id, msg.content)}
+                            className="flex items-center gap-1 hover:text-slate-700 transition"
+                          >
+                            {copiedId === msg.id ? (
+                              <>
+                                <Check className="w-3 h-3 text-emerald-600" />
+                                <span className="text-emerald-600">복사됨</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="w-3 h-3" />
+                                <span>복사</span>
+                              </>
+                            )}
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  )}
-                </div>
-              ))}
+
+                    {msg.role === 'user' && (
+                      <div className="w-7 h-7 rounded-lg bg-slate-200 text-slate-600 flex items-center justify-center shrink-0 mt-0.5">
+                        <User className="w-4 h-4" />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
 
               {loading && (
                 <div className="flex gap-2.5 justify-start">
@@ -368,7 +549,7 @@ export function AiChatDrawer({
           )}
         </div>
 
-        {/* 입력창 영역 */}
+        {/* 입력창 영역 (자동 높이 조절) */}
         <div className="p-3 bg-white border-t border-slate-200">
           <form
             onSubmit={(e) => {
@@ -379,9 +560,9 @@ export function AiChatDrawer({
           >
             <textarea
               ref={textareaRef}
-              rows={2}
+              rows={1}
               value={inputMessage}
-              onChange={(e) => setInputMessage(e.target.value)}
+              onChange={handleInputChange}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
@@ -389,7 +570,7 @@ export function AiChatDrawer({
                 }
               }}
               placeholder="예: '10월 법인카드 총 지출액 얼마야?', '거래처별 건수 보여줘'..."
-              className="flex-1 bg-transparent border-0 focus:outline-none text-xs text-slate-800 resize-none p-1 placeholder:text-slate-400"
+              className="flex-1 bg-transparent border-0 focus:outline-none text-xs text-slate-800 resize-none p-1 placeholder:text-slate-400 max-h-44 leading-relaxed"
             />
             <button
               type="submit"
@@ -400,8 +581,9 @@ export function AiChatDrawer({
               <Send className="w-4 h-4" />
             </button>
           </form>
-          <div className="text-[10px] text-slate-400 mt-1.5 text-center">
-            Enter 키를 눌러 전송 (Shift+Enter로 줄바꿈)
+          <div className="text-[10px] text-slate-400 mt-1.5 flex items-center justify-between px-1">
+            <span>Enter 전송 / Shift+Enter 줄바꿈</span>
+            <span>좌측 경계선을 당겨 폭 조절 가능</span>
           </div>
         </div>
       </div>

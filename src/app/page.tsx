@@ -249,6 +249,27 @@ export default function FileToSheetApp() {
     }
   };
 
+  // AI 답변 표를 새 시트로 추가하는 핸들러
+  const handleAddNewSheetFromAi = (newSheet: { name: string; headers: string[]; rows: Record<string, any>[] }) => {
+    if (!currentProject) return;
+    ws.setProjects((prev) => {
+      const next = [...prev];
+      if (!next[ws.activeProjectIndex]) return prev;
+      const proj = { ...next[ws.activeProjectIndex] };
+      proj.sheets = [
+        ...proj.sheets,
+        {
+          name: newSheet.name,
+          headers: newSheet.headers,
+          rows: newSheet.rows,
+        },
+      ];
+      proj.activeSheetIndex = proj.sheets.length - 1;
+      next[ws.activeProjectIndex] = proj;
+      return next;
+    });
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-slate-50 text-slate-800 font-sans selection:bg-blue-100 selection:text-blue-900">
       <Header
@@ -572,6 +593,7 @@ export default function FileToSheetApp() {
         onClose={() => setShowAiChatDrawer(false)}
         projects={ws.projects}
         activeProjectIndex={ws.activeProjectIndex}
+        onAddNewSheetFromAi={handleAddNewSheetFromAi}
       />
     </div>
   );
