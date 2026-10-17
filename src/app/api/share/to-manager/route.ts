@@ -33,14 +33,14 @@ export async function POST(request: NextRequest) {
 
     if (cleanReceiverPhone.length < 10 || !cleanReceiverPhone.startsWith('010')) {
       return NextResponse.json(
-        { success: false, error: '올바른 010 총괄 담당자 휴대폰 번호를 입력해 주세요.' },
+        { success: false, error: '올바른 010 받는 분 휴대폰 번호를 입력해 주세요.' },
         { status: 400 }
       );
     }
 
     if (cleanSenderPhone && cleanSenderPhone === cleanReceiverPhone) {
       return NextResponse.json(
-        { success: false, error: '본인 번호로는 공유할 수 없습니다. 총괄 담당자의 번호를 입력해 주세요.' },
+        { success: false, error: '본인 번호로는 전송할 수 없습니다. 받는 분의 휴대폰 번호를 입력해 주세요.' },
         { status: 400 }
       );
     }
@@ -73,11 +73,11 @@ export async function POST(request: NextRequest) {
       },
     ]);
 
-    console.log(`[Branch Share] ${branchName}(${cleanSenderPhone}) -> 총괄(${cleanReceiverPhone}) : 시트 [${sheetName}] (${rows.length}행) 공유 완료`);
+    console.log(`[Sheet Send] ${branchName}(${cleanSenderPhone}) -> 수신(${cleanReceiverPhone}) : 시트 [${sheetName}] (${rows.length}행) 전송 완료`);
 
     return NextResponse.json({
       success: true,
-      message: `'${branchName}'의 '${sheetName}' 시트가 총괄 담당자(${cleanReceiverPhone.replace(/(\d{3})(\d{4})(\d{4})/, '$1-****-$3')})에게 성공적으로 공유되었습니다.`,
+      message: `'${branchName}'의 '${sheetName}' 시트가 받는 분(${cleanReceiverPhone.replace(/(\d{3})(\d{4})(\d{4})/, '$1-****-$3')})에게 성공적으로 전송되었습니다.`,
     });
   } catch (error: any) {
     console.error('총괄 공유 등록 오류:', error);

@@ -87,11 +87,11 @@ export function ShareToManagerModal({
         <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-blue-50/70 to-indigo-50/70">
           <div className="flex items-center gap-2.5">
             <div className="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-500/20">
-              <Building2 className="w-5 h-5" />
+              <Send className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-extrabold text-base text-slate-900">본사 총괄 담당자에게 공유</h3>
-              <p className="text-xs text-slate-500 font-medium">사업소별 시트 데이터를 본사 총괄 계정으로 전송</p>
+              <h3 className="font-extrabold text-base text-slate-900">시트 보내기</h3>
+              <p className="text-xs text-slate-500 font-medium">작성한 시트 데이터를 상대방 휴대폰 계정으로 직접 전송</p>
             </div>
           </div>
           <button
@@ -109,20 +109,20 @@ export function ShareToManagerModal({
               <div className="w-14 h-14 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shadow-inner">
                 <CheckCircle className="w-8 h-8" />
               </div>
-              <h4 className="font-extrabold text-base text-slate-900">공유 전송 완료!</h4>
+              <h4 className="font-extrabold text-base text-slate-900">시트 전송 완료!</h4>
               <p className="text-xs text-slate-600 max-w-xs leading-relaxed">{successMessage}</p>
             </div>
           ) : (
             <form onSubmit={handleShareSubmit} className="space-y-4">
-              {/* 사업소 / 지점명 입력 */}
+              {/* 발신처 (부서/지점/회사명/이름) */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1">
                   <Building2 className="w-3.5 h-3.5 text-blue-600" />
-                  소속 사업소 / 지점명
+                  보내는 곳 (부서 / 지점 / 회사명 / 이름)
                 </label>
                 <input
                   type="text"
-                  placeholder="예: 강남사업소, 부산공장, 광주지사"
+                  placeholder="예: 영업1팀, 강남지점, 홍길동, (주)파트너스"
                   value={branchName}
                   onChange={(e) => setBranchName(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-hidden focus:border-blue-500 text-sm font-semibold text-slate-800"
@@ -134,7 +134,7 @@ export function ShareToManagerModal({
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1">
                   <Layers className="w-3.5 h-3.5 text-indigo-600" />
-                  전송할 시트 선택 ({currentProject.sheets.length}개 중)
+                  보낼 시트 선택 ({currentProject.sheets.length}개 중)
                 </label>
                 <select
                   value={selectedSheetIndex}
@@ -149,11 +149,11 @@ export function ShareToManagerModal({
                 </select>
               </div>
 
-              {/* 총괄 담당자 휴대폰 번호 입력 */}
+              {/* 받는 분 휴대폰 번호 입력 */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1">
                   <Smartphone className="w-3.5 h-3.5 text-blue-600" />
-                  수신 총괄 담당자 휴대폰 번호
+                  받는 분 휴대폰 번호
                 </label>
                 <input
                   type="tel"
@@ -164,7 +164,7 @@ export function ShareToManagerModal({
                   required
                 />
                 <p className="text-[11px] text-slate-400 mt-1">
-                  총괄 담당자가 본인 휴대폰으로 로그인 시 &apos;공유받은 시트&apos; 함에서 확인합니다.
+                  상대방이 로그인 시 &apos;받은 시트함&apos;에서 확인하고 여러 시트를 모아서 통합 분석할 수 있습니다.
                 </p>
               </div>
 
@@ -181,7 +181,7 @@ export function ShareToManagerModal({
                 className="w-full py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white font-bold text-sm shadow-md transition flex items-center justify-center gap-2 active:scale-98"
               >
                 <Send className="w-4 h-4" />
-                <span>{isSubmitting ? '시트 데이터 전송 중...' : '총괄 담당자에게 시트 공유하기'}</span>
+                <span>{isSubmitting ? '시트 전송 중...' : '시트 전송하기'}</span>
               </button>
             </form>
           )}

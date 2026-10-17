@@ -4,6 +4,7 @@ import React, { useState, useRef } from 'react';
 import {
   FileSpreadsheet, Download, Share2, RefreshCw, Smartphone, LogOut,
   User, Database, Crown, UploadCloud, Zap, ChevronDown, Building2, BarChart3,
+  Send, Inbox,
 } from 'lucide-react';
 import { UserSession, ProjectWorkspace } from '@/types/workspace';
 import { UserUsagePopover } from './UserUsagePopover';
@@ -191,10 +192,10 @@ export function Header({
             onClick={onOpenShareToManagerModal}
             disabled={!hasSheetData}
             className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-100 disabled:opacity-40 disabled:hover:bg-blue-50 shadow-2xs transition active:scale-98"
-            title="소속 사업소의 시트 데이터를 본사 총괄 담당자에게 전송"
+            title="현재 시트 데이터를 다른 담당자/본사의 휴대폰 번호로 직접 전송"
           >
-            <Building2 className="w-3.5 h-3.5 text-blue-600" />
-            <span>본사에 공유</span>
+            <Send className="w-3.5 h-3.5 text-blue-600" />
+            <span>시트 보내기</span>
           </button>
         )}
 
@@ -202,10 +203,10 @@ export function Header({
           <button
             onClick={onOpenConsolidatedModal}
             className="flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-xl bg-indigo-50 border border-indigo-300 text-indigo-700 hover:bg-indigo-100 shadow-2xs transition active:scale-98"
-            title="각 사업소에서 공유받은 시트들을 모아서 통계 분석 및 통합 엑셀 다운로드"
+            title="다른 담당자/지점에서 공유받은 시트들을 모아서 통계 분석 및 통합 엑셀 다운로드"
           >
-            <BarChart3 className="w-3.5 h-3.5 text-indigo-600" />
-            <span>사업소 취합함</span>
+            <Inbox className="w-3.5 h-3.5 text-indigo-600" />
+            <span>받은 시트함</span>
           </button>
         )}
 

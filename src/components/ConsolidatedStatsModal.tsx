@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  Building2, X, Download, BarChart3, CheckSquare, Square,
-  Layers, RefreshCw, Trash2, ArrowUpRight, Check
+  Inbox, X, Download, BarChart3, CheckSquare, Square,
+  Layers, RefreshCw, Trash2, ArrowUpRight, Check, Building2
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { UserSession } from '@/types/workspace';
@@ -96,7 +96,7 @@ export function ConsolidatedStatsModal({
     let totalRows = 0;
     const branchStats: Record<string, { branch: string; rowCount: number; amount: number }> = {};
     const consolidatedRows: Record<string, any>[] = [];
-    const allHeadersSet = new Set<string>(['소속사업소', '프로젝트', '시트명']);
+    const allHeadersSet = new Set<string>(['출처_소속', '프로젝트', '시트명']);
 
     selectedItems.forEach((item) => {
       totalRows += item.rows.length;
@@ -119,7 +119,7 @@ export function ConsolidatedStatsModal({
         branchStats[item.senderBranch].amount += rowAmount;
 
         consolidatedRows.push({
-          소속사업소: item.senderBranch,
+          출처_소속: item.senderBranch,
           프로젝트: item.projectName,
           시트명: item.sheetName,
           ...row,
@@ -151,9 +151,9 @@ export function ConsolidatedStatsModal({
 
     const ws = XLSX.utils.json_to_sheet(consolidated.consolidatedRows);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, '전사_사업소_통합데이터');
+    XLSX.utils.book_append_sheet(wb, ws, '통합_시트_데이터');
     const today = new Date().toISOString().slice(0, 10);
-    XLSX.writeFile(wb, `FileToSheet_전사통합집계_${today}.xlsx`);
+    XLSX.writeFile(wb, `FileToSheet_통합집계_${today}.xlsx`);
   };
 
   if (!isOpen) return null;
@@ -165,17 +165,17 @@ export function ConsolidatedStatsModal({
         <div className="p-5 border-b border-slate-200 flex items-center justify-between bg-gradient-to-r from-indigo-50/80 to-blue-50/80">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-md shadow-indigo-500/20">
-              <Building2 className="w-5 h-5" />
+              <Inbox className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-extrabold text-base text-slate-900">전사 사업소 공유 수신함 & 롤업 통계</h3>
+                <h3 className="font-extrabold text-base text-slate-900">받은 시트함 & 통합 통계</h3>
                 <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-bold">
                   총 {items.length}개 시트
                 </span>
               </div>
               <p className="text-xs text-slate-500 font-medium">
-                각 사업소 담당자가 공유한 시트를 모아서 통계를 분석하고 통합 엑셀을 내려받습니다.
+                공유받은 시트들을 모아서 통계를 분석하고 통합 엑셀을 내려받습니다.
               </p>
             </div>
           </div>
@@ -218,9 +218,9 @@ export function ConsolidatedStatsModal({
             {items.length === 0 ? (
               <div className="p-8 border-2 border-dashed border-slate-200 rounded-2xl text-center">
                 <Layers className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                <p className="text-sm font-bold text-slate-600">공유받은 사업소 시트가 없습니다.</p>
+                <p className="text-sm font-bold text-slate-600">공유받은 시트가 없습니다.</p>
                 <p className="text-xs text-slate-400 mt-1">
-                  사업소 담당자가 시트 상단의 [총괄 담당자에게 공유]를 통해 회원님의 휴대폰 번호로 시트를 보내면 여기에 표시됩니다.
+                  상대방이 시트 상단의 [시트 보내기]를 통해 회원님의 휴대폰 번호로 시트를 보내면 여기에 표시됩니다.
                 </p>
               </div>
             ) : (
@@ -271,13 +271,13 @@ export function ConsolidatedStatsModal({
               {/* 핵심 지표 3종 배너 */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
-                  <span className="text-xs text-slate-500 font-medium">선택된 사업소</span>
+                  <span className="text-xs text-slate-500 font-medium">선택된 출처 (시트)</span>
                   <div className="text-2xl font-extrabold text-slate-900 mt-1">
-                    {consolidated.branchList.length} <span className="text-sm font-normal text-slate-500">개소</span>
+                    {consolidated.branchList.length} <span className="text-sm font-normal text-slate-500">곳</span>
                   </div>
                 </div>
                 <div className="p-4 rounded-2xl bg-indigo-50/80 border border-indigo-200">
-                  <span className="text-xs text-indigo-700 font-medium">전사 통합 데이터 행 수</span>
+                  <span className="text-xs text-indigo-700 font-medium">통합 데이터 행 수</span>
                   <div className="text-2xl font-extrabold text-indigo-600 mt-1 font-mono">
                     {consolidated.totalRows.toLocaleString()} <span className="text-sm font-normal text-indigo-500">행</span>
                   </div>
@@ -304,7 +304,7 @@ export function ConsolidatedStatsModal({
                     }`}
                   >
                     <BarChart3 className="w-3.5 h-3.5" />
-                    <span>사업소별 비교 차트</span>
+                    <span>출처별 비교 차트</span>
                   </button>
                   <button
                     onClick={() => setActiveTab('preview')}
@@ -325,14 +325,14 @@ export function ConsolidatedStatsModal({
                   className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white font-bold text-xs shadow-xs transition flex items-center gap-1.5 active:scale-98 cursor-pointer"
                 >
                   <Download className="w-3.5 h-3.5" />
-                  <span>전사 통합 엑셀 다운로드</span>
+                  <span>통합 엑셀 다운로드</span>
                 </button>
               </div>
 
-              {/* 탭 1: 사업소별 비교 차트 */}
+              {/* 탭 1: 출처별 비교 차트 */}
               {activeTab === 'stats' && (
                 <div className="bg-slate-50/80 rounded-2xl p-4 border border-slate-200 space-y-3">
-                  <h4 className="text-xs font-bold text-slate-700">사업소별 데이터 건수 및 금액 비교</h4>
+                  <h4 className="text-xs font-bold text-slate-700">출처(발신처)별 데이터 건수 및 금액 비교</h4>
                   <div className="space-y-2.5">
                     {consolidated.branchList.map((branch, idx) => {
                       const percent = Math.round((branch.rowCount / consolidated.maxBranchRows) * 100);
