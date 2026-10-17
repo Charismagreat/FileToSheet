@@ -1,15 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { ProjectWorkspace, OriginalDocFile } from '@/types/workspace';
 import { parseFileOnClient } from '@/lib/file-parser-client';
 import {
-  createUploadedFileRecord,
-  uploadToEgdeskStorage,
-  updateFileParseResult,
-  saveParsedSheetRows,
+  createUploadedFileRecord, uploadToEgdeskStorage,
+  updateFileParseResult, saveParsedSheetRows,
 } from '@/lib/egdesk-db';
-import { getPlanLimits, checkSheetLimit, truncateRowsToLimit } from '@/lib/plan-limits';
+import { getPlanLimits, checkSheetLimit, truncateRowsToLimit, validateUploadFile } from '@/lib/plan-limits';
 
 interface UseFileUploadOptions {
   projects: ProjectWorkspace[];
@@ -21,39 +19,47 @@ interface UseFileUploadOptions {
 }
 
 export function useFileUpload({
-  projects,
-  setProjects,
-  activeProjectIndex,
-  setActiveProjectIndex,
-  plan,
-  onPlanLimit,
+  projects, setProjects, activeProjectIndex, setActiveProjectIndex, plan, onPlanLimit,
 }: UseFileUploadOptions) {
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [processStatus, setProcessStatus] = useState<string>('');
   const [storageProgress, setStorageProgress] = useState<number>(0);
   const [pendingUploadFile, setPendingUploadFile] = useState<File | null>(null);
   const [initialPrompt, setInitialPrompt] = useState<string>('');
+  const uploadTimestampsRef = useRef<number[]>([]);
+  const todayUploadsRef = useRef<{ date: string; count: number }>({ date: '', count: 0 });
 
   const currentProject = projects[activeProjectIndex] || null;
   const currentSheet = currentProject ? currentProject.sheets[currentProject.activeSheetIndex] : null;
 
+  const checkSafety = (file: File): boolean => {
+    const now = Date.now();
+    const today = new Date().toISOString().slice(0, 10);
+    if (todayUploadsRef.current.date !== today) todayUploadsRef.current = { date: today, count: 0 };
+    uploadTimestampsRef.current = uploadTimestampsRef.current.filter((t) => now - t < 60000);
+    const val = validateUploadFile(plan, file, uploadTimestampsRef.current.length, todayUploadsRef.current.count);
+    if (!val.allowed) {
+      if (onPlanLimit) onPlanLimit(val.reason === 'file_size' ? '파일 용량 제한' : '업로드 제한', val.message || '');
+      else alert(val.message);
+      return false;
+    }
+    return true;
+  };
+
   const handleFileDropOrSelect = (file: File, prompt?: string) => {
-    if (!file) return;
+    if (!file || !checkSafety(file)) return;
     if (prompt !== undefined) setInitialPrompt(prompt);
     setPendingUploadFile(file);
   };
 
   const handleDropDirectlyToTable = (file: File) => {
-    if (!file) return;
+    if (!file || !checkSafety(file)) return;
     processFile(file, 'append_rows');
   };
 
 
-  const processFile = async (
-    file: File,
-    mode: 'new_document' | 'new_sheet' | 'append_rows',
-    customPrompt?: string
-  ) => {
+
+  const processFile = async (file: File, mode: 'new_document' | 'new_sheet' | 'append_rows', customPrompt?: string) => {
     setPendingUploadFile(null);
     setIsProcessing(true);
     setStorageProgress(0);
@@ -62,6 +68,7 @@ export function useFileUpload({
 
     try {
       const targetHeaders = mode === 'append_rows' && currentSheet?.headers?.length ? currentSheet.headers : undefined;
+
       const { sheets: parsedSheets, category } = await parseFileOnClient(file, setProcessStatus, customPrompt, targetHeaders);
       setProcessStatus('이지데스크 My DB에 레코드 생성 중...');
       const fileId = await createUploadedFileRecord(file, category);

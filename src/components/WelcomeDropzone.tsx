@@ -107,11 +107,13 @@ export function WelcomeDropzone({
           </div>
         </div>
 
-        <div className="mt-6">
+        <div className="mt-6 flex flex-col items-center">
           <span className="px-6 py-3 rounded-xl bg-blue-600 group-hover:bg-blue-700 text-white font-bold text-xs shadow-md transition active:scale-98">
             내 컴퓨터에서 파일 선택하기
           </span>
+          <p className="text-[11px] text-slate-400 mt-2">단일 파일 최대 10MB (PRO 플랜은 최대 50MB) 지원</p>
         </div>
+
 
         {isProcessing && (
           <div className="mt-6 w-full max-w-md bg-white border border-blue-200 rounded-2xl p-4 shadow-lg text-left" onClick={(e) => e.stopPropagation()}>
