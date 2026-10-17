@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Header } from '@/components/Header';
 import { WelcomeDropzone } from '@/components/WelcomeDropzone';
 import { ProjectBar } from '@/components/ProjectBar';
@@ -19,7 +19,7 @@ import { UploadUndoToast } from '@/components/UploadUndoToast';
 import { AiChatDrawer, ChatScope } from '@/components/AiChatDrawer';
 import { BillingHistoryModal } from '@/components/BillingHistoryModal';
 import { RemoteDbModal } from '@/components/RemoteDbModal';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, Upload } from 'lucide-react';
 import { ExportTargetType } from '@/components/ExportScopeModal';
 import { FilterState } from '@/components/DataFilterPopover';
 import { useAuth } from '@/hooks/useAuth';
@@ -43,6 +43,7 @@ export default function FileToSheetApp() {
   const [showShareManagementModal, setShowShareManagementModal] = useState<boolean>(false);
   const [showAiChatDrawer, setShowAiChatDrawer] = useState<boolean>(false);
   const [aiChatInitialScope, setAiChatInitialScope] = useState<ChatScope>('current_sheet');
+  const fabFileInputRef = useRef<HTMLInputElement>(null);
   const handlePlanLimit = (title: string, reason: string) => setLimitNotice({ title, reason });
 
   const ws = useWorkspace({
@@ -642,12 +643,41 @@ export default function FileToSheetApp() {
         onDismiss={upload.dismissUndoToast}
       />
 
-      {/* 18. 우측 하단 플로팅 AI 데이터 비서 퀵 버튼 */}
+      {/* 18-A. 하단 중앙 플로팅 파일 업로드 FAB 버튼 (확장형) */}
+      {ws.projects.length > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 animate-in fade-in slide-in-from-bottom-2 duration-200">
+          <input
+            type="file"
+            ref={fabFileInputRef}
+            onChange={(e) => {
+              if (e.target.files && e.target.files[0]) {
+                upload.handleFileDropOrSelect(e.target.files[0]);
+                e.target.value = '';
+              }
+            }}
+            accept=".xlsx,.xls,.csv,.pdf,image/*"
+            className="hidden"
+          />
+          <button
+            type="button"
+            onClick={() => fabFileInputRef.current?.click()}
+            className="flex items-center gap-2 pl-3 pr-4 py-2.5 rounded-full bg-white hover:bg-blue-50 text-slate-800 hover:text-blue-700 font-extrabold text-xs shadow-xl shadow-slate-900/15 border border-slate-200 transition transform hover:scale-105 active:scale-95 group cursor-pointer"
+            title="새 파일 업로드 (엑셀, PDF, 영수증 이미지, CSV 등)"
+          >
+            <div className="w-6 h-6 rounded-full bg-blue-600 group-hover:bg-blue-700 text-white flex items-center justify-center shadow-xs transition">
+              <Upload className="w-3.5 h-3.5" />
+            </div>
+            <span>파일 업로드</span>
+          </button>
+        </div>
+      )}
+
+      {/* 18-B. 우측 하단 플로팅 AI 데이터 비서 퀵 버튼 */}
       <div className="fixed bottom-6 right-6 z-40">
         <button
           type="button"
           onClick={() => setShowAiChatDrawer(true)}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-extrabold text-xs shadow-xl shadow-indigo-500/25 border border-white/20 transition transform hover:scale-105 active:scale-95"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-extrabold text-xs shadow-xl shadow-indigo-500/25 border border-white/20 transition transform hover:scale-105 active:scale-95 cursor-pointer"
           title="자연어로 모든 시트와 프로젝트에 대해 질문하고 답변 받기"
         >
           <Sparkles className="w-4 h-4 text-amber-300 animate-spin" style={{ animationDuration: '6s' }} />

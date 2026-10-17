@@ -58,7 +58,6 @@ export function Header({
   hasSheetData,
   exportLoading,
 }: HeaderProps) {
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUsageOpen, setIsUsageOpen] = useState<boolean>(false);
   const [isExportOpen, setIsExportOpen] = useState<boolean>(false);
   const [isShareOpen, setIsShareOpen] = useState<boolean>(false);
@@ -107,34 +106,9 @@ export function Header({
         </div>
       </div>
 
-      {/* 2. 숨겨진 파일 업로드 인풋 */}
-      <input
-        type="file"
-        ref={fileInputRef}
-        onChange={(e) => {
-          if (e.target.files && e.target.files[0] && onUploadFile) {
-            onUploadFile(e.target.files[0]);
-            e.target.value = '';
-          }
-        }}
-        accept=".xlsx,.xls,.csv,.pdf,image/*"
-        className="hidden"
-      />
-
-      {/* 3. 우측 정돈된 액션 바 (그룹화) */}
+      {/* 2. 우측 정돈된 액션 바 (그룹화) */}
       <div className="flex items-center gap-2">
-        {/* 🌟 그룹 A: 핵심 작업 (파일 추가 / 원격 My DB) */}
-        {onUploadFile && (
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200/80 transition active:scale-95"
-            title="새 파일 업로드 및 AI 엑셀 표 변환"
-          >
-            <UploadCloud className="w-3.5 h-3.5 text-blue-600" />
-            <span className="hidden sm:inline">파일 추가</span>
-          </button>
-        )}
-
+        {/* 🌟 그룹 A: 원격 My DB 연동 */}
         {onOpenRemoteDbModal && (
           <button
             onClick={onOpenRemoteDbModal}
