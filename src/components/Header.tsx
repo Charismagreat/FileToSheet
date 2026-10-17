@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import Link from 'next/link';
 import {
   FileSpreadsheet, Download, Share2, RefreshCw, Smartphone, LogOut,
   User, Database, Crown, UploadCloud, Zap, ChevronDown, Building2, BarChart3,
-  Send, Inbox, Globe, Sparkles, Link as LinkIcon, ShieldCheck
+  Send, Inbox, Globe, Sparkles, Link as LinkIcon, ShieldCheck, Lightbulb
 } from 'lucide-react';
 import { UserSession, ProjectWorkspace } from '@/types/workspace';
 import { UserUsagePopover } from './UserUsagePopover';
@@ -95,15 +96,32 @@ export function Header({
 
   return (
     <header className="border-b border-slate-200/80 bg-white/95 backdrop-blur sticky top-0 z-30 px-4 sm:px-6 lg:px-8 py-2.5 flex items-center justify-between gap-4 shadow-2xs">
-      {/* 1. 좌측 로고 & 타이틀 영역 */}
-      <div className="flex items-center gap-3 shrink-0">
-        <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center shadow-md shadow-blue-500/15">
-          <FileSpreadsheet className="w-5 h-5 text-white" />
+      {/* 1. 좌측 로고 & 타이틀 & 활용사례 메뉴 영역 */}
+      <div className="flex items-center gap-3 sm:gap-4 shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center shadow-md shadow-blue-500/15">
+            <FileSpreadsheet className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <span className="font-extrabold text-lg tracking-tight text-slate-900 leading-tight block">FileToSheet</span>
+            <p className="text-[11px] text-slate-400 font-normal leading-tight hidden sm:block">어떤 파일이든 드롭 즉시 엑셀 표로, FileToSheet</p>
+          </div>
         </div>
-        <div>
-          <span className="font-extrabold text-lg tracking-tight text-slate-900 leading-tight block">FileToSheet</span>
-          <p className="text-[11px] text-slate-400 font-normal leading-tight hidden sm:block">어떤 파일이든 드롭 즉시 엑셀 표로, FileToSheet</p>
-        </div>
+
+        {/* 💡 활용사례 바로가기 메뉴 (현재 작업물 유지를 위해 새 탭으로 오픈) */}
+        <Link
+          href="/use-cases"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1.5 text-xs font-extrabold px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 hover:from-amber-100 hover:to-orange-100 text-amber-950 border border-amber-200/90 transition transform hover:scale-105 active:scale-95 shadow-2xs group cursor-pointer"
+          title="파일투시트의 가치와 직무별/업종별 6대 핵심 활용사례 보기 (새 창)"
+        >
+          <Lightbulb className="w-3.5 h-3.5 text-amber-600 group-hover:rotate-12 transition" />
+          <span>활용사례</span>
+          <span className="text-[9px] font-black bg-amber-500 text-white px-1.5 py-0.2 rounded-full leading-none hidden sm:inline-block">
+            HOT
+          </span>
+        </Link>
       </div>
 
       {/* 2. 우측 정돈된 액션 바 (그룹화) */}
