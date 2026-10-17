@@ -169,30 +169,105 @@ export default function FileToSheetApp() {
         )}
       </main>
 
+      {/* 1. 휴대폰 간편 인증 모달 */}
       <PhoneAuthModal
-        show={auth.showPhoneAuthModal} onClose={() => auth.setShowPhoneAuthModal(false)}
-        authStep={auth.authStep} setAuthStep={auth.setAuthStep}
-        authPhoneNumber={auth.authPhoneNumber} setAuthPhoneNumber={auth.setAuthPhoneNumber}
-        authCode={auth.authCode} setAuthCode={auth.setAuthCode}
-        authLoading={auth.authLoading} authError={auth.authError} setAuthError={auth.setAuthError}
-        timerSeconds={auth.timerSeconds} testCodeHint={auth.testCodeHint}
-        onSendCode={auth.handleSendAuthCode} onVerifyCode={auth.handleVerifyAuthCode}
+        show={auth.showPhoneAuthModal}
+        onClose={() => auth.setShowPhoneAuthModal(false)}
+        authStep={auth.authStep}
+        setAuthStep={auth.setAuthStep}
+        authPhoneNumber={auth.authPhoneNumber}
+        setAuthPhoneNumber={auth.setAuthPhoneNumber}
+        authCode={auth.authCode}
+        setAuthCode={auth.setAuthCode}
+        authLoading={auth.authLoading}
+        authError={auth.authError}
+        setAuthError={auth.setAuthError}
+        timerSeconds={auth.timerSeconds}
+        testCodeHint={auth.testCodeHint}
+        onSendCode={auth.handleSendAuthCode}
+        onVerifyCode={auth.handleVerifyAuthCode}
       />
 
+      {/* 2. 파일 업로드 옵션 선택 모달 (새 문서 / 새 시트 / 행 추가) */}
       <UploadOptionModal
-        pendingFile={upload.pendingUploadFile} onClose={() => upload.setPendingUploadFile(null)}
-        onSelectOption={upload.processFile} hasExistingProject={ws.projects.length > 0}
+        pendingFile={upload.pendingUploadFile}
+        onClose={() => upload.setPendingUploadFile(null)}
+        onSelectOption={upload.processFile}
+        hasExistingProject={ws.projects.length > 0}
         initialPrompt={upload.initialPrompt}
       />
 
-      <OriginalFileModal show={showOriginalModal} onClose={() => setShowOriginalModal(false)} project={currentProject} />
-      <AddColumnModal show={ws.isAddingColumn} onClose={() => ws.setIsAddingColumn(false)} newColumnName={ws.newColumnName} setNewColumnName={ws.setNewColumnName} onAddColumn={ws.handleAddColumn} />
-      <ExportOptionModal isOpen={fileExport.isExportOptionModalOpen} onClose={() => fileExport.setIsExportOptionModalOpen(false)} onSelectOption={(mode) => fileExport.executeExportGoogleSheets(mode)} spreadsheetUrl={currentProject?.googleSpreadsheetUrl} loading={fileExport.exportLoading} />
-      <ShareModal isOpen={showShareModal} onClose={() => setShowShareModal(false)} projects={ws.projects} initialProjectIndex={ws.activeProjectIndex} />
-      <PlanLimitModal isOpen={Boolean(limitNotice)} onClose={() => setLimitNotice(null)} title={limitNotice?.title} reason={limitNotice?.reason || ''} plan={auth.currentUser?.plan} />
-      <PricingModal isOpen={showPricingModal} onClose={() => setShowPricingModal(false)} currentUser={auth.currentUser} onUpgrade={() => { setShowPricingModal(false); setLimitNotice({ title: 'PRO 플랜 업그레이드', reason: '월 9,900원에 500장 AI 파싱과 무제한 데이터 행을 누려보세요.' }); }} onOpenEnterpriseInquiry={() => setShowEnterpriseModal(true)} />
-      <EnterpriseInquiryModal isOpen={showEnterpriseModal} onClose={() => setShowEnterpriseModal(false)} />
-      <DuplicateFileModal isOpen={Boolean(upload.duplicateWarning)} onClose={() => upload.setDuplicateWarning(null)} existingFile={upload.duplicateWarning?.existingFile || null} newFile={upload.duplicateWarning?.newFile || null} onProceed={upload.confirmProceedDuplicate} />
+      {/* 3. 원본 증빙 파일 미리보기 모달 */}
+      <OriginalFileModal
+        show={showOriginalModal}
+        onClose={() => setShowOriginalModal(false)}
+        project={currentProject}
+      />
+
+      {/* 4. 새 열(Header) 추가 모달 */}
+      <AddColumnModal
+        show={ws.isAddingColumn}
+        onClose={() => ws.setIsAddingColumn(false)}
+        newColumnName={ws.newColumnName}
+        setNewColumnName={ws.setNewColumnName}
+        onAddColumn={ws.handleAddColumn}
+      />
+
+      {/* 5. Google 시트 내보내기 옵션 모달 */}
+      <ExportOptionModal
+        isOpen={fileExport.isExportOptionModalOpen}
+        onClose={() => fileExport.setIsExportOptionModalOpen(false)}
+        onSelectOption={(mode) => fileExport.executeExportGoogleSheets(mode)}
+        spreadsheetUrl={currentProject?.googleSpreadsheetUrl}
+        loading={fileExport.exportLoading}
+      />
+
+      {/* 6. 선택적 시트/탭 읽기 전용 보안 공유 모달 */}
+      <ShareModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        projects={ws.projects}
+        initialProjectIndex={ws.activeProjectIndex}
+      />
+
+      {/* 7. 플랜 한도 초과 안내 및 PRO 유도 모달 */}
+      <PlanLimitModal
+        isOpen={Boolean(limitNotice)}
+        onClose={() => setLimitNotice(null)}
+        title={limitNotice?.title}
+        reason={limitNotice?.reason || ''}
+        plan={auth.currentUser?.plan}
+      />
+
+      {/* 8. 상시 요금제 및 기능 비교 모달 (Free vs PRO vs Enterprise) */}
+      <PricingModal
+        isOpen={showPricingModal}
+        onClose={() => setShowPricingModal(false)}
+        currentUser={auth.currentUser}
+        onUpgrade={() => {
+          setShowPricingModal(false);
+          setLimitNotice({
+            title: 'PRO 플랜 업그레이드',
+            reason: '월 9,900원에 500장 AI 파싱과 무제한 데이터 행을 누려보세요.',
+          });
+        }}
+        onOpenEnterpriseInquiry={() => setShowEnterpriseModal(true)}
+      />
+
+      {/* 9. B2B 사내 구축형(Enterprise On-Premise) 견적 및 도입 상담 모달 */}
+      <EnterpriseInquiryModal
+        isOpen={showEnterpriseModal}
+        onClose={() => setShowEnterpriseModal(false)}
+      />
+
+      {/* 10. 동일 내용 파일(SHA-256) 중복 업로드 방지 및 AI 크레딧 보호 모달 */}
+      <DuplicateFileModal
+        isOpen={Boolean(upload.duplicateWarning)}
+        onClose={() => upload.setDuplicateWarning(null)}
+        existingFile={upload.duplicateWarning?.existingFile || null}
+        newFile={upload.duplicateWarning?.newFile || null}
+        onProceed={upload.confirmProceedDuplicate}
+      />
     </div>
   );
 }

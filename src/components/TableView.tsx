@@ -110,17 +110,27 @@ export function TableView({
                   {sheet.headers.map((header, colIdx) => {
                     const isEditing = editingCell?.rowIdx === actualIdx && editingCell?.colKey === header;
                     const cellVal = row[header] ?? '';
+
                     return (
                       <td
                         key={colIdx}
-                        onDoubleClick={() => { setEditingCell({ rowIdx: actualIdx, colKey: header }); setEditValue(String(cellVal)); }}
+                        onDoubleClick={() => {
+                          setEditingCell({ rowIdx: actualIdx, colKey: header });
+                          setEditValue(String(cellVal));
+                        }}
                         className="px-3.5 py-2 border-r border-slate-200 text-slate-700 max-w-xs truncate cursor-cell relative"
                       >
                         {isEditing ? (
                           <input
-                            autoFocus type="text" value={editValue} onChange={(e) => setEditValue(e.target.value)}
+                            autoFocus
+                            type="text"
+                            value={editValue}
+                            onChange={(e) => setEditValue(e.target.value)}
                             onBlur={onSaveCellEdit}
-                            onKeyDown={(e) => { if (e.key === 'Enter') onSaveCellEdit(); if (e.key === 'Escape') setEditingCell(null); }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') onSaveCellEdit();
+                              if (e.key === 'Escape') setEditingCell(null);
+                            }}
                             className="w-full bg-white text-slate-900 px-2 py-0.5 rounded border-2 border-blue-500 shadow-xs focus:outline-none text-xs"
                           />
                         ) : (
@@ -130,7 +140,11 @@ export function TableView({
                     );
                   })}
                   <td className="px-2 py-2 text-center border-l border-slate-200">
-                    <button onClick={() => onDeleteRow(actualIdx)} className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500 transition" title="행 삭제">
+                    <button
+                      onClick={() => onDeleteRow(actualIdx)}
+                      className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500 transition"
+                      title="행 삭제"
+                    >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </td>
