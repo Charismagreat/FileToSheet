@@ -113,56 +113,58 @@ export default function UseCasesPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-sans selection:bg-blue-600 selection:text-white">
-      {/* 1. 상단 글로벌 내비게이션 바 (메인 헤더와 동일한 화이트/블러 테마) */}
-      <header className="border-b border-slate-200/80 bg-white/95 backdrop-blur sticky top-0 z-40 px-4 sm:px-8 py-3 flex items-center justify-between shadow-2xs">
-        <Link href="/" className="flex items-center gap-3 group">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center shadow-md shadow-blue-500/15 group-hover:scale-105 transition">
-            <FileSpreadsheet className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <span className="font-extrabold text-lg tracking-tight text-slate-900 leading-tight block">FileToSheet</span>
-            <p className="text-[11px] text-slate-400 font-normal leading-tight hidden sm:block">어떤 파일이든 드롭 즉시 엑셀 표로, FileToSheet</p>
-          </div>
-        </Link>
+      {/* 1. 상단 글로벌 내비게이션 바 (max-w-5xl 수직 정렬 일치) */}
+      <header className="border-b border-slate-200/80 bg-white/95 backdrop-blur sticky top-0 z-40 px-4 sm:px-6 lg:px-8 py-3 shadow-2xs">
+        <div className="max-w-5xl mx-auto w-full flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-3 group">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center shadow-md shadow-blue-500/15 group-hover:scale-105 transition">
+              <FileSpreadsheet className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <span className="font-extrabold text-lg tracking-tight text-slate-900 leading-tight block">FileToSheet</span>
+              <p className="text-[11px] text-slate-400 font-normal leading-tight hidden sm:block">어떤 파일이든 드롭 즉시 엑셀 표로, FileToSheet</p>
+            </div>
+          </Link>
 
-        <div className="flex items-center gap-2.5">
-          <Link
-            href="/"
-            className="text-xs font-bold px-3.5 py-1.5 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition active:scale-95"
-          >
-            시트 작업 화면으로
-          </Link>
-          <Link
-            href="/"
-            className="flex items-center gap-1.5 text-xs font-extrabold px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition transform hover:scale-105 active:scale-95 cursor-pointer"
-          >
-            <span>지금 무료로 변환하기</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
+          <div className="flex items-center gap-2.5">
+            <Link
+              href="/"
+              className="text-xs font-bold px-3.5 py-1.5 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition active:scale-95"
+            >
+              시트 작업 화면으로
+            </Link>
+            <Link
+              href="/"
+              className="flex items-center gap-1.5 text-xs font-extrabold px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition transform hover:scale-105 active:scale-95 cursor-pointer"
+            >
+              <span>지금 무료로 변환하기</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
         </div>
       </header>
 
-      {/* 2. Hero Section: 밝고 신뢰감 있는 라이트 블루 그라디언트 테마 */}
-      <section className="relative overflow-hidden pt-16 pb-16 px-4 sm:px-8 border-b border-slate-200 bg-gradient-to-b from-blue-50/70 via-indigo-50/30 to-white">
-        <div className="max-w-4xl mx-auto text-center relative z-10 flex flex-col items-center">
+      {/* 2. Hero Section: 밝고 신뢰감 있는 라이트 블루 그라디언트 테마 (max-w-5xl 일치) */}
+      <section className="relative overflow-hidden pt-16 pb-16 px-4 sm:px-6 lg:px-8 border-b border-slate-200 bg-gradient-to-b from-blue-50/70 via-indigo-50/30 to-white">
+        <div className="max-w-5xl mx-auto w-full text-center relative z-10 flex flex-col items-center">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-blue-200 text-blue-700 text-xs font-extrabold mb-6 shadow-xs animate-in fade-in slide-in-from-top-3">
             <Sparkles className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
             <span>수기 타이핑 3시간 ➔ AI 엑셀 자동화 10초</span>
           </div>
 
-          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight leading-[1.18] mb-6 break-keep">
+          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight leading-[1.18] mb-6 break-keep max-w-4xl mx-auto">
             어떤 파일이든 드롭 즉시, <br className="hidden sm:inline" />
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600">
               정밀한 엑셀 표로 재탄생합니다
             </span>
           </h1>
 
-          <p className="text-slate-600 text-base sm:text-lg max-w-2xl leading-relaxed mb-10 break-keep">
+          <p className="text-slate-600 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed mb-10 break-keep">
             영수증, 세금계산서, 계약서, 발주서, 통장내역... 세상에 존재하는 모든 비정형 문서를
             AI가 읽고, 구조를 분석하여, 엑셀 표·구글 시트·SQLite DB로 즉시 정규화합니다.
           </p>
 
-          <div className="flex flex-wrap items-center justify-center gap-3.5">
+          <div className="flex flex-wrap items-center justify-center gap-3.5 mb-14">
             <Link
               href="/"
               className="flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-sm shadow-lg shadow-blue-600/20 transition transform hover:scale-105 active:scale-95 cursor-pointer"
@@ -178,8 +180,8 @@ export default function UseCasesPage() {
             </a>
           </div>
 
-          {/* 4대 핵심 지표 카드 그리드 (완벽한 균형 배치) */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 w-full max-w-3xl mt-12 pt-8 border-t border-slate-200">
+          {/* 4대 핵심 지표 카드 그리드 (max-w-5xl 전체 폭 일치) */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 w-full pt-8 border-t border-slate-200">
             <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs text-center">
               <div className="text-2xl sm:text-3xl font-black text-blue-600 font-mono">99.8%</div>
               <div className="text-xs font-bold text-slate-600 mt-1">AI 표 변환 정확도</div>
@@ -201,7 +203,7 @@ export default function UseCasesPage() {
       </section>
 
       {/* 3. Before vs After 비교 섹션 (일정한 높이와 명확한 대비) */}
-      <section className="py-16 px-4 sm:px-8 max-w-5xl mx-auto w-full">
+      <section className="py-16 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto w-full">
         <div className="text-center mb-10">
           <h2 className="text-xs font-black text-blue-600 uppercase tracking-widest mb-1.5">BEFORE & AFTER</h2>
           <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-900 break-keep">
@@ -274,8 +276,8 @@ export default function UseCasesPage() {
       </section>
 
       {/* 4. 직무 및 업종별 6대 핵심 활용사례 인터랙티브 탐색기 */}
-      <section id="use-cases-list" className="py-16 px-4 sm:px-8 border-t border-slate-200 bg-white">
-        <div className="max-w-6xl mx-auto">
+      <section id="use-cases-list" className="py-16 px-4 sm:px-6 lg:px-8 border-t border-slate-200 bg-white">
+        <div className="max-w-5xl mx-auto w-full">
           <div className="text-center mb-10">
             <h2 className="text-xs font-black text-blue-600 uppercase tracking-widest mb-1.5">INDUSTRY SOLUTIONS</h2>
             <h3 className="text-2xl sm:text-4xl font-extrabold text-slate-900 break-keep">
@@ -405,7 +407,7 @@ export default function UseCasesPage() {
       </section>
 
       {/* 5. FileToSheet만의 4대 차별화 핵심 기술 (Why Us?) */}
-      <section className="py-16 px-4 sm:px-8 max-w-6xl mx-auto w-full">
+      <section className="py-16 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto w-full">
         <div className="text-center mb-10">
           <h2 className="text-xs font-black text-blue-600 uppercase tracking-widest mb-1.5">WHY FILETOSHEET</h2>
           <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-900 break-keep">
@@ -469,8 +471,8 @@ export default function UseCasesPage() {
       </section>
 
       {/* 6. 자주 묻는 질문 (FAQ) */}
-      <section className="py-16 px-4 sm:px-8 border-t border-slate-200 bg-slate-50/60">
-        <div className="max-w-4xl mx-auto">
+      <section className="py-16 px-4 sm:px-6 lg:px-8 border-t border-slate-200 bg-slate-50/60">
+        <div className="max-w-5xl mx-auto w-full">
           <div className="text-center mb-10">
             <h2 className="text-xs font-black text-blue-600 uppercase tracking-widest mb-1.5">FAQ</h2>
             <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-900">자주 묻는 질문</h3>
@@ -502,8 +504,8 @@ export default function UseCasesPage() {
       </section>
 
       {/* 7. 최종 하단 전환 CTA 배너 (세련된 블루-인디고 카드) */}
-      <section className="py-16 px-4 sm:px-8 border-t border-slate-200 text-center bg-white">
-        <div className="max-w-3xl mx-auto rounded-3xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 p-8 sm:p-12 text-white shadow-xl shadow-indigo-500/15 flex flex-col items-center">
+      <section className="py-16 px-4 sm:px-6 lg:px-8 border-t border-slate-200 text-center bg-white">
+        <div className="max-w-5xl mx-auto w-full rounded-3xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 p-8 sm:p-12 text-white shadow-xl shadow-indigo-500/15 flex flex-col items-center">
           <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center text-white mb-5 shadow-inner">
             <FileSpreadsheet className="w-6 h-6" />
           </div>
@@ -525,8 +527,8 @@ export default function UseCasesPage() {
       </section>
 
       {/* 8. 푸터 */}
-      <footer className="border-t border-slate-200 bg-slate-50 py-8 px-4 sm:px-8 text-center text-xs text-slate-500">
-        <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+      <footer className="border-t border-slate-200 bg-slate-50 py-8 px-4 sm:px-6 lg:px-8 text-center text-xs text-slate-500">
+        <div className="max-w-5xl mx-auto w-full flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <FileSpreadsheet className="w-4 h-4 text-blue-600" />
             <span className="font-extrabold text-slate-700">FileToSheet</span>
