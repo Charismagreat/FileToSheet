@@ -134,9 +134,18 @@ export function AiChatDrawer({
     }
   }, [messages, storageKey]);
 
+  // 🌟 마우스 드래그 가로폭 조절 시작 핸들러
+  const startResizing = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+  };
+
   // 마우스 드래그 가로폭 조절 이벤트
   useEffect(() => {
     if (!isResizing) return;
+
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'ew-resize';
 
     const handleMouseMove = (e: MouseEvent) => {
       const newWidth = window.innerWidth - e.clientX;
@@ -147,6 +156,8 @@ export function AiChatDrawer({
     const handleMouseUp = () => {
       setIsResizing(false);
       localStorage.setItem('filetosheet_ai_drawer_width', String(drawerWidth));
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
     };
 
     window.addEventListener('mousemove', handleMouseMove);
@@ -154,6 +165,8 @@ export function AiChatDrawer({
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
     };
   }, [isResizing, drawerWidth]);
 
