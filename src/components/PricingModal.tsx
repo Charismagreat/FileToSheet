@@ -24,7 +24,14 @@ const COMPARISON_FEATURES = [
   { name: '기술 지원 및 SLA', free: '커뮤니티 지원', pro: '영업일 우선 답변', ent: '전담 엔지니어 & SLA 보장' },
 ];
 
-export function PricingModal({ isOpen, onClose, currentUser, onUpgrade, onOpenEnterpriseInquiry }: PricingModalProps) {
+export function PricingModal({
+  isOpen,
+  onClose,
+  currentUser,
+  onUpgrade,
+  onOpenEnterpriseInquiry,
+  onOpenBillingHistory,
+}: PricingModalProps) {
   const [isAnnual, setIsAnnual] = useState<boolean>(true);
   const [couponInput, setCouponInput] = useState<string>('');
   const [appliedCoupon, setAppliedCoupon] = useState<CouponDefinition | null>(null);
