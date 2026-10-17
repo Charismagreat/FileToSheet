@@ -278,7 +278,7 @@ export function Header({
                 </div>
               </button>
 
-              {/* 2. 담당자에게 시트 보내기 */}
+              {/* 2. 보낸 시트함 */}
               {onOpenShareToManagerModal && currentUser && (
                 <button
                   type="button"
@@ -286,15 +286,14 @@ export function Header({
                     setIsShareOpen(false);
                     onOpenShareToManagerModal();
                   }}
-                  disabled={!hasSheetData}
-                  className="w-full px-3 py-2 text-left hover:bg-indigo-50 hover:text-indigo-800 disabled:opacity-40 flex items-center gap-2 transition"
+                  className="w-full px-3 py-2 text-left hover:bg-indigo-50 hover:text-indigo-800 flex items-center gap-2 transition"
                 >
                   <div className="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0">
                     <Send className="w-3.5 h-3.5" />
                   </div>
                   <div>
-                    <div className="font-bold text-slate-800">담당자에게 시트 보내기</div>
-                    <div className="text-[10px] text-slate-400">전화번호로 본사/담당자에게 직접 전송</div>
+                    <div className="font-bold text-slate-800">보낸 시트함</div>
+                    <div className="text-[10px] text-slate-400">보낸 시트 내역 조회, 회수 및 새 시트 전송</div>
                   </div>
                 </button>
               )}
@@ -314,12 +313,12 @@ export function Header({
                   </div>
                   <div>
                     <div className="font-bold text-slate-800">받은 시트함</div>
-                    <div className="text-[10px] text-slate-400">지점 공유 시트 모아보기 및 통합 통계</div>
+                    <div className="text-[10px] text-slate-400">공유받은 시트 모아보기 및 통합 통계</div>
                   </div>
                 </button>
               )}
 
-              {/* 4. 공유 관리 센터 */}
+              {/* 4. 웹 링크 공유 관리 센터 */}
               {onOpenShareManagementModal && (
                 <button
                   type="button"
@@ -333,7 +332,7 @@ export function Header({
                     <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
                   </div>
                   <div>
-                    <div className="font-bold text-slate-800">공유 관리 센터</div>
+                    <div className="font-bold text-slate-800">웹 링크 공유 관리</div>
                     <div className="text-[10px] text-slate-400">공유 링크 회수 및 만료 설정 관리</div>
                   </div>
                 </button>
