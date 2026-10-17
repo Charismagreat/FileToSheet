@@ -12,4 +12,5 @@ export { AccountTransferModal } from '../AccountTransferModal';
 export { ShareToManagerModal } from '../ShareToManagerModal';
 export { ConsolidatedStatsModal } from '../ConsolidatedStatsModal';
 export { EmergencyRecoveryModal } from '../EmergencyRecoveryModal';
+export { ShareManagementModal } from '../ShareManagementModal';
 

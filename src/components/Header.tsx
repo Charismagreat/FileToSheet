@@ -4,7 +4,7 @@ import React, { useState, useRef } from 'react';
 import {
   FileSpreadsheet, Download, Share2, RefreshCw, Smartphone, LogOut,
   User, Database, Crown, UploadCloud, Zap, ChevronDown, Building2, BarChart3,
-  Send, Inbox,
+  Send, Inbox, Globe,
 } from 'lucide-react';
 import { UserSession, ProjectWorkspace } from '@/types/workspace';
 import { UserUsagePopover } from './UserUsagePopover';
@@ -22,6 +22,7 @@ interface HeaderProps {
   onOpenTransferModal?: () => void;
   onOpenShareToManagerModal?: () => void;
   onOpenConsolidatedModal?: () => void;
+  onOpenShareManagementModal?: () => void;
   onExportGoogleSheets: () => void;
   onOpenOriginalModal: () => void;
   onOpenShareModal: () => void;
@@ -43,6 +44,7 @@ export function Header({
   onOpenTransferModal,
   onOpenShareToManagerModal,
   onOpenConsolidatedModal,
+  onOpenShareManagementModal,
   onExportGoogleSheets,
   onOpenShareModal,
   onUploadFile,
@@ -219,6 +221,17 @@ export function Header({
           <Share2 className="w-3.5 h-3.5" />
           <span>링크 공유</span>
         </button>
+
+        {onOpenShareManagementModal && (
+          <button
+            onClick={onOpenShareManagementModal}
+            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100 shadow-2xs transition active:scale-98"
+            title="외부에 공유된 모든 웹 링크 및 보낸 시트 내역을 한곳에서 확인하고 즉시 회수·중단"
+          >
+            <Globe className="w-3.5 h-3.5 text-blue-600" />
+            <span>공유 관리</span>
+          </button>
+        )}
       </div>
     </header>
   );

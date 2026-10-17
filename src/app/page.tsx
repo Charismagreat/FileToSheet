@@ -13,6 +13,7 @@ import {
   PhoneAuthModal, UploadOptionModal, OriginalFileModal, AddColumnModal,
   ExportOptionModal, ShareModal, PlanLimitModal, PricingModal, EnterpriseInquiryModal, DuplicateFileModal,
   AccountTransferModal, ShareToManagerModal, ConsolidatedStatsModal, EmergencyRecoveryModal,
+  ShareManagementModal,
 } from '@/components/modals';
 import { useAuth } from '@/hooks/useAuth';
 import { useWorkspace } from '@/hooks/useWorkspace';
@@ -29,6 +30,7 @@ export default function FileToSheetApp() {
   const [showShareToManagerModal, setShowShareToManagerModal] = useState<boolean>(false);
   const [showConsolidatedModal, setShowConsolidatedModal] = useState<boolean>(false);
   const [showEmergencyRecoveryModal, setShowEmergencyRecoveryModal] = useState<boolean>(false);
+  const [showShareManagementModal, setShowShareManagementModal] = useState<boolean>(false);
   const handlePlanLimit = (title: string, reason: string) => setLimitNotice({ title, reason });
 
   const ws = useWorkspace({
@@ -83,6 +85,7 @@ export default function FileToSheetApp() {
         onExportGoogleSheets={fileExport.handleExportGoogleSheets}
         onOpenOriginalModal={() => setShowOriginalModal(true)}
         onOpenShareModal={() => setShowShareModal(true)}
+        onOpenShareManagementModal={() => setShowShareManagementModal(true)}
         hasOriginalFile={Boolean(currentProject?.originalFileUrl)}
         hasSheetData={Boolean(currentSheet && currentSheet.rows.length > 0)}
         exportLoading={fileExport.exportLoading}
@@ -312,6 +315,13 @@ export default function FileToSheetApp() {
           auth.setCurrentUser(newUser);
           alert(`비상 회수가 안전하게 승인되었습니다. 새 담당자(${newUser.phoneNumber}) 계정으로 정상 전환되었습니다.`);
         }}
+      />
+
+      {/* 15. 외부에 공유된 프로젝트/시트/탭 통합 관리 센터 모달 */}
+      <ShareManagementModal
+        isOpen={showShareManagementModal}
+        onClose={() => setShowShareManagementModal(false)}
+        currentUser={auth.currentUser}
       />
     </div>
   );
