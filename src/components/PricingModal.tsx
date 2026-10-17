@@ -176,18 +176,18 @@ export function PricingModal({ isOpen, onClose, currentUser, onUpgrade, onOpenEn
                 <ul className="text-[11px] text-slate-600 space-y-1.5 mb-4">
                   <li className="flex items-center gap-1.5">
                     <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                    <span>문서 파싱 <strong>100장</strong> (장당 20원)</span>
+                    <span>문서 파싱 <strong>50장</strong></span>
                   </li>
                   <li className="flex items-center gap-1.5">
                     <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                    <span>AI 질문 <strong>200회</strong> (50만 토큰)</span>
+                    <span>AI 질문 <strong>100회</strong> (25만 토큰)</span>
                   </li>
                 </ul>
               </div>
               <button
                 type="button"
                 onClick={() => {
-                  alert('2,000원 라이트 크레딧(문서 100장 또는 AI 대화 200회)이 계정에 충전되었습니다!');
+                  alert('2,000원 라이트 크레딧(문서 50장 또는 AI 대화 100회)이 계정에 충전되었습니다!');
                   onClose();
                 }}
                 className="w-full py-2 bg-slate-100 hover:bg-blue-600 hover:text-white text-slate-700 font-bold text-xs rounded-lg transition active:scale-95 shadow-2xs"
@@ -204,24 +204,24 @@ export function PricingModal({ isOpen, onClose, currentUser, onUpgrade, onOpenEn
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <span className="font-extrabold text-xs text-blue-950">비즈니스 (Biz)</span>
-                  <span className="text-[10px] bg-blue-100 text-blue-700 font-bold px-1.5 py-0.2 rounded">+20장 덤</span>
+                  <span className="text-[10px] bg-blue-100 text-blue-700 font-bold px-1.5 py-0.2 rounded">+10장 덤</span>
                 </div>
                 <div className="text-xl font-black text-blue-900 mb-2.5">5,000원</div>
                 <ul className="text-[11px] text-slate-700 space-y-1.5 mb-4">
                   <li className="flex items-center gap-1.5">
                     <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                    <span>문서 파싱 <strong>270장</strong> (보너스 20장)</span>
+                    <span>문서 파싱 <strong>135장</strong> (보너스 10장)</span>
                   </li>
                   <li className="flex items-center gap-1.5">
                     <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                    <span>AI 질문 <strong>600회</strong> (150만 토큰)</span>
+                    <span>AI 질문 <strong>300회</strong> (75만 토큰)</span>
                   </li>
                 </ul>
               </div>
               <button
                 type="button"
                 onClick={() => {
-                  alert('5,000원 비즈니스 크레딧(문서 270장 또는 AI 대화 600회)이 계정에 충전되었습니다!');
+                  alert('5,000원 비즈니스 크레딧(문서 135장 또는 AI 대화 300회)이 계정에 충전되었습니다!');
                   onClose();
                 }}
                 className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-lg transition shadow-xs active:scale-95"
@@ -235,24 +235,24 @@ export function PricingModal({ isOpen, onClose, currentUser, onUpgrade, onOpenEn
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <span className="font-extrabold text-xs text-slate-800">파워 (Power)</span>
-                  <span className="text-[10px] bg-indigo-100 text-indigo-700 font-bold px-1.5 py-0.2 rounded">+50장 덤</span>
+                  <span className="text-[10px] bg-indigo-100 text-indigo-700 font-bold px-1.5 py-0.2 rounded">+25장 덤</span>
                 </div>
                 <div className="text-xl font-black text-slate-900 mb-2.5">8,000원</div>
                 <ul className="text-[11px] text-slate-600 space-y-1.5 mb-4">
                   <li className="flex items-center gap-1.5">
                     <Check className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-                    <span>문서 파싱 <strong>450장</strong> (보너스 50장)</span>
+                    <span>문서 파싱 <strong>225장</strong> (보너스 25장)</span>
                   </li>
                   <li className="flex items-center gap-1.5">
                     <Check className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-                    <span>AI 질문 <strong>1,000회</strong> (250만 토큰)</span>
+                    <span>AI 질문 <strong>500회</strong> (125만 토큰)</span>
                   </li>
                 </ul>
               </div>
               <button
                 type="button"
                 onClick={() => {
-                  alert('8,000원 파워 크레딧(문서 450장 또는 AI 대화 1,000회)이 계정에 충전되었습니다!');
+                  alert('8,000원 파워 크레딧(문서 225장 또는 AI 대화 500회)이 계정에 충전되었습니다!');
                   onClose();
                 }}
                 className="w-full py-2 bg-slate-100 hover:bg-indigo-600 hover:text-white text-slate-700 font-bold text-xs rounded-lg transition active:scale-95 shadow-2xs"
