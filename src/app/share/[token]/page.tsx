@@ -90,7 +90,7 @@ function SharedProjectContent() {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-800 font-sans">
-      <header className="h-14 border-b border-slate-200 bg-white/95 backdrop-blur px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30 shadow-2xs">
+      <header className="h-14 border-b border-slate-200 bg-white/95 backdrop-blur px-4 sm:px-6 lg:px-8 flex items-center justify-between sticky top-0 z-30 shadow-2xs">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-lg bg-blue-600 text-white font-bold flex items-center justify-center text-sm shadow-xs">FS</div>
           <div>
@@ -113,7 +113,7 @@ function SharedProjectContent() {
         </div>
       </header>
 
-      <main className="flex-1 p-4 sm:p-6 flex flex-col gap-3 max-w-7xl w-full mx-auto">
+      <main className="flex-1 w-full px-4 sm:px-6 lg:px-8 py-3 flex flex-col gap-3">
         <div className="flex-1 flex flex-col bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
           {shareConfig.sheets.length > 1 && (
             <div className="flex items-center gap-1 px-3 pt-2 border-b border-slate-200 bg-slate-100/50 overflow-x-auto">
