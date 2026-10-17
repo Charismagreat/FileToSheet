@@ -48,16 +48,21 @@ export function RemoteDbModal({
   useEffect(() => {
     if (!isOpen) return;
     const current = getRemoteDbConfig();
-    setConfig(current);
-    if (current.cachedRows && current.cachedRows.length > 0) {
-      setPreviewRows(current.cachedRows);
-      setPreviewCols(current.cachedColumns || []);
-      setTotalRows(current.cachedRowCount || current.cachedRows.length);
+    const effectiveConfig: RemoteDbConfig = {
+      ...current,
+      environment: current.environment || 'production',
+    };
+    setConfig(effectiveConfig);
+    if (effectiveConfig.cachedRows && effectiveConfig.cachedRows.length > 0) {
+      setPreviewRows(effectiveConfig.cachedRows);
+      setPreviewCols(effectiveConfig.cachedColumns || []);
+      setTotalRows(effectiveConfig.cachedRowCount || effectiveConfig.cachedRows.length);
     }
-    if (current.availableTables && current.availableTables.length > 0) {
-      setSelectedTables(current.availableTables.map((t) => t.tableName));
+    // 실제 연결되어 테이블이 감지된 경우에만 기본 선택
+    if (effectiveConfig.isConnected && effectiveConfig.availableTables && effectiveConfig.availableTables.length > 0) {
+      setSelectedTables(effectiveConfig.availableTables.map((t) => t.tableName));
     } else {
-      setSelectedTables([current.tableName || 'Product']);
+      setSelectedTables([]);
     }
   }, [isOpen]);
 
@@ -137,6 +142,10 @@ export function RemoteDbModal({
 
   // [방안 1 핵심] 3. 선택된 모든 테이블을 새 전용 프로젝트로 열어 '표 데이터' 탭에 1:1 매핑
   const handleOpenAsNewProject = async () => {
+    if (!config.isConnected) {
+      alert('원격 터널링 서버에 아직 연결되지 않았습니다.\n먼저 상단의 [원격 터널 연결 및 전체 테이블 감지] 버튼을 눌러주세요.');
+      return;
+    }
     if (selectedTables.length === 0) {
       alert('가져올 테이블을 최소 1개 이상 선택해 주세요.');
       return;
@@ -149,7 +158,7 @@ export function RemoteDbModal({
     setBatchLoading(false);
 
     if (!res.success || !res.tables || res.tables.length === 0) {
-      alert(`테이블 데이터를 불러오지 못했습니다: ${res.error || '알 수 없는 오류'}`);
+      alert(`테이블 데이터를 불러오지 못했습니다:\n${res.error || '원격 터널 연결 상태 및 API Key를 확인해 주세요.'}`);
       return;
     }
 
@@ -174,6 +183,10 @@ export function RemoteDbModal({
 
   // [방안 1 확장] 4. 현재 작업 중인 프로젝트에 선택된 모든 테이블을 시트로 일괄 추가
   const handleImportToCurrentProject = async () => {
+    if (!config.isConnected) {
+      alert('원격 터널링 서버에 아직 연결되지 않았습니다.\n먼저 상단의 [원격 터널 연결 및 전체 테이블 감지] 버튼을 눌러주세요.');
+      return;
+    }
     if (selectedTables.length === 0) {
       alert('가져올 테이블을 최소 1개 이상 선택해 주세요.');
       return;
@@ -186,7 +199,7 @@ export function RemoteDbModal({
     setBatchLoading(false);
 
     if (!res.success || !res.tables || res.tables.length === 0) {
-      alert(`테이블 데이터를 불러오지 못했습니다: ${res.error || '알 수 없는 오류'}`);
+      alert(`테이블 데이터를 불러오지 못했습니다:\n${res.error || '원격 터널 연결 상태 및 API Key를 확인해 주세요.'}`);
       return;
     }
 
@@ -210,6 +223,10 @@ export function RemoteDbModal({
 
   // 5. 단일 현재 테이블만 새 시트로 복사 가져오기
   const handleImportSingleSheet = () => {
+    if (!config.isConnected) {
+      alert('원격 터널링 서버에 아직 연결되지 않았습니다.\n먼저 상단의 [원격 터널 연결 및 전체 테이블 감지] 버튼을 눌러주세요.');
+      return;
+    }
     if (previewRows.length === 0 || previewCols.length === 0) {
       alert('가져올 원격 데이터가 없습니다. 먼저 [원격 터널 연결 테스트] 또는 [새로고침]을 실행해 주세요.');
       return;
@@ -292,8 +309,17 @@ export function RemoteDbModal({
                 <button
                   type="button"
                   onClick={() => {
-                    const updated = { ...config, environment: 'production' as const };
+                    const updated: RemoteDbConfig = {
+                      ...config,
+                      environment: 'production',
+                      isConnected: false,
+                      availableTables: [],
+                    };
                     setConfig(updated);
+                    setSelectedTables([]);
+                    setPreviewRows([]);
+                    setPreviewCols([]);
+                    setTestResult(null);
                     saveRemoteDbConfig(updated);
                   }}
                   className={`px-3 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
@@ -308,8 +334,17 @@ export function RemoteDbModal({
                 <button
                   type="button"
                   onClick={() => {
-                    const updated = { ...config, environment: 'development' as const };
+                    const updated: RemoteDbConfig = {
+                      ...config,
+                      environment: 'development',
+                      isConnected: false,
+                      availableTables: [],
+                    };
                     setConfig(updated);
+                    setSelectedTables([]);
+                    setPreviewRows([]);
+                    setPreviewCols([]);
+                    setTestResult(null);
                     saveRemoteDbConfig(updated);
                   }}
                   className={`px-3 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
@@ -598,9 +633,9 @@ export function RemoteDbModal({
             <button
               type="button"
               onClick={handleImportSingleSheet}
-              disabled={previewRows.length === 0 || batchLoading}
-              className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 disabled:opacity-50 text-slate-700 font-bold text-xs transition flex items-center gap-1 active:scale-95"
-              title="현재 미리보기 중인 테이블만 1개 시트로 추가합니다"
+              disabled={!config.isConnected || previewRows.length === 0 || batchLoading}
+              className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed text-slate-700 font-bold text-xs transition flex items-center gap-1 active:scale-95"
+              title={config.isConnected ? '현재 미리보기 중인 테이블만 1개 시트로 추가합니다' : '먼저 상단의 [원격 터널 연결 및 전체 테이블 감지]를 완료해 주세요'}
             >
               <Download className="w-3.5 h-3.5" />
               <span>현재 테이블만 시트로</span>
@@ -610,9 +645,9 @@ export function RemoteDbModal({
             <button
               type="button"
               onClick={handleImportToCurrentProject}
-              disabled={selectedTables.length === 0 || batchLoading}
-              className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 disabled:opacity-50 text-white font-bold text-xs transition flex items-center gap-1.5 active:scale-95"
-              title="선택된 모든 테이블을 현재 프로젝트의 시트들로 일괄 추가합니다"
+              disabled={!config.isConnected || selectedTables.length === 0 || batchLoading || allAvailableCount === 0}
+              className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-xs transition flex items-center gap-1.5 active:scale-95"
+              title={config.isConnected ? '선택된 모든 테이블을 현재 프로젝트의 시트들로 일괄 추가합니다' : '먼저 상단의 [원격 터널 연결 및 전체 테이블 감지]를 완료해 주세요'}
             >
               <Plus className="w-3.5 h-3.5" />
               <span>선택 테이블 일괄 시트 추가 ({selectedTables.length})</span>
@@ -622,9 +657,9 @@ export function RemoteDbModal({
             <button
               type="button"
               onClick={handleOpenAsNewProject}
-              disabled={selectedTables.length === 0 || batchLoading}
-              className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-extrabold text-xs shadow-md shadow-indigo-500/20 transition flex items-center gap-1.5 active:scale-95"
-              title="선택된 모든 테이블을 시트로 매핑하여 새 프로젝트를 열고 '표 데이터' 탭으로 탐색합니다"
+              disabled={!config.isConnected || selectedTables.length === 0 || batchLoading || allAvailableCount === 0}
+              className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-extrabold text-xs shadow-md shadow-indigo-500/20 transition flex items-center gap-1.5 active:scale-95"
+              title={config.isConnected ? '선택된 모든 테이블을 시트로 매핑하여 새 프로젝트를 열고 \'표 데이터\' 탭으로 탐색합니다' : '먼저 상단의 [원격 터널 연결 및 전체 테이블 감지]를 완료해 주세요'}
             >
               <FolderPlus className="w-4 h-4 text-amber-300" />
               <span>모든 테이블 새 프로젝트로 열기 ({selectedTables.length})</span>

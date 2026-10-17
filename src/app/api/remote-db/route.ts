@@ -255,11 +255,22 @@ export async function POST(req: NextRequest) {
           };
         });
 
+        // 유효하게 성공한 테이블이 1개도 없고 에러만 발생한 경우
+        const successfulTables = fetchedTables.filter((t) => !t.error);
+        if (successfulTables.length === 0 && fetchedTables.length > 0) {
+          const firstErr = fetchedTables[0].error || '원격 통신 에러';
+          return NextResponse.json({
+            success: false,
+            error: `원격 서버에 접속할 수 없습니다 (${firstErr}). 원격지 터널링 서비스와 API Key를 확인해 주세요.`,
+            tables: [],
+          }, { status: 502 });
+        }
+
         return NextResponse.json({
           success: true,
           environment,
-          totalTables: fetchedTables.length,
-          tables: fetchedTables,
+          totalTables: successfulTables.length,
+          tables: successfulTables,
         });
       } catch (err: any) {
         return NextResponse.json({
