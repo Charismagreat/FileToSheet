@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   FileSpreadsheet, Download, Share2, RefreshCw, Smartphone, LogOut,
   User, Database, Crown, UploadCloud, Zap, ChevronDown, Building2, BarChart3,
-  Send, Inbox, Globe, Sparkles,
+  Send, Inbox, Globe, Sparkles, Link as LinkIcon, ShieldCheck
 } from 'lucide-react';
 import { UserSession, ProjectWorkspace } from '@/types/workspace';
 import { UserUsagePopover } from './UserUsagePopover';
@@ -60,8 +60,14 @@ export function Header({
 }: HeaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUsageOpen, setIsUsageOpen] = useState<boolean>(false);
+  const [isExportOpen, setIsExportOpen] = useState<boolean>(false);
+  const [isShareOpen, setIsShareOpen] = useState<boolean>(false);
   const [bonusCredits, setBonusCredits] = useState<{ bonusTokens: number; bonusDocs: number }>({ bonusTokens: 0, bonusDocs: 0 });
 
+  const exportMenuRef = useRef<HTMLDivElement>(null);
+  const shareMenuRef = useRef<HTMLDivElement>(null);
+
+  // 크레딧 동기화
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const sync = () => setBonusCredits(getBonusCredits());
@@ -70,106 +76,323 @@ export function Header({
     return () => window.removeEventListener('filetosheet_credit_updated', sync);
   }, []);
 
+  // 외부 클릭 시 드롭다운 닫기
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target as Node)) {
+        setIsExportOpen(false);
+      }
+      if (shareMenuRef.current && !shareMenuRef.current.contains(e.target as Node)) {
+        setIsShareOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, []);
+
   const planPolicy = getPlanLimits(currentUser?.plan);
   const parsedDocsCount = currentProject?.originalFiles?.length || 1;
   const maxDocs = planPolicy.includedMonthlyDocs + bonusCredits.bonusDocs;
 
   return (
-    <header className="border-b border-slate-200/80 bg-white/95 backdrop-blur sticky top-0 z-30 px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-4 shadow-xs">
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center shadow-md shadow-blue-500/15">
+    <header className="border-b border-slate-200/80 bg-white/95 backdrop-blur sticky top-0 z-30 px-4 sm:px-6 lg:px-8 py-2.5 flex items-center justify-between gap-4 shadow-2xs">
+      {/* 1. 좌측 로고 & 타이틀 영역 */}
+      <div className="flex items-center gap-3 shrink-0">
+        <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center shadow-md shadow-blue-500/15">
           <FileSpreadsheet className="w-5 h-5 text-white" />
         </div>
         <div>
-          <span className="font-extrabold text-xl tracking-tight text-slate-900">FileToSheet</span>
-          <p className="text-xs text-slate-500 font-normal">어떤 파일이든 드롭 즉시 엑셀 표로, FileToSheet</p>
+          <span className="font-extrabold text-lg tracking-tight text-slate-900 leading-tight block">FileToSheet</span>
+          <p className="text-[11px] text-slate-400 font-normal leading-tight hidden sm:block">어떤 파일이든 드롭 즉시 엑셀 표로, FileToSheet</p>
         </div>
       </div>
 
-      <div className="flex items-center gap-2.5">
-        <input
-          type="file"
-          ref={fileInputRef}
-          onChange={(e) => {
-            if (e.target.files && e.target.files[0] && onUploadFile) {
-              onUploadFile(e.target.files[0]);
-              e.target.value = '';
-            }
-          }}
-          accept=".xlsx,.xls,.csv,.pdf,image/*"
-          className="hidden"
-        />
+      {/* 2. 숨겨진 파일 업로드 인풋 */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={(e) => {
+          if (e.target.files && e.target.files[0] && onUploadFile) {
+            onUploadFile(e.target.files[0]);
+            e.target.value = '';
+          }
+        }}
+        accept=".xlsx,.xls,.csv,.pdf,image/*"
+        className="hidden"
+      />
 
-        {/* 요금제 비교 모달 버튼 */}
-        <button
-          onClick={onOpenPricingModal}
-          className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-50 to-indigo-50 border border-amber-200/80 hover:border-amber-300 text-slate-800 shadow-2xs transition active:scale-98"
-          title="FileToSheet 플랜 및 기능 비교"
-        >
-          <Crown className="w-3.5 h-3.5 text-amber-500" />
-          <span>요금제</span>
-        </button>
+      {/* 3. 우측 정돈된 액션 바 (그룹화) */}
+      <div className="flex items-center gap-2">
+        {/* 🌟 그룹 A: 핵심 작업 (파일 추가 / 원격 My DB) */}
+        {onUploadFile && (
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200/80 transition active:scale-95"
+            title="새 파일 업로드 및 AI 엑셀 표 변환"
+          >
+            <UploadCloud className="w-3.5 h-3.5 text-blue-600" />
+            <span className="hidden sm:inline">파일 추가</span>
+          </button>
+        )}
 
-        {/* 원격 My DB 연동 모달 버튼 */}
         {onOpenRemoteDbModal && (
           <button
             onClick={onOpenRemoteDbModal}
-            className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/80 hover:border-blue-400 text-blue-900 shadow-2xs transition active:scale-98"
-            title="원격지 이지데스크 터널링 My DB(Product) 연동 및 조회"
+            className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 text-slate-700 hover:text-indigo-700 transition active:scale-95"
+            title="원격지 이지데스크 터널링 My DB 연동 및 조회"
           >
-            <Globe className="w-3.5 h-3.5 text-blue-600" />
+            <Globe className="w-3.5 h-3.5 text-indigo-600" />
             <span>원격 My DB</span>
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
           </button>
         )}
 
-        {currentUser ? (
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-blue-50/80 border border-blue-200 text-xs">
-            <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-[11px]">
-              <User className="w-3.5 h-3.5" />
-            </div>
-            <div className="flex flex-col">
-              <span className="font-bold text-slate-900 leading-tight">
-                {currentUser.phoneNumber.replace(/(\d{3})(\d{4})(\d{4})/, '$1-****-$3')}
-              </span>
-              <span className="text-[10px] text-blue-600 font-medium leading-tight">
-                {currentUser.plan === 'pro' ? '⭐ PRO 플랜' : '기본 회원 (Free)'}
-              </span>
-            </div>
-            <button
-              onClick={onLogout}
-              className="ml-1 p-1 hover:bg-blue-100 rounded-md text-slate-400 hover:text-slate-700 transition"
-              title="로그아웃"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        ) : (
+        <div className="h-4 w-px bg-slate-200 mx-0.5 hidden md:block" />
+
+        {/* 🌟 그룹 B: 내보내기 통합 드롭다운 (Excel / SQLite / Google Sheets) */}
+        <div className="relative" ref={exportMenuRef}>
           <button
-            onClick={onOpenLoginModal}
-            className="flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition active:scale-98"
+            onClick={() => setIsExportOpen((prev) => !prev)}
+            disabled={!hasSheetData}
+            className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl transition border active:scale-95 ${
+              isExportOpen
+                ? 'bg-slate-800 text-white border-slate-800 shadow-xs'
+                : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200 disabled:opacity-40 disabled:hover:bg-white'
+            }`}
+            title="엑셀, SQLite DB, 구글 스프레드시트로 내보내기"
           >
-            <Smartphone className="w-3.5 h-3.5" />
-            로그인
+            {exportLoading ? (
+              <RefreshCw className="w-3.5 h-3.5 animate-spin text-blue-600" />
+            ) : (
+              <Download className="w-3.5 h-3.5 text-slate-600" />
+            )}
+            <span>내보내기</span>
+            <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${isExportOpen ? 'rotate-180' : ''}`} />
+          </button>
+
+          {isExportOpen && (
+            <div className="absolute right-0 top-full mt-1.5 w-56 bg-white rounded-2xl border border-slate-200 shadow-xl py-1.5 z-50 text-xs animate-in fade-in zoom-in-95 duration-100 font-medium text-slate-700">
+              <div className="px-3 py-1.5 text-[11px] font-bold text-slate-400 border-b border-slate-100">
+                다운로드 및 내보내기
+              </div>
+
+              {/* 1. Excel (.xlsx) 다운로드 */}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsExportOpen(false);
+                  onDownloadXlsx();
+                }}
+                className="w-full px-3 py-2 text-left hover:bg-emerald-50 hover:text-emerald-800 flex items-center gap-2 transition"
+              >
+                <div className="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                  <Download className="w-3.5 h-3.5" />
+                </div>
+                <div>
+                  <div className="font-bold text-slate-800">Excel (.xlsx) 다운로드</div>
+                  <div className="text-[10px] text-slate-400">서식과 수식이 보존된 스프레드시트</div>
+                </div>
+              </button>
+
+              {/* 2. SQLite DB (.sqlite) 다운로드 */}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsExportOpen(false);
+                  if (currentUser?.plan === 'pro') onDownloadSqlite?.();
+                  else onOpenPlanModal ? onOpenPlanModal() : onDownloadSqlite?.();
+                }}
+                className="w-full px-3 py-2 text-left hover:bg-indigo-50 hover:text-indigo-800 flex items-center gap-2 transition"
+              >
+                <div className="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0">
+                  <Database className="w-3.5 h-3.5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-bold text-slate-800 flex items-center gap-1">
+                    <span>SQLite DB 다운로드</span>
+                    {currentUser?.plan !== 'pro' && <Crown className="w-3 h-3 text-amber-500" />}
+                  </div>
+                  <div className="text-[10px] text-slate-400">데이터베이스 파일로 추출 (PRO)</div>
+                </div>
+              </button>
+
+              {/* 3. Google 스프레드시트 내보내기 */}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsExportOpen(false);
+                  onExportGoogleSheets();
+                }}
+                className="w-full px-3 py-2 text-left hover:bg-blue-50 hover:text-blue-800 flex items-center gap-2 transition"
+              >
+                <div className="w-6 h-6 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center shrink-0">
+                  <Share2 className="w-3.5 h-3.5" />
+                </div>
+                <div>
+                  <div className="font-bold text-slate-800">Google 시트로 내보내기</div>
+                  <div className="text-[10px] text-slate-400">구글 드라이브 스프레드시트와 실시간 연동</div>
+                </div>
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* 🌟 그룹 C: 공유 및 협업 통합 드롭다운 (링크 공유 / 시트 보내기 / 받은 시트함 / 공유 관리) */}
+        <div className="relative" ref={shareMenuRef}>
+          <button
+            onClick={() => setIsShareOpen((prev) => !prev)}
+            className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl transition border active:scale-95 ${
+              isShareOpen
+                ? 'bg-slate-800 text-white border-slate-800 shadow-xs'
+                : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
+            }`}
+            title="링크 공유, 시트 전송, 받은 시트함 및 공유 관리"
+          >
+            <Share2 className="w-3.5 h-3.5 text-slate-600" />
+            <span>공유/협업</span>
+            <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${isShareOpen ? 'rotate-180' : ''}`} />
+          </button>
+
+          {isShareOpen && (
+            <div className="absolute right-0 top-full mt-1.5 w-60 bg-white rounded-2xl border border-slate-200 shadow-xl py-1.5 z-50 text-xs animate-in fade-in zoom-in-95 duration-100 font-medium text-slate-700">
+              <div className="px-3 py-1.5 text-[11px] font-bold text-slate-400 border-b border-slate-100">
+                공유 및 협업 센터
+              </div>
+
+              {/* 1. 읽기 전용 링크 공유 */}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsShareOpen(false);
+                  onOpenShareModal();
+                }}
+                disabled={!hasSheetData}
+                className="w-full px-3 py-2 text-left hover:bg-blue-50 hover:text-blue-800 disabled:opacity-40 flex items-center gap-2 transition"
+              >
+                <div className="w-6 h-6 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center shrink-0">
+                  <LinkIcon className="w-3.5 h-3.5" />
+                </div>
+                <div>
+                  <div className="font-bold text-slate-800">웹 링크 공유</div>
+                  <div className="text-[10px] text-slate-400">읽기 전용 보안 웹 링크 생성</div>
+                </div>
+              </button>
+
+              {/* 2. 담당자에게 시트 보내기 */}
+              {onOpenShareToManagerModal && currentUser && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsShareOpen(false);
+                    onOpenShareToManagerModal();
+                  }}
+                  disabled={!hasSheetData}
+                  className="w-full px-3 py-2 text-left hover:bg-indigo-50 hover:text-indigo-800 disabled:opacity-40 flex items-center gap-2 transition"
+                >
+                  <div className="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0">
+                    <Send className="w-3.5 h-3.5" />
+                  </div>
+                  <div>
+                    <div className="font-bold text-slate-800">담당자에게 시트 보내기</div>
+                    <div className="text-[10px] text-slate-400">전화번호로 본사/담당자에게 직접 전송</div>
+                  </div>
+                </button>
+              )}
+
+              {/* 3. 받은 시트함 */}
+              {onOpenConsolidatedModal && currentUser && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsShareOpen(false);
+                    onOpenConsolidatedModal();
+                  }}
+                  className="w-full px-3 py-2 text-left hover:bg-purple-50 hover:text-purple-800 flex items-center gap-2 transition"
+                >
+                  <div className="w-6 h-6 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center shrink-0">
+                    <Inbox className="w-3.5 h-3.5" />
+                  </div>
+                  <div>
+                    <div className="font-bold text-slate-800">받은 시트함</div>
+                    <div className="text-[10px] text-slate-400">지점 공유 시트 모아보기 및 통합 통계</div>
+                  </div>
+                </button>
+              )}
+
+              {/* 4. 공유 관리 센터 */}
+              {onOpenShareManagementModal && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsShareOpen(false);
+                    onOpenShareManagementModal();
+                  }}
+                  className="w-full px-3 py-2 text-left hover:bg-slate-50 hover:text-slate-900 border-t border-slate-100 flex items-center gap-2 transition mt-1"
+                >
+                  <div className="w-6 h-6 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
+                    <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
+                  </div>
+                  <div>
+                    <div className="font-bold text-slate-800">공유 관리 센터</div>
+                    <div className="text-[10px] text-slate-400">공유 링크 회수 및 만료 설정 관리</div>
+                  </div>
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* 🌟 그룹 D: AI 데이터 비서 버튼 */}
+        {onOpenAiChat && (
+          <button
+            onClick={onOpenAiChat}
+            className="flex items-center gap-1.5 text-xs font-extrabold px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-xs transition active:scale-95"
+            title="자연어로 모든 시트와 프로젝트를 분석하고 질문하는 AI 데이터 비서"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-spin" style={{ animationDuration: '6s' }} />
+            <span>AI 비서</span>
           </button>
         )}
 
-        {currentUser && (
+        <div className="h-4 w-px bg-slate-200 mx-0.5" />
+
+        {/* 🌟 그룹 E: 요금제 & 사용자 프로필 / 사용량 통합 뱃지 */}
+        {onOpenPricingModal && (
+          <button
+            onClick={onOpenPricingModal}
+            className="flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 transition active:scale-95"
+            title="요금제 및 기능 비교"
+          >
+            <Crown className="w-3.5 h-3.5 text-amber-500" />
+            <span className="hidden lg:inline">요금제</span>
+          </button>
+        )}
+
+        {currentUser ? (
           <div className="relative">
             <button
               onClick={() => setIsUsageOpen((prev) => !prev)}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-xs font-semibold text-slate-700 transition"
-              title="이번 달 사용량 및 잔여량 확인"
+              className="flex items-center gap-2 pl-2 pr-2.5 py-1 rounded-xl bg-slate-100 hover:bg-slate-200/80 border border-slate-200 text-xs font-semibold text-slate-800 transition active:scale-98"
+              title="계정 정보 및 이번 달 사용량 확인"
             >
-              <Zap className="w-3.5 h-3.5 text-amber-500" />
-              <span>{parsedDocsCount}/{maxDocs}장</span>
+              <div className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-[10px]">
+                <User className="w-3 h-3" />
+              </div>
+              <span className="font-bold text-[11px] text-slate-700">
+                {currentUser.phoneNumber.replace(/(\d{3})(\d{4})(\d{4})/, '$1-****-$3')}
+              </span>
+              <span className="text-[10px] text-slate-400 font-mono">
+                {parsedDocsCount}/{maxDocs}장
+              </span>
               {bonusCredits.bonusDocs > 0 && (
-                <span className="text-[10px] font-extrabold text-blue-600 bg-blue-100/90 border border-blue-200 px-1.5 py-0.2 rounded-full">
+                <span className="text-[9px] font-extrabold text-blue-600 bg-blue-100 border border-blue-200 px-1 py-0.1 rounded-full">
                   +{bonusCredits.bonusDocs}
                 </span>
               )}
               <ChevronDown className="w-3 h-3 text-slate-400" />
             </button>
+
+            {/* 사용자 상세 정보 및 사용량 팝오버 */}
             <UserUsagePopover
               isOpen={isUsageOpen}
               onClose={() => setIsUsageOpen(false)}
@@ -181,103 +404,13 @@ export function Header({
               onOpenBillingHistory={onOpenBillingHistory}
             />
           </div>
-        )}
-
-        {onUploadFile && (
+        ) : (
           <button
-            onClick={() => fileInputRef.current?.click()}
-            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 shadow-2xs transition active:scale-98"
-            title="새 파일 업로드 및 AI 자연어 추출 요청"
+            onClick={onOpenLoginModal}
+            className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition active:scale-95"
           >
-            <UploadCloud className="w-3.5 h-3.5 text-blue-600" />
-            <span>파일 추가</span>
-          </button>
-        )}
-
-        <button
-          onClick={onDownloadXlsx}
-          disabled={!hasSheetData}
-          className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white shadow-xs transition active:scale-98"
-        >
-          <Download className="w-3.5 h-3.5" />
-          .xlsx
-        </button>
-
-        <button
-          onClick={() => {
-            if (currentUser?.plan === 'pro') onDownloadSqlite?.();
-            else onOpenPlanModal ? onOpenPlanModal() : onDownloadSqlite?.();
-          }}
-          disabled={!hasSheetData || exportLoading}
-          className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white shadow-xs transition active:scale-98"
-          title={currentUser?.plan === 'pro' ? '프로젝트를 SQLite 데이터베이스 파일로 다운로드' : 'PRO 전용: SQLite DB 다운로드'}
-        >
-          <Database className="w-3.5 h-3.5 text-indigo-200" />
-          <span>.sqlite DB</span>
-          {currentUser?.plan !== 'pro' && <Crown className="w-3 h-3 text-amber-300 ml-0.5" />}
-        </button>
-
-        <button
-          onClick={onExportGoogleSheets}
-          disabled={!hasSheetData || exportLoading}
-          className="flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:hover:bg-blue-600 text-white shadow-xs transition active:scale-98"
-        >
-          {exportLoading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Share2 className="w-3.5 h-3.5" />}
-          Google 시트로 내보내기
-        </button>
-
-        {onOpenShareToManagerModal && currentUser && (
-          <button
-            onClick={onOpenShareToManagerModal}
-            disabled={!hasSheetData}
-            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-100 disabled:opacity-40 disabled:hover:bg-blue-50 shadow-2xs transition active:scale-98"
-            title="현재 시트 데이터를 다른 담당자/본사의 휴대폰 번호로 직접 전송"
-          >
-            <Send className="w-3.5 h-3.5 text-blue-600" />
-            <span>시트 보내기</span>
-          </button>
-        )}
-
-        {onOpenConsolidatedModal && currentUser && (
-          <button
-            onClick={onOpenConsolidatedModal}
-            className="flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-xl bg-indigo-50 border border-indigo-300 text-indigo-700 hover:bg-indigo-100 shadow-2xs transition active:scale-98"
-            title="다른 담당자/지점에서 공유받은 시트들을 모아서 통계 분석 및 통합 엑셀 다운로드"
-          >
-            <Inbox className="w-3.5 h-3.5 text-indigo-600" />
-            <span>받은 시트함</span>
-          </button>
-        )}
-
-        <button
-          onClick={onOpenShareModal}
-          disabled={!hasSheetData}
-          className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:hover:bg-slate-50 shadow-2xs transition active:scale-98"
-          title="시트 및 탭을 선택하여 읽기 전용 링크로 공유"
-        >
-          <Share2 className="w-3.5 h-3.5" />
-          <span>링크 공유</span>
-        </button>
-
-        {onOpenShareManagementModal && (
-          <button
-            onClick={onOpenShareManagementModal}
-            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100 shadow-2xs transition active:scale-98"
-            title="외부에 공유된 모든 웹 링크 및 보낸 시트 내역을 한곳에서 확인하고 즉시 회수·중단"
-          >
-            <Globe className="w-3.5 h-3.5 text-blue-600" />
-            <span>공유 관리</span>
-          </button>
-        )}
-
-        {onOpenAiChat && (
-          <button
-            onClick={onOpenAiChat}
-            className="flex items-center gap-1.5 text-xs font-extrabold px-3.5 py-2 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-sm transition active:scale-98"
-            title="자연어로 모든 시트와 프로젝트를 분석하고 질문하는 AI 데이터 비서"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-spin" style={{ animationDuration: '6s' }} />
-            <span>AI 비서</span>
+            <Smartphone className="w-3.5 h-3.5" />
+            <span>로그인</span>
           </button>
         )}
       </div>
