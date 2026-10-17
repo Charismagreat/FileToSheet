@@ -13,8 +13,10 @@ import {
   PhoneAuthModal, UploadOptionModal, OriginalFileModal, AddColumnModal,
   ExportOptionModal, ShareModal, PlanLimitModal, PricingModal, EnterpriseInquiryModal, DuplicateFileModal,
   AccountTransferModal, ShareToManagerModal, ConsolidatedStatsModal, EmergencyRecoveryModal,
-  ShareManagementModal,
+  ShareManagementModal, ExportScopeModal,
 } from '@/components/modals';
+import { ExportTargetType } from '@/components/ExportScopeModal';
+import { FilterState } from '@/components/DataFilterPopover';
 import { useAuth } from '@/hooks/useAuth';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { useFileUpload } from '@/hooks/useFileUpload';
@@ -54,15 +56,128 @@ export default function FileToSheetApp() {
   const [showOriginalModal, setShowOriginalModal] = useState<boolean>(false);
   const [showShareModal, setShowShareModal] = useState<boolean>(false);
 
+  // 조회 필터 상태 (기간/날짜 및 건수 제한)
+  const [filterState, setFilterState] = useState<FilterState>({
+    dateConfig: { column: '', startDate: '', endDate: '', preset: 'all' },
+    limit: 0,
+  });
+
+  // 내보내기 범위 선택 모달 상태
+  const [showExportScopeModal, setShowExportScopeModal] = useState<boolean>(false);
+  const [exportScopeTarget, setExportScopeTarget] = useState<ExportTargetType>('xlsx');
+  const [pendingScopeChoice, setPendingScopeChoice] = useState<'filtered' | 'all'>('all');
+
   const currentProject = ws.currentProject;
   const currentSheet = ws.currentSheet;
   const sheetOriginalFiles = getSheetOriginalFiles(currentProject, currentSheet);
 
+  // 1. 원본 행 데이터 (고유 index 보존)
   const rawRowsWithOrigin = currentSheet ? currentSheet.rows.map((r, i) => ({ ...r, _originIdx: i })) : [];
+
+  // 2. 실시간 텍스트 검색 필터
   const searchedRows = rawRowsWithOrigin.filter((row) =>
     !searchQuery.trim() || Object.values(row).some((val) => String(val ?? '').toLowerCase().includes(searchQuery.toLowerCase()))
   );
-  const filteredRows = sortOrder === 'desc' ? [...searchedRows].reverse() : searchedRows;
+
+  // 3. 최신순 / 과거순 정렬
+  const sortedRows = sortOrder === 'desc' ? [...searchedRows].reverse() : searchedRows;
+
+  // 4. 날짜/기간 필터
+  const dateFilteredRows = sortedRows.filter((row) => {
+    const { column, startDate, endDate } = filterState.dateConfig;
+    if (!startDate && !endDate) return true;
+    const colKey = column || (currentSheet?.headers[0] ?? '');
+    const colVal = String(row[colKey] ?? '');
+    const match = colVal.match(/\d{4}[-./]\d{1,2}[-./]\d{1,2}/);
+    if (!match) return true;
+    const normalized = match[0].replace(/[./]/g, '-').split('-').map((p, idx) => idx > 0 ? p.padStart(2, '0') : p).join('-');
+    if (startDate && normalized < startDate) return false;
+    if (endDate && normalized > endDate) return false;
+    return true;
+  });
+
+  // 5. 건수 제한 필터
+  const filteredRows = filterState.limit > 0 ? dateFilteredRows.slice(0, filterState.limit) : dateFilteredRows;
+
+  // 필터 활성화 여부 계산
+  const isFilterActive = Boolean(
+    filterState.dateConfig.startDate ||
+    filterState.dateConfig.endDate ||
+    filterState.limit > 0
+  );
+  const activeFilterCount =
+    (filterState.dateConfig.startDate || filterState.dateConfig.endDate ? 1 : 0) +
+    (filterState.limit > 0 ? 1 : 0);
+
+  const handleResetFilter = () => {
+    setFilterState({
+      dateConfig: { column: '', startDate: '', endDate: '', preset: 'all' },
+      limit: 0,
+    });
+  };
+
+  // 엑셀 다운로드 클릭 핸들러 (필터 시 범위 선택)
+  const handleDownloadXlsxClick = () => {
+    if (!currentSheet || currentSheet.rows.length === 0) {
+      alert('데이터가 없습니다.');
+      return;
+    }
+    if (filteredRows.length !== rawRowsWithOrigin.length) {
+      setExportScopeTarget('xlsx');
+      setShowExportScopeModal(true);
+    } else {
+      fileExport.downloadXlsx('all', filteredRows);
+    }
+  };
+
+  // SQLite DB 다운로드 클릭 핸들러 (필터 시 범위 선택)
+  const handleDownloadSqliteClick = () => {
+    if (!currentSheet || currentSheet.rows.length === 0) {
+      alert('데이터가 없습니다.');
+      return;
+    }
+    if (filteredRows.length !== rawRowsWithOrigin.length) {
+      setExportScopeTarget('sqlite');
+      setShowExportScopeModal(true);
+    } else {
+      fileExport.downloadSqlite('all', filteredRows);
+    }
+  };
+
+  // 구글 시트 내보내기 클릭 핸들러 (필터 시 범위 선택)
+  const handleExportGoogleSheetsClick = () => {
+    if (!currentSheet || currentSheet.rows.length === 0) {
+      alert('데이터가 없습니다.');
+      return;
+    }
+    if (filteredRows.length !== rawRowsWithOrigin.length) {
+      setExportScopeTarget('sheets');
+      setShowExportScopeModal(true);
+    } else {
+      proceedGoogleSheetsExport('all');
+    }
+  };
+
+  const proceedGoogleSheetsExport = (scope: 'filtered' | 'all') => {
+    setPendingScopeChoice(scope);
+    if (currentProject?.googleSpreadsheetId) {
+      fileExport.setIsExportOptionModalOpen(true);
+    } else {
+      fileExport.executeExportGoogleSheets('create', scope, filteredRows);
+    }
+  };
+
+  // 범위 선택 모달 확정 핸들러
+  const handleConfirmScope = (scope: 'filtered' | 'all') => {
+    setShowExportScopeModal(false);
+    if (exportScopeTarget === 'xlsx') {
+      fileExport.downloadXlsx(scope, filteredRows);
+    } else if (exportScopeTarget === 'sqlite') {
+      fileExport.downloadSqlite(scope, filteredRows);
+    } else if (exportScopeTarget === 'sheets') {
+      proceedGoogleSheetsExport(scope);
+    }
+  };
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-50 text-slate-800 font-sans selection:bg-blue-100 selection:text-blue-900">
@@ -72,8 +187,8 @@ export default function FileToSheetApp() {
         onOpenLoginModal={() => auth.setShowPhoneAuthModal(true)}
         onLogout={auth.handleLogout}
         onUploadFile={upload.handleFileDropOrSelect}
-        onDownloadXlsx={fileExport.handleDownloadXlsx}
-        onDownloadSqlite={fileExport.handleDownloadSqlite}
+        onDownloadXlsx={handleDownloadXlsxClick}
+        onDownloadSqlite={handleDownloadSqliteClick}
         onOpenPricingModal={() => setShowPricingModal(true)}
         onOpenTransferModal={() => setShowTransferModal(true)}
         onOpenShareToManagerModal={() => setShowShareToManagerModal(true)}
@@ -82,7 +197,7 @@ export default function FileToSheetApp() {
           title: 'PRO 전용 기능',
           reason: 'SQLite DB 직접 다운로드 및 데이터 행 수 무제한 처리는 PRO 플랜 회원 혜택입니다.'
         })}
-        onExportGoogleSheets={fileExport.handleExportGoogleSheets}
+        onExportGoogleSheets={handleExportGoogleSheetsClick}
         onOpenOriginalModal={() => setShowOriginalModal(true)}
         onOpenShareModal={() => setShowShareModal(true)}
         onOpenShareManagementModal={() => setShowShareManagementModal(true)}
@@ -135,6 +250,7 @@ export default function FileToSheetApp() {
                   activeSubTab={activeSubTab}
                   setActiveSubTab={setActiveSubTab}
                   rowsCount={filteredRows.length}
+                  totalRowsCount={rawRowsWithOrigin.length}
                   hasOriginalFile={sheetOriginalFiles.length > 0}
                   originalFilesCount={sheetOriginalFiles.length}
                   searchQuery={searchQuery}
@@ -143,6 +259,12 @@ export default function FileToSheetApp() {
                   onOpenAddColumn={() => ws.setIsAddingColumn(true)}
                   sortOrder={sortOrder}
                   onToggleSort={() => setSortOrder((prev) => prev === 'desc' ? 'asc' : 'desc')}
+                  headers={currentSheet.headers}
+                  filterState={filterState}
+                  onFilterChange={setFilterState}
+                  onResetFilter={handleResetFilter}
+                  isFilterActive={isFilterActive}
+                  activeFilterCount={activeFilterCount}
                 />
 
                 {activeSubTab === 'table' && (
@@ -229,7 +351,7 @@ export default function FileToSheetApp() {
       <ExportOptionModal
         isOpen={fileExport.isExportOptionModalOpen}
         onClose={() => fileExport.setIsExportOptionModalOpen(false)}
-        onSelectOption={(mode) => fileExport.executeExportGoogleSheets(mode)}
+        onSelectOption={(mode) => fileExport.executeExportGoogleSheets(mode, pendingScopeChoice, filteredRows)}
         spreadsheetUrl={currentProject?.googleSpreadsheetUrl}
         loading={fileExport.exportLoading}
       />
@@ -322,6 +444,17 @@ export default function FileToSheetApp() {
         isOpen={showShareManagementModal}
         onClose={() => setShowShareManagementModal(false)}
         currentUser={auth.currentUser}
+      />
+
+      {/* 16. 내보내기 범위 (필터된 결과 vs 전체 원본) 선택 모달 */}
+      <ExportScopeModal
+        isOpen={showExportScopeModal}
+        onClose={() => setShowExportScopeModal(false)}
+        targetType={exportScopeTarget}
+        filteredCount={filteredRows.length}
+        totalCount={rawRowsWithOrigin.length}
+        onConfirm={handleConfirmScope}
+        loading={fileExport.exportLoading}
       />
     </div>
   );

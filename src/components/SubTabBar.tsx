@@ -1,12 +1,14 @@
 'use client';
 
 import React from 'react';
-import { Table as TableIcon, Eye, BarChart3, Search, Plus, Columns, ArrowUpDown } from 'lucide-react';
+import { Table as TableIcon, Eye, BarChart3, Search, Plus, Columns, ArrowUpDown, RotateCcw } from 'lucide-react';
+import { DataFilterPopover, FilterState } from './DataFilterPopover';
 
 interface SubTabBarProps {
   activeSubTab: 'table' | 'original' | 'summary';
   setActiveSubTab: (tab: 'table' | 'original' | 'summary') => void;
   rowsCount: number;
+  totalRowsCount?: number;
   hasOriginalFile: boolean;
   originalFilesCount?: number;
   searchQuery: string;
@@ -15,12 +17,19 @@ interface SubTabBarProps {
   onOpenAddColumn: () => void;
   sortOrder?: 'desc' | 'asc';
   onToggleSort?: () => void;
+  headers?: string[];
+  filterState?: FilterState;
+  onFilterChange?: (newState: FilterState) => void;
+  onResetFilter?: () => void;
+  isFilterActive?: boolean;
+  activeFilterCount?: number;
 }
 
 export function SubTabBar({
   activeSubTab,
   setActiveSubTab,
   rowsCount,
+  totalRowsCount,
   hasOriginalFile,
   originalFilesCount = 0,
   searchQuery,
@@ -29,7 +38,15 @@ export function SubTabBar({
   onOpenAddColumn,
   sortOrder = 'desc',
   onToggleSort,
+  headers = [],
+  filterState,
+  onFilterChange,
+  onResetFilter,
+  isFilterActive = false,
+  activeFilterCount = 0,
 }: SubTabBarProps) {
+  const isFiltered = (totalRowsCount !== undefined && rowsCount !== totalRowsCount) || Boolean(searchQuery.trim()) || isFilterActive;
+
   return (
     <div className="border-b border-slate-200 bg-white px-4 py-2 flex flex-wrap items-center justify-between gap-3 shadow-2xs">
       <div className="flex items-center gap-1.5">
@@ -42,6 +59,11 @@ export function SubTabBar({
         >
           <TableIcon className="w-3.5 h-3.5" />
           <span>📊 표 데이터 ({rowsCount}행)</span>
+          {isFiltered && totalRowsCount !== undefined && (
+            <span className="text-[10px] font-bold text-blue-600 bg-blue-100/80 px-1.5 py-0.2 rounded ml-0.5">
+              전체 {totalRowsCount}행 중
+            </span>
+          )}
         </button>
 
         <button
@@ -67,6 +89,18 @@ export function SubTabBar({
 
       {activeSubTab === 'table' && (
         <div className="flex items-center gap-2">
+          {/* 기간 및 건수 필터 팝오버 */}
+          {filterState && onFilterChange && onResetFilter && (
+            <DataFilterPopover
+              headers={headers}
+              filterState={filterState}
+              onFilterChange={onFilterChange}
+              onResetFilter={onResetFilter}
+              isFilterActive={isFilterActive}
+              activeFilterCount={activeFilterCount}
+            />
+          )}
+
           {/* 최신순 / 등록순 정렬 토글 */}
           {onToggleSort && (
             <button
@@ -75,19 +109,28 @@ export function SubTabBar({
               title={sortOrder === 'desc' ? '현재 최신 데이터 우선 정렬 (클릭 시 과거 등록순)' : '현재 과거 등록순 정렬 (클릭 시 최신순)'}
             >
               <ArrowUpDown className="w-3.5 h-3.5 text-blue-600" />
-              <span>{sortOrder === 'desc' ? '⬇️ 최신순 (기본)' : '⬆️ 과거순'}</span>
+              <span>{sortOrder === 'desc' ? '⬇️ 최신순' : '⬆️ 과거순'}</span>
             </button>
           )}
 
+          {/* 실시간 텍스트 검색창 */}
           <div className="relative">
             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="데이터 실시간 검색..."
+              placeholder="표 데이터 실시간 검색..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8 pr-3 py-1 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 w-36 sm:w-48 bg-slate-50 focus:bg-white transition"
+              className="pl-8 pr-3 py-1 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 w-36 sm:w-44 bg-slate-50 focus:bg-white transition"
             />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-[10px]"
+              >
+                ✕
+              </button>
+            )}
           </div>
 
           <button onClick={onAddRow} className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg transition" title="새 데이터 행 추가">

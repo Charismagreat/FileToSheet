@@ -11,36 +11,78 @@ interface UseFileExportOptions {
   activeProjectIndex: number;
 }
 
+function cleanRows(rows: Record<string, any>[], headers: string[]) {
+  return rows.map((r) => {
+    const clean: Record<string, any> = {};
+    headers.forEach((h) => {
+      clean[h] = r[h] ?? '';
+    });
+    return clean;
+  });
+}
+
 export function useFileExport({ currentProject, setProjects, activeProjectIndex }: UseFileExportOptions) {
   const [exportLoading, setExportLoading] = useState<boolean>(false);
   const [isExportOptionModalOpen, setIsExportOptionModalOpen] = useState<boolean>(false);
 
   const currentSheet = currentProject ? currentProject.sheets[currentProject.activeSheetIndex] : null;
 
-  const handleDownloadXlsx = () => {
+  // 1. Excel (.xlsx) 다운로드 (범위 지정 지원)
+  const downloadXlsx = (scope: 'filtered' | 'all' = 'all', filteredRows: Record<string, any>[] = []) => {
     if (!currentProject || currentProject.sheets.length === 0) {
       alert('데이터가 없습니다.');
       return;
     }
-    downloadWorkbook(currentProject.sheets, `FileToSheet_${currentProject.name}.xlsx`);
+
+    const safeProjName = currentProject.name || 'project';
+
+    if (scope === 'filtered' && currentSheet) {
+      // 현재 활성 시트의 행만 필터된 행으로 치환
+      const sanitizedFiltered = cleanRows(filteredRows, currentSheet.headers);
+      const targetSheets = currentProject.sheets.map((s, idx) => {
+        if (idx === currentProject.activeSheetIndex) {
+          return { name: s.name, rows: sanitizedFiltered };
+        }
+        return { name: s.name, rows: cleanRows(s.rows, s.headers) };
+      });
+      const filename = `FileToSheet_${safeProjName}_조회결과_${sanitizedFiltered.length}건.xlsx`;
+      downloadWorkbook(targetSheets, filename);
+    } else {
+      // 전체 원본 데이터 다운로드
+      const targetSheets = currentProject.sheets.map((s) => ({
+        name: s.name,
+        rows: cleanRows(s.rows, s.headers),
+      }));
+      downloadWorkbook(targetSheets, `FileToSheet_${safeProjName}_전체.xlsx`);
+    }
   };
 
-  const executeExportGoogleSheets = async (mode: 'update' | 'create') => {
+  // 2. Google 스프레드시트 내보내기 실행 (범위 지정 지원)
+  const executeExportGoogleSheets = async (
+    mode: 'update' | 'create',
+    scope: 'filtered' | 'all' = 'all',
+    filteredRows: Record<string, any>[] = []
+  ) => {
     if (!currentSheet || currentSheet.rows.length === 0) {
       alert('데이터가 없습니다.');
       return;
     }
     setExportLoading(true);
     try {
+      const rowsToExport = scope === 'filtered' ? filteredRows : currentSheet.rows;
+      const sanitizedRows = cleanRows(rowsToExport, currentSheet.headers);
+
       const data = [
         currentSheet.headers,
-        ...currentSheet.rows.map((r) => currentSheet.headers.map((h) => String(r[h] ?? ''))),
+        ...sanitizedRows.map((r) => currentSheet.headers.map((h) => String(r[h] ?? ''))),
       ];
+
+      const suffix = scope === 'filtered' ? ` (조회결과 ${sanitizedRows.length}건)` : '';
       const res = await apiFetch('/api/export-sheets', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: `[FileToSheet] ${currentProject?.name}`,
+          title: `[FileToSheet] ${currentProject?.name}${suffix}`,
           data,
           fileId: currentProject?.id,
           mode,
@@ -74,30 +116,36 @@ export function useFileExport({ currentProject, setProjects, activeProjectIndex 
     }
   };
 
-  const handleExportGoogleSheets = () => {
-    if (!currentSheet || currentSheet.rows.length === 0) {
-      alert('데이터가 없습니다.');
-      return;
-    }
-    // 이미 연결된 구글 시트가 있으면 선택 모달 표시
-    if (currentProject?.googleSpreadsheetId) {
-      setIsExportOptionModalOpen(true);
-    } else {
-      executeExportGoogleSheets('create');
-    }
-  };
-
-  const handleDownloadSqlite = async () => {
+  // 3. SQLite DB (.sqlite) 다운로드 (범위 지정 지원)
+  const downloadSqlite = async (scope: 'filtered' | 'all' = 'all', filteredRows: Record<string, any>[] = []) => {
     if (!currentProject || currentProject.sheets.length === 0) {
       alert('데이터가 없습니다.');
       return;
     }
     setExportLoading(true);
     try {
+      let projectPayload = currentProject;
+      const safeProjName = (currentProject.name || 'project').replace(/[\\/:*?"<>|]/g, '_');
+
+      if (scope === 'filtered' && currentSheet) {
+        const sanitizedFiltered = cleanRows(filteredRows, currentSheet.headers);
+        const modifiedSheets = currentProject.sheets.map((s, idx) => {
+          if (idx === currentProject.activeSheetIndex) {
+            return { ...s, rows: sanitizedFiltered };
+          }
+          return { ...s, rows: cleanRows(s.rows, s.headers) };
+        });
+        projectPayload = {
+          ...currentProject,
+          name: `${safeProjName}_조회결과_${sanitizedFiltered.length}건`,
+          sheets: modifiedSheets,
+        };
+      }
+
       const res = await apiFetch('/api/export-sqlite', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ project: currentProject }),
+        body: JSON.stringify({ project: projectPayload }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -107,8 +155,8 @@ export function useFileExport({ currentProject, setProjects, activeProjectIndex 
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      const safeName = (currentProject.name || 'project').replace(/[\\/:*?"<>|]/g, '_');
-      a.download = `FileToSheet_${safeName}.sqlite`;
+      const suffix = scope === 'filtered' ? `_조회결과` : `_전체`;
+      a.download = `FileToSheet_${safeProjName}${suffix}.sqlite`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -124,10 +172,8 @@ export function useFileExport({ currentProject, setProjects, activeProjectIndex 
     exportLoading,
     isExportOptionModalOpen,
     setIsExportOptionModalOpen,
-    handleDownloadXlsx,
-    handleDownloadSqlite,
-    handleExportGoogleSheets,
+    downloadXlsx,
+    downloadSqlite,
     executeExportGoogleSheets,
   };
 }
-
