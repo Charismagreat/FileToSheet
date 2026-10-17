@@ -70,7 +70,7 @@ export function ReceiptModal({ isOpen, onClose, record }: ReceiptModalProps) {
           <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 space-y-1 text-[11px]">
             <div className="flex justify-between">
               <span className="text-slate-400">서비스명</span>
-              <span className="font-bold text-slate-800">FileToSheet (파일투시트)</span>
+              <span className="font-bold text-slate-800">File to Sheet</span>
             </div>
             <div className="flex justify-between">
               <span className="text-slate-400">공급자 상호</span>

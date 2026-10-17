@@ -206,7 +206,7 @@ export default function UseCasesPage() {
           <div className="text-center mb-10">
             <h2 className="text-xs font-black text-blue-600 uppercase tracking-widest mb-1.5">BEFORE & AFTER</h2>
             <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-900 break-keep">
-              파일투시트 도입 전과 후, 업무가 이렇게 바뀝니다
+              File to Sheet 도입 전과 후, 업무가 이렇게 바뀝니다
             </h3>
           </div>
 
@@ -345,7 +345,7 @@ export default function UseCasesPage() {
                     <div>
                       <span className="text-xs font-black text-blue-700 flex items-center gap-1.5 mb-2.5">
                         <Sparkles className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-                        <span>파일투시트의 해결책 (Solution)</span>
+                        <span>File to Sheet의 해결책 (Solution)</span>
                       </span>
                       <p className="text-xs sm:text-sm text-slate-800 leading-relaxed break-keep font-medium">{current.solution}</p>
                     </div>
@@ -498,7 +498,7 @@ export default function UseCasesPage() {
             <div className="p-5 sm:p-6 rounded-2xl bg-slate-50/70 border border-slate-200 shadow-2xs">
               <h4 className="text-sm font-bold text-slate-900 mb-2">Q. 회사 기밀이나 개인정보 유출 위험은 없나요?</h4>
               <p className="text-xs sm:text-sm text-slate-600 leading-relaxed break-keep">
-                파일투시트는 엔터프라이즈 보안 가이드라인을 준수합니다. 업로드된 문서는 고객님의 승인 없이 외부에 공유되지 않으며, 인공지능 모델의 학습 데이터로 재활용되지 않습니다.
+                File to Sheet는 엔터프라이즈 보안 가이드라인을 준수합니다. 업로드된 문서는 고객님의 승인 없이 외부에 공유되지 않으며, 인공지능 모델의 학습 데이터로 재활용되지 않습니다.
               </p>
             </div>
           </div>

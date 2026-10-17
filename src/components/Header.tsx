@@ -114,7 +114,7 @@ export function Header({
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-1.5 text-xs font-extrabold px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 hover:from-amber-100 hover:to-orange-100 text-amber-950 border border-amber-200/90 transition transform hover:scale-105 active:scale-95 shadow-2xs group cursor-pointer"
-          title="파일투시트의 가치와 직무별/업종별 6대 핵심 활용사례 보기 (새 창)"
+          title="File to Sheet의 가치와 직무별/업종별 6대 핵심 활용사례 보기 (새 창)"
         >
           <Lightbulb className="w-3.5 h-3.5 text-amber-600 group-hover:rotate-12 transition" />
           <span>활용사례</span>
