@@ -153,9 +153,10 @@ export function UserUsagePopover({
               <span>PRO 플랜으로 무제한 경험</span>
             </div>
             <p className="text-[10px] text-blue-700/80 leading-relaxed">
-              시트 30개, 데이터 <strong>행 수 무제한</strong>, 월 300장 파싱을 월 9,900원에 누려보세요.
+              시트 30개, <strong>행 수 무제한</strong>, 월 500장 파싱 + 영구 보관을 월 9,900원에 누려보세요.
             </p>
           </div>
+
           <button
             onClick={() => {
               onClose();

@@ -15,6 +15,7 @@ export interface PlanPolicy {
   maxFileSizeMB: number;       // 단일 파일 최대 허용 용량 (MB)
   dailyUploadLimit: number;    // 일일 최대 업로드 횟수
   rateLimitPerMinute: number;  // 분당 최대 업로드 횟수 (스팸/매크로 방어)
+  storageRetentionDays: number; // 원본 증빙 파일 보관 기간 (일, Infinity = 영구)
 }
 
 export const PLAN_LIMITS: Record<string, PlanPolicy> = {
@@ -31,6 +32,7 @@ export const PLAN_LIMITS: Record<string, PlanPolicy> = {
     maxFileSizeMB: 10,
     dailyUploadLimit: 30,
     rateLimitPerMinute: 15,
+    storageRetentionDays: 30, // 30일 보관
   },
   pro: {
     name: '프로 회원',
@@ -40,13 +42,15 @@ export const PLAN_LIMITS: Record<string, PlanPolicy> = {
     maxSheetsPerProject: 30,
     maxRowsPerSheet: Infinity, // 무제한 (SQLite 고속 엔진 탑재)
     maxTotalRowsPerProject: Infinity, // 무제한
-    includedMonthlyDocs: 300,
+    includedMonthlyDocs: 500, // 월 500장 기본 파싱 제공 (대폭 확대)
     overagePricePerDoc: 20,
     maxFileSizeMB: 50,
     dailyUploadLimit: Infinity,
     rateLimitPerMinute: 20,
+    storageRetentionDays: Infinity, // 원본 영구 보관 무료
   },
 };
+
 
 export function getPlanLimits(plan?: string): PlanPolicy {
   return PLAN_LIMITS[plan === 'pro' ? 'pro' : 'free'];

@@ -52,14 +52,19 @@ export function PlanLimitModal({ isOpen, onClose, title = '이용 한도 도달 
 
             <li className="flex items-center gap-1.5">
               <Check className="w-3 h-3 text-blue-600 shrink-0" />
-              <span>월 <strong>300장 기본 파싱</strong> + 초과 시 <strong>장당 20원</strong></span>
+              <span>월 <strong>500장 기본 파싱</strong> + 초과 시 <strong>장당 20원</strong></span>
             </li>
             <li className="flex items-center gap-1.5">
               <Check className="w-3 h-3 text-blue-600 shrink-0" />
-              <span>Google Sheets 원클릭 연동 & 비밀번호 보호 공유</span>
+              <span>원본 증빙 문서 <strong>영구 보관 무료</strong> (Free: 30일)</span>
+            </li>
+            <li className="flex items-center gap-1.5">
+              <Check className="w-3 h-3 text-blue-600 shrink-0" />
+              <span>Google Sheets 연동 & .sqlite DB 원클릭 다운로드</span>
             </li>
           </ul>
         </div>
+
 
         <div className="flex gap-2">
           <button
