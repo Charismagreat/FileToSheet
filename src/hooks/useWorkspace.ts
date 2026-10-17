@@ -18,6 +18,8 @@ export function useWorkspace({ phoneNumber }: UseWorkspaceOptions = {}) {
   const [editingSheetIdx, setEditingSheetIdx] = useState<number | null>(null);
   const [editingSheetName, setEditingSheetName] = useState<string>('');
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isLoadedRef = useRef<boolean>(false);
+  const isSavingRef = useRef<boolean>(false);
 
   const currentProject = projects[activeProjectIndex] || null;
   const currentSheet = currentProject ? currentProject.sheets[currentProject.activeSheetIndex] : null;
@@ -27,30 +29,47 @@ export function useWorkspace({ phoneNumber }: UseWorkspaceOptions = {}) {
     if (!phoneNumber) {
       setProjects([]);
       setActiveProjectIndex(0);
+      isLoadedRef.current = false;
       return;
     }
+    isLoadedRef.current = false;
     fetchUserProjectsFromDb(phoneNumber).then((dbProjects) => {
       if (dbProjects && dbProjects.length > 0) {
         setProjects(dbProjects);
         setActiveProjectIndex(0);
       }
+      isLoadedRef.current = true;
+    }).catch(() => {
+      isLoadedRef.current = true;
     });
   }, [phoneNumber]);
 
-  // 2. 프로젝트 변경 시 실제 DB에 자동 동기화 (디바운스 800ms)
+  // 2. 프로젝트 변경 시 실제 DB에 자동 동기화 (안전 락 + 디바운스 1000ms)
   useEffect(() => {
-    if (!phoneNumber || !currentProject) return;
+    if (!isLoadedRef.current || !phoneNumber || !currentProject) return;
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+
     saveTimeoutRef.current = setTimeout(async () => {
-      const savedId = await saveUserProjectToDb(phoneNumber, currentProject);
-      if (savedId && !currentProject.id) {
-        setProjects((prev) => {
-          const next = [...prev];
-          if (next[activeProjectIndex]) next[activeProjectIndex] = { ...next[activeProjectIndex], id: savedId };
-          return next;
-        });
+      if (isSavingRef.current) return;
+      isSavingRef.current = true;
+      try {
+        const savedId = await saveUserProjectToDb(phoneNumber, currentProject);
+        if (savedId && !currentProject.id) {
+          setProjects((prev) => {
+            const next = [...prev];
+            if (next[activeProjectIndex] && !next[activeProjectIndex].id) {
+              next[activeProjectIndex] = { ...next[activeProjectIndex], id: savedId };
+            }
+            return next;
+          });
+        }
+      } catch (err) {
+        console.warn('자동 저장 중 경고:', err);
+      } finally {
+        isSavingRef.current = false;
       }
-    }, 800);
+    }, 1000);
+
     return () => { if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current); };
   }, [projects, phoneNumber, activeProjectIndex]);
 

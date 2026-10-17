@@ -127,7 +127,7 @@ export function useFileUpload({
           next[activeProjectIndex] = proj;
         } else {
           next.push({
-            id: fileId,
+            id: null,
             name: file.name.replace(/\.[^/.]+$/, ''),
             category,
             sheets: parsedSheets.map((sh) => ({ ...sh, rows: sh.rows.map((r) => ({ ...r, _fileId: fileId, _fileName: file.name })) })),
