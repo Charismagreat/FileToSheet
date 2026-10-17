@@ -41,7 +41,7 @@ export function UploadUndoToast({ uploadInfo, onUndo, onDismiss }: UploadUndoToa
   if (!uploadInfo) return null;
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-5 fade-in duration-200">
+    <div className="fixed bottom-20 right-6 z-50 animate-in slide-in-from-bottom-5 fade-in duration-200">
       <div className="bg-slate-900 text-white rounded-2xl shadow-2xl border border-slate-700/60 p-4 max-w-md w-full flex items-center gap-3 backdrop-blur-md">
         {/* 성공 아이콘 */}
         <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30">

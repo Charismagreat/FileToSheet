@@ -4,7 +4,7 @@ import React, { useState, useRef } from 'react';
 import {
   FileSpreadsheet, Download, Share2, RefreshCw, Smartphone, LogOut,
   User, Database, Crown, UploadCloud, Zap, ChevronDown, Building2, BarChart3,
-  Send, Inbox, Globe,
+  Send, Inbox, Globe, Sparkles,
 } from 'lucide-react';
 import { UserSession, ProjectWorkspace } from '@/types/workspace';
 import { UserUsagePopover } from './UserUsagePopover';
@@ -23,6 +23,7 @@ interface HeaderProps {
   onOpenShareToManagerModal?: () => void;
   onOpenConsolidatedModal?: () => void;
   onOpenShareManagementModal?: () => void;
+  onOpenAiChat?: () => void;
   onExportGoogleSheets: () => void;
   onOpenOriginalModal: () => void;
   onOpenShareModal: () => void;
@@ -45,6 +46,7 @@ export function Header({
   onOpenShareToManagerModal,
   onOpenConsolidatedModal,
   onOpenShareManagementModal,
+  onOpenAiChat,
   onExportGoogleSheets,
   onOpenShareModal,
   onUploadFile,
@@ -230,6 +232,17 @@ export function Header({
           >
             <Globe className="w-3.5 h-3.5 text-blue-600" />
             <span>공유 관리</span>
+          </button>
+        )}
+
+        {onOpenAiChat && (
+          <button
+            onClick={onOpenAiChat}
+            className="flex items-center gap-1.5 text-xs font-extrabold px-3.5 py-2 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-sm transition active:scale-98"
+            title="자연어로 모든 시트와 프로젝트를 분석하고 질문하는 AI 데이터 비서"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-spin" style={{ animationDuration: '6s' }} />
+            <span>AI 비서</span>
           </button>
         )}
       </div>

@@ -16,6 +16,8 @@ import {
   ShareManagementModal, ExportScopeModal,
 } from '@/components/modals';
 import { UploadUndoToast } from '@/components/UploadUndoToast';
+import { AiChatDrawer } from '@/components/AiChatDrawer';
+import { Sparkles } from 'lucide-react';
 import { ExportTargetType } from '@/components/ExportScopeModal';
 import { FilterState } from '@/components/DataFilterPopover';
 import { useAuth } from '@/hooks/useAuth';
@@ -34,6 +36,7 @@ export default function FileToSheetApp() {
   const [showConsolidatedModal, setShowConsolidatedModal] = useState<boolean>(false);
   const [showEmergencyRecoveryModal, setShowEmergencyRecoveryModal] = useState<boolean>(false);
   const [showShareManagementModal, setShowShareManagementModal] = useState<boolean>(false);
+  const [showAiChatDrawer, setShowAiChatDrawer] = useState<boolean>(false);
   const handlePlanLimit = (title: string, reason: string) => setLimitNotice({ title, reason });
 
   const ws = useWorkspace({
@@ -268,6 +271,7 @@ export default function FileToSheetApp() {
         onOpenOriginalModal={() => setShowOriginalModal(true)}
         onOpenShareModal={() => setShowShareModal(true)}
         onOpenShareManagementModal={() => setShowShareManagementModal(true)}
+        onOpenAiChat={() => setShowAiChatDrawer(true)}
         hasOriginalFile={Boolean(currentProject?.originalFileUrl)}
         hasSheetData={Boolean(currentSheet && currentSheet.rows.length > 0)}
         exportLoading={fileExport.exportLoading}
@@ -544,6 +548,30 @@ export default function FileToSheetApp() {
         uploadInfo={upload.lastUploadAction}
         onUndo={upload.undoLastUpload}
         onDismiss={upload.dismissUndoToast}
+      />
+
+      {/* 18. 우측 하단 플로팅 AI 데이터 비서 퀵 버튼 */}
+      <div className="fixed bottom-6 right-6 z-40">
+        <button
+          type="button"
+          onClick={() => setShowAiChatDrawer(true)}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-extrabold text-xs shadow-xl shadow-indigo-500/25 border border-white/20 transition transform hover:scale-105 active:scale-95"
+          title="자연어로 모든 시트와 프로젝트에 대해 질문하고 답변 받기"
+        >
+          <Sparkles className="w-4 h-4 text-amber-300 animate-spin" style={{ animationDuration: '6s' }} />
+          <span>AI 데이터 비서</span>
+          <span className="bg-white/20 text-white text-[10px] px-1.5 py-0.2 rounded-full font-bold">
+            PRO
+          </span>
+        </button>
+      </div>
+
+      {/* 19. 자연어 시트 질의응답 AI Chat Drawer */}
+      <AiChatDrawer
+        isOpen={showAiChatDrawer}
+        onClose={() => setShowAiChatDrawer(false)}
+        projects={ws.projects}
+        activeProjectIndex={ws.activeProjectIndex}
       />
     </div>
   );
