@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Trash2, UploadCloud, RefreshCw, FileText } from 'lucide-react';
 import { ParsedSheet } from '@/lib/parser';
 import { TableHeader } from './TableHeader';
 import { TableEmptyDropzone } from './TableEmptyDropzone';
+import { TablePagination } from './TablePagination';
 
 interface TableViewProps {
   sheet: ParsedSheet;
@@ -38,6 +39,23 @@ export function TableView({
   onSaveHeaderEdit, onDeleteColumn, onReorderColumns, onDeleteRow,
 }: TableViewProps) {
   const [hoveredFileKey, setHoveredFileKey] = useState<string | number | null>(null);
+
+  // 실무형 페이지네이션 상태 (기본 50개씩)
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(50);
+
+  // 필터링 결과나 행 개수 변경 시 유효 페이지 범위 보정
+  useEffect(() => {
+    const maxPage = pageSize >= 999999 ? 1 : Math.max(1, Math.ceil(filteredRows.length / pageSize));
+    if (currentPage > maxPage) {
+      setCurrentPage(maxPage);
+    }
+  }, [filteredRows.length, pageSize, currentPage]);
+
+  const isAll = pageSize >= 999999;
+  const paginatedRows = isAll
+    ? filteredRows
+    : filteredRows.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   return (
     <>
@@ -80,8 +98,9 @@ export function TableView({
           />
 
           <tbody className="divide-y divide-slate-100 font-sans">
-            {filteredRows.map((row, rowIdx) => {
+            {paginatedRows.map((row, rowIdx) => {
               const actualIdx = row._originIdx !== undefined ? row._originIdx : rowIdx;
+              const displayRowNumber = isAll ? rowIdx + 1 : (currentPage - 1) * pageSize + rowIdx + 1;
               const rowFileKey = row._fileUid || (row._fileId ? `id_${row._fileId}` : undefined) || row._fileName || docFilename;
               const rowFileName = row._fileName || docFilename;
               const rowUploadTime = row.등록일시 ? ` (${row.등록일시} 적재)` : '';
@@ -96,7 +115,7 @@ export function TableView({
                 >
                   <td className="px-2.5 py-2 text-center text-slate-400 border-r border-slate-200 font-mono text-[11px] bg-slate-50/60 select-none">
                     <div className="flex items-center justify-center gap-1">
-                      <span>{rowIdx + 1}</span>
+                      <span>{displayRowNumber}</span>
                       {rowFileName && (
                         <span
                           title={`📄 원본 증빙: ${rowFileName}${rowUploadTime}\n(동일 파일에서 추출된 행들이 함께 하이라이트됩니다)`}
@@ -155,6 +174,15 @@ export function TableView({
         </table>
         {filteredRows.length === 0 && <TableEmptyDropzone onFileSelect={onDropDirectlyToTable} />}
       </div>
+
+      {/* 페이지네이션 컨트롤러 */}
+      <TablePagination
+        currentPage={currentPage}
+        totalRows={filteredRows.length}
+        pageSize={pageSize}
+        onPageChange={setCurrentPage}
+        onPageSizeChange={setPageSize}
+      />
 
       <div className="border-t border-slate-200 bg-slate-50/90 px-4 py-2 flex items-center justify-between text-[11px] text-slate-500">
         <div className="flex items-center gap-3">
