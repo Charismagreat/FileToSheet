@@ -181,7 +181,7 @@ export default function FileToSheetApp() {
 
       <AddColumnModal show={ws.isAddingColumn} onClose={() => ws.setIsAddingColumn(false)} newColumnName={ws.newColumnName} setNewColumnName={ws.setNewColumnName} onAddColumn={ws.handleAddColumn} />
       <ExportOptionModal isOpen={fileExport.isExportOptionModalOpen} onClose={() => fileExport.setIsExportOptionModalOpen(false)} onSelectOption={(mode) => fileExport.executeExportGoogleSheets(mode)} spreadsheetUrl={currentProject?.googleSpreadsheetUrl} loading={fileExport.exportLoading} />
-      <ShareModal isOpen={showShareModal} onClose={() => setShowShareModal(false)} project={currentProject} />
+      <ShareModal isOpen={showShareModal} onClose={() => setShowShareModal(false)} projects={ws.projects} initialProjectIndex={ws.activeProjectIndex} />
     </div>
   );
 }
