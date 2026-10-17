@@ -19,6 +19,7 @@ import { UploadUndoToast } from '@/components/UploadUndoToast';
 import { AiChatDrawer, ChatScope } from '@/components/AiChatDrawer';
 import { BillingHistoryModal } from '@/components/BillingHistoryModal';
 import { RemoteDbModal } from '@/components/RemoteDbModal';
+import { BatchUploadMonitor } from '@/components/BatchUploadMonitor';
 import { Sparkles, Upload } from 'lucide-react';
 import { ExportTargetType } from '@/components/ExportScopeModal';
 import { FilterState } from '@/components/DataFilterPopover';
@@ -26,6 +27,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import { useFileExport } from '@/hooks/useFileExport';
+import { useBatchUploadQueue } from '@/hooks/useBatchUploadQueue';
 import { getSheetOriginalFiles } from '@/lib/sheet-helpers';
 import { ProjectWorkspace } from '@/types/workspace';
 
@@ -58,6 +60,67 @@ export default function FileToSheetApp() {
   const fileExport = useFileExport({
     currentProject: ws.currentProject, setProjects: ws.setProjects, activeProjectIndex: ws.activeProjectIndex,
   });
+
+  // 🌟 다중 파일 스마트 시트 일괄 적재 큐 훅
+  const batchQueue = useBatchUploadQueue({
+    project: ws.currentProject,
+    plan: auth.currentUser?.plan,
+    onPlanLimit: handlePlanLimit,
+    onItemAppended: (targetSheetIndex, newRows, docItem) => {
+      ws.setProjects((prev) =>
+        prev.map((proj, pIdx) => {
+          if (pIdx !== ws.activeProjectIndex) return proj;
+          const nextSheets = proj.sheets.map((sh, sIdx) => {
+            if (sIdx !== targetSheetIndex) return sh;
+            const existingOriginalFiles = sh.originalFiles || [];
+            const nextRows = [...sh.rows, ...newRows].map((r, i) => ({ ...r, 일련번호: i + 1 }));
+            return {
+              ...sh,
+              rows: nextRows,
+              originalFiles: [...existingOriginalFiles, docItem],
+            };
+          });
+          const nextOriginalFiles = [...(proj.originalFiles || []), docItem];
+          return {
+            ...proj,
+            sheets: nextSheets,
+            originalFiles: nextOriginalFiles,
+          };
+        })
+      );
+    },
+    onNewSheetCreated: (newSheet, docItem) => {
+      ws.setProjects((prev) =>
+        prev.map((proj, pIdx) => {
+          if (pIdx !== ws.activeProjectIndex) return proj;
+          const nextSheets = [...proj.sheets, newSheet];
+          const nextOriginalFiles = [...(proj.originalFiles || []), docItem];
+          return {
+            ...proj,
+            sheets: nextSheets,
+            activeSheetIndex: nextSheets.length - 1,
+            originalFiles: nextOriginalFiles,
+          };
+        })
+      );
+    },
+  });
+
+  const handleBatchOrSingleUpload = (files: FileList | File[]) => {
+    const fileArray = Array.from(files);
+    if (fileArray.length === 0) return;
+
+    if (ws.projects.length === 0) {
+      upload.handleFileDropOrSelect(fileArray[0]);
+      return;
+    }
+
+    if (fileArray.length > 1) {
+      batchQueue.enqueueFiles(fileArray);
+    } else {
+      upload.handleFileDropOrSelect(fileArray[0]);
+    }
+  };
 
 
   const [activeSubTab, setActiveSubTab] = useState<'table' | 'original' | 'summary'>('table');
@@ -448,7 +511,13 @@ export default function FileToSheetApp() {
                     docFilename={currentProject.name}
                     isTableDragging={isTableDragging}
                     setIsTableDragging={setIsTableDragging}
-                    onDropDirectlyToTable={upload.handleDropDirectlyToTable}
+                    onDropDirectlyToTable={(file, allFiles) => {
+                      if (allFiles && allFiles.length > 1) {
+                        batchQueue.enqueueFiles(allFiles);
+                      } else {
+                        upload.handleDropDirectlyToTable(file);
+                      }
+                    }}
                     isProcessing={upload.isProcessing}
                     processStatus={upload.processStatus}
                     storageProgress={upload.storageProgress}
@@ -661,26 +730,27 @@ export default function FileToSheetApp() {
         onDismiss={upload.dismissUndoToast}
       />
 
-      {/* 18-A. 하단 중앙 플로팅 파일 업로드 FAB 버튼 (확장형) */}
+      {/* 18-A. 하단 중앙 플로팅 파일 업로드 FAB 버튼 (다중 파일 지원) */}
       {ws.projects.length > 0 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 animate-in fade-in slide-in-from-bottom-2 duration-200">
           <input
             type="file"
             ref={fabFileInputRef}
             onChange={(e) => {
-              if (e.target.files && e.target.files[0]) {
-                upload.handleFileDropOrSelect(e.target.files[0]);
+              if (e.target.files && e.target.files.length > 0) {
+                handleBatchOrSingleUpload(e.target.files);
                 e.target.value = '';
               }
             }}
             accept=".xlsx,.xls,.csv,.pdf,image/*"
+            multiple
             className="hidden"
           />
           <button
             type="button"
             onClick={() => fabFileInputRef.current?.click()}
             className="flex items-center gap-2 pl-3 pr-4 py-2.5 rounded-full bg-white hover:bg-blue-50 text-slate-800 hover:text-blue-700 font-extrabold text-xs shadow-xl shadow-slate-900/15 border border-slate-200 transition transform hover:scale-105 active:scale-95 group cursor-pointer"
-            title="새 파일 업로드 (엑셀, PDF, 영수증 이미지, CSV 등)"
+            title="새 파일 업로드 (다중 파일 선택 가능, AI 스마트 시트 자동 분류)"
           >
             <div className="w-6 h-6 rounded-full bg-blue-600 group-hover:bg-blue-700 text-white flex items-center justify-center shadow-xs transition">
               <Upload className="w-3.5 h-3.5" />
@@ -689,6 +759,26 @@ export default function FileToSheetApp() {
           </button>
         </div>
       )}
+
+      {/* 18-B. 우측 하단 플로팅 실시간 다중 업로드 큐 모니터링 창 */}
+      <BatchUploadMonitor
+        isOpen={batchQueue.isQueueOpen}
+        isMinimized={batchQueue.isMinimized}
+        setIsMinimized={batchQueue.setIsMinimized}
+        onClose={batchQueue.closeQueue}
+        queue={batchQueue.queue}
+        totalCount={batchQueue.totalCount}
+        completedCount={batchQueue.completedCount}
+        mismatchedCount={batchQueue.mismatchedCount}
+        failedCount={batchQueue.failedCount}
+        inProgressCount={batchQueue.inProgressCount}
+        waitingCount={batchQueue.waitingCount}
+        totalAddedRows={batchQueue.totalAddedRows}
+        isAllFinished={batchQueue.isAllFinished}
+        onRetryItem={batchQueue.retryItem}
+        onCreateSheetFromMismatched={batchQueue.createSheetFromMismatched}
+        onClearFinished={batchQueue.clearFinished}
+      />
 
       {/* 18-B. 우측 하단 플로팅 AI 데이터 비서 퀵 버튼 */}
       <div className="fixed bottom-6 right-6 z-40">

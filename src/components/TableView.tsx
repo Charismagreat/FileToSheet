@@ -13,7 +13,7 @@ interface TableViewProps {
   docFilename?: string;
   isTableDragging: boolean;
   setIsTableDragging: (dragging: boolean) => void;
-  onDropDirectlyToTable: (file: File) => void;
+  onDropDirectlyToTable: (file: File, allFiles?: File[]) => void;
   isProcessing?: boolean;
   processStatus?: string;
   storageProgress?: number;
@@ -68,14 +68,18 @@ export function TableView({
         onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setIsTableDragging(false); }}
         onDrop={(e) => {
           e.preventDefault(); e.stopPropagation(); setIsTableDragging(false);
-          if (e.dataTransfer.files?.[0]) onDropDirectlyToTable(e.dataTransfer.files[0]);
+          if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            const files = Array.from(e.dataTransfer.files);
+            onDropDirectlyToTable(files[0], files);
+          }
         }}
         className={`flex-1 overflow-auto relative transition-colors ${isTableDragging ? 'bg-blue-50/70 ring-4 ring-blue-500/50 ring-inset' : ''}`}
       >
         {isTableDragging && (
           <div className="absolute inset-0 z-20 bg-blue-600/10 backdrop-blur-2xs flex flex-col items-center justify-center pointer-events-none border-4 border-dashed border-blue-500 rounded-xl m-2">
             <UploadCloud className="w-12 h-12 text-blue-600 animate-bounce mb-2" />
-            <span className="font-extrabold text-base text-blue-700">이 시트의 표 데이터로 즉시 적재됩니다 (팝업 없음)</span>
+            <span className="font-extrabold text-base text-blue-700">스마트 시트 자동 분류로 즉시 적재됩니다</span>
+            <span className="text-xs text-blue-600 mt-1 font-medium">여러 개의 파일을 동시에 올릴 수 있습니다 (일괄 큐 모니터링)</span>
           </div>
         )}
 
