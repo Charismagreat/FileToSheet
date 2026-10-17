@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Smartphone, X, AlertCircle } from 'lucide-react';
+import { Smartphone, X, AlertCircle, ShieldAlert } from 'lucide-react';
 
 interface PhoneAuthModalProps {
   show: boolean;
@@ -19,6 +19,7 @@ interface PhoneAuthModalProps {
   testCodeHint: string;
   onSendCode: () => void;
   onVerifyCode: () => void;
+  onOpenEmergencyRecovery?: () => void;
 }
 
 export function PhoneAuthModal({
@@ -37,6 +38,7 @@ export function PhoneAuthModal({
   testCodeHint,
   onSendCode,
   onVerifyCode,
+  onOpenEmergencyRecovery,
 }: PhoneAuthModalProps) {
   if (!show) return null;
 
@@ -149,6 +151,22 @@ export function PhoneAuthModal({
                 인증번호 재전송
               </button>
             </div>
+          </div>
+        )}
+
+        {onOpenEmergencyRecovery && (
+          <div className="mt-4 pt-3 border-t border-slate-100 text-center">
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                onOpenEmergencyRecovery();
+              }}
+              className="text-[11px] text-slate-400 hover:text-rose-600 transition flex items-center justify-center gap-1 mx-auto cursor-pointer"
+            >
+              <ShieldAlert className="w-3 h-3 text-slate-400" />
+              <span>휴대폰 분실 / 담당자 부재 비상 회수</span>
+            </button>
           </div>
         )}
       </div>

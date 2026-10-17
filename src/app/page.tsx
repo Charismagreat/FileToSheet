@@ -12,7 +12,7 @@ import { SummaryView } from '@/components/SummaryView';
 import {
   PhoneAuthModal, UploadOptionModal, OriginalFileModal, AddColumnModal,
   ExportOptionModal, ShareModal, PlanLimitModal, PricingModal, EnterpriseInquiryModal, DuplicateFileModal,
-  AccountTransferModal, ShareToManagerModal, ConsolidatedStatsModal,
+  AccountTransferModal, ShareToManagerModal, ConsolidatedStatsModal, EmergencyRecoveryModal,
 } from '@/components/modals';
 import { useAuth } from '@/hooks/useAuth';
 import { useWorkspace } from '@/hooks/useWorkspace';
@@ -28,6 +28,7 @@ export default function FileToSheetApp() {
   const [showTransferModal, setShowTransferModal] = useState<boolean>(false);
   const [showShareToManagerModal, setShowShareToManagerModal] = useState<boolean>(false);
   const [showConsolidatedModal, setShowConsolidatedModal] = useState<boolean>(false);
+  const [showEmergencyRecoveryModal, setShowEmergencyRecoveryModal] = useState<boolean>(false);
   const handlePlanLimit = (title: string, reason: string) => setLimitNotice({ title, reason });
 
   const ws = useWorkspace({
@@ -193,6 +194,7 @@ export default function FileToSheetApp() {
         testCodeHint={auth.testCodeHint}
         onSendCode={auth.handleSendAuthCode}
         onVerifyCode={auth.handleVerifyAuthCode}
+        onOpenEmergencyRecovery={() => setShowEmergencyRecoveryModal(true)}
       />
 
       {/* 2. 파일 업로드 옵션 선택 모달 (새 문서 / 새 시트 / 행 추가) */}
@@ -300,6 +302,16 @@ export default function FileToSheetApp() {
         isOpen={showConsolidatedModal}
         onClose={() => setShowConsolidatedModal(false)}
         currentUser={auth.currentUser}
+      />
+
+      {/* 14. 대표자 2차 인증 기반 비상 계정 강제 회수 모달 */}
+      <EmergencyRecoveryModal
+        isOpen={showEmergencyRecoveryModal}
+        onClose={() => setShowEmergencyRecoveryModal(false)}
+        onRecoverySuccess={(newUser) => {
+          auth.setCurrentUser(newUser);
+          alert(`비상 회수가 안전하게 승인되었습니다. 새 담당자(${newUser.phoneNumber}) 계정으로 정상 전환되었습니다.`);
+        }}
       />
     </div>
   );
