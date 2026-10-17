@@ -11,9 +11,11 @@ interface OriginalDocViewProps {
   project: ProjectWorkspace;
   onDeleteFile?: (fileIdx: number, deleteDataRows: boolean, targetDoc?: OriginalDocFile) => void;
   onGoToTableTab?: () => void;
+  filteredRows?: Record<string, any>[];
+  isFiltered?: boolean;
 }
 
-export function OriginalDocView({ project, onDeleteFile, onGoToTableTab }: OriginalDocViewProps) {
+export function OriginalDocView({ project, onDeleteFile, onGoToTableTab, filteredRows, isFiltered = false }: OriginalDocViewProps) {
   const currentSheet = project.sheets[project.activeSheetIndex] || null;
   const files: OriginalDocFile[] = getSheetOriginalFiles(project, currentSheet);
 
@@ -71,7 +73,11 @@ export function OriginalDocView({ project, onDeleteFile, onGoToTableTab }: Origi
         <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
           {files.map((file, idx) => {
             const isSelected = selectedIdx === idx;
-            const count = currentSheet?.rows.filter((r) => (r._fileName && file.name ? r._fileName === file.name : files.length === 1)).length || 0;
+            const totalCount = currentSheet?.rows.filter((r) => (r._fileName && file.name ? r._fileName === file.name : files.length === 1)).length || 0;
+            const matchedCount = isFiltered && filteredRows
+              ? filteredRows.filter((r) => (r._fileName && file.name ? r._fileName === file.name : files.length === 1)).length
+              : null;
+
             return (
               <div
                 key={idx}
@@ -98,7 +104,17 @@ export function OriginalDocView({ project, onDeleteFile, onGoToTableTab }: Origi
                   )}
                 </div>
                 <div className="flex items-center justify-between text-[11px] text-slate-400 pl-0.5">
-                  <span className="px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-700 font-medium text-[10px]">적재 {count}행</span>
+                  {isFiltered && matchedCount !== null ? (
+                    <span className={`px-1.5 py-0.2 rounded font-medium text-[10px] ${
+                      matchedCount > 0 ? 'bg-blue-100 text-blue-800 font-bold' : 'bg-slate-100 text-slate-400'
+                    }`}>
+                      필터 {matchedCount}행 / 전체 {totalCount}행
+                    </span>
+                  ) : (
+                    <span className="px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-700 font-medium text-[10px]">
+                      적재 {totalCount}행
+                    </span>
+                  )}
                   {file.uploadedAt && <span className="text-[10px] truncate">{file.uploadedAt.split(' ')[0]}</span>}
                 </div>
               </div>

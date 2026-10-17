@@ -86,6 +86,11 @@ export function SubTabBar({
         >
           <BarChart3 className="w-3.5 h-3.5" />
           <span>요약 및 통계</span>
+          {isFiltered && (
+            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/90 px-1.5 py-0.2 rounded ml-0.5">
+              필터 연동
+            </span>
+          )}
         </button>
       </div>
 

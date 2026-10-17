@@ -1,22 +1,61 @@
 'use client';
 
 import React from 'react';
-import { BarChart3, AlertCircle } from 'lucide-react';
+import { BarChart3, AlertCircle, Filter, RotateCcw } from 'lucide-react';
 import { ParsedSheet } from '@/lib/parser';
 import { calculateSheetSummary } from '@/lib/summary';
 
 interface SummaryViewProps {
   sheet: ParsedSheet;
+  filteredRows?: Record<string, any>[];
+  totalRowsCount?: number;
+  isFiltered?: boolean;
+  onResetFilter?: () => void;
+  searchQuery?: string;
+  onClearSearch?: () => void;
 }
 
-export function SummaryView({ sheet }: SummaryViewProps) {
-  const summary = calculateSheetSummary(sheet);
+export function SummaryView({
+  sheet,
+  filteredRows,
+  totalRowsCount,
+  isFiltered = false,
+  onResetFilter,
+  searchQuery = '',
+  onClearSearch,
+}: SummaryViewProps) {
+  const effectiveRows = filteredRows !== undefined ? filteredRows : sheet.rows;
+  const effectiveSheet: ParsedSheet = {
+    ...sheet,
+    rows: effectiveRows,
+  };
+  const summary = calculateSheetSummary(effectiveSheet);
 
-  if (!summary) {
+  if (!summary || effectiveRows.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center p-12 text-slate-400 text-xs min-h-[300px]">
-        <AlertCircle className="w-8 h-8 mb-2 opacity-50" />
-        <span>통계를 계산할 데이터가 시트에 없습니다.</span>
+      <div className="flex flex-col items-center justify-center p-12 text-slate-400 text-xs min-h-[300px] gap-3">
+        <AlertCircle className="w-8 h-8 text-amber-500/70" />
+        {sheet.rows.length === 0 ? (
+          <span>통계를 계산할 데이터가 시트에 없습니다.</span>
+        ) : (
+          <div className="flex flex-col items-center gap-3">
+            <span className="text-slate-600 font-semibold">현재 적용된 필터 조건에 일치하는 데이터가 없습니다.</span>
+            <span className="text-[11px] text-slate-400">필터 조건을 완화하거나 초기화하여 전체 데이터 통계를 확인하세요.</span>
+            {(onResetFilter || onClearSearch) && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (onResetFilter) onResetFilter();
+                  if (onClearSearch) onClearSearch();
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition active:scale-95 cursor-pointer mt-1"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>필터 초기화 및 전체 통계 보기</span>
+              </button>
+            )}
+          </div>
+        )}
       </div>
     );
   }
@@ -24,15 +63,65 @@ export function SummaryView({ sheet }: SummaryViewProps) {
   const numStatKeys = Object.keys(summary.numericStats);
 
   return (
-    <div className="flex-1 p-6 flex flex-col gap-6 overflow-y-auto max-h-[600px] bg-slate-50/40">
+    <div className="flex-1 p-6 flex flex-col gap-5 overflow-y-auto max-h-[600px] bg-slate-50/40">
+      {/* 🌟 필터 적용 알림 배너 (필터 시 동기화 인지 강화) */}
+      {isFiltered && (
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/80 rounded-xl p-3.5 px-4 flex flex-wrap items-center justify-between gap-3 shadow-2xs">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center shadow-xs shrink-0">
+              <Filter className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="text-xs font-extrabold text-blue-900 flex items-center gap-2">
+                <span>조회 필터 연동 집계 중</span>
+                <span className="text-[10px] bg-blue-200/90 text-blue-800 px-2 py-0.5 rounded-full font-mono font-bold">
+                  {effectiveRows.length.toLocaleString('ko-KR')} / {(totalRowsCount ?? sheet.rows.length).toLocaleString('ko-KR')}행
+                </span>
+              </div>
+              <p className="text-[11px] text-blue-700/90 mt-0.5">
+                표 데이터 탭의 필터(기간·조건·검색어)가 반영되어 선별된 행을 기준으로 실시간 산출된 통계입니다.
+              </p>
+            </div>
+          </div>
+          {(onResetFilter || onClearSearch) && (
+            <button
+              type="button"
+              onClick={() => {
+                if (onResetFilter) onResetFilter();
+                if (onClearSearch) onClearSearch();
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-blue-100/70 text-blue-700 text-xs font-bold border border-blue-200 shadow-2xs transition active:scale-95 cursor-pointer"
+              title="필터를 모두 해제하고 시트 전체 데이터 통계 보기"
+            >
+              <RotateCcw className="w-3.5 h-3.5 text-blue-600" />
+              <span>필터 해제 (전체 통계 보기)</span>
+            </button>
+          )}
+        </div>
+      )}
+
       {/* 상단 KPI 개요 카드 */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-2xs">
-          <span className="text-xs font-bold text-slate-500">총 데이터 행 수</span>
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-500">
+              {isFiltered ? '집계 대상 행 수' : '총 데이터 행 수'}
+            </span>
+            {isFiltered && (
+              <span className="text-[10px] font-bold bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-mono">
+                필터 적용
+              </span>
+            )}
+          </div>
           <div className="text-2xl font-black text-slate-900 mt-1 font-mono">
-            {summary.totalRows.toLocaleString('ko-KR')}{' '}
+            {effectiveRows.length.toLocaleString('ko-KR')}{' '}
             <span className="text-xs font-normal text-slate-400">행</span>
           </div>
+          {isFiltered && totalRowsCount !== undefined && (
+            <div className="text-[11px] text-slate-400 mt-1">
+              전체 <span className="font-mono font-bold text-slate-600">{totalRowsCount.toLocaleString('ko-KR')}</span>행 중
+            </div>
+          )}
         </div>
 
         <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-2xs">

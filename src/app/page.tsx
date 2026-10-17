@@ -471,8 +471,26 @@ export default function FileToSheetApp() {
                   />
                 )}
 
-                {activeSubTab === 'original' && <OriginalDocView project={currentProject} onDeleteFile={ws.handleDeleteOriginalFile} onGoToTableTab={() => setActiveSubTab('table')} />}
-                {activeSubTab === 'summary' && <SummaryView sheet={currentSheet} />}
+                {activeSubTab === 'original' && (
+                  <OriginalDocView
+                    project={currentProject}
+                    onDeleteFile={ws.handleDeleteOriginalFile}
+                    onGoToTableTab={() => setActiveSubTab('table')}
+                    filteredRows={filteredRows}
+                    isFiltered={filteredRows.length !== rawRowsWithOrigin.length}
+                  />
+                )}
+                {activeSubTab === 'summary' && (
+                  <SummaryView
+                    sheet={currentSheet}
+                    filteredRows={filteredRows}
+                    totalRowsCount={rawRowsWithOrigin.length}
+                    isFiltered={filteredRows.length !== rawRowsWithOrigin.length}
+                    onResetFilter={handleResetFilter}
+                    searchQuery={searchQuery}
+                    onClearSearch={() => setSearchQuery('')}
+                  />
+                )}
               </div>
             )}
           </>
