@@ -39,6 +39,7 @@ export function SubTabBar({
   onOpenAddColumn,
   sortOrder = 'desc',
   onToggleSort,
+  activeSortLabel,
   headers = [],
   filterState,
   onFilterChange,
