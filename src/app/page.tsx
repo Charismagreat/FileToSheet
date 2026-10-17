@@ -16,8 +16,9 @@ import {
   ShareManagementModal, ExportScopeModal,
 } from '@/components/modals';
 import { UploadUndoToast } from '@/components/UploadUndoToast';
-import { AiChatDrawer } from '@/components/AiChatDrawer';
+import { AiChatDrawer, ChatScope } from '@/components/AiChatDrawer';
 import { BillingHistoryModal } from '@/components/BillingHistoryModal';
+import { RemoteDbModal } from '@/components/RemoteDbModal';
 import { Sparkles } from 'lucide-react';
 import { ExportTargetType } from '@/components/ExportScopeModal';
 import { FilterState } from '@/components/DataFilterPopover';
@@ -32,6 +33,7 @@ export default function FileToSheetApp() {
   const [limitNotice, setLimitNotice] = useState<{ title: string; reason: string } | null>(null);
   const [showPricingModal, setShowPricingModal] = useState<boolean>(false);
   const [showBillingHistoryModal, setShowBillingHistoryModal] = useState<boolean>(false);
+  const [showRemoteDbModal, setShowRemoteDbModal] = useState<boolean>(false);
   const [showEnterpriseModal, setShowEnterpriseModal] = useState<boolean>(false);
   const [showTransferModal, setShowTransferModal] = useState<boolean>(false);
   const [showShareToManagerModal, setShowShareToManagerModal] = useState<boolean>(false);
@@ -39,6 +41,7 @@ export default function FileToSheetApp() {
   const [showEmergencyRecoveryModal, setShowEmergencyRecoveryModal] = useState<boolean>(false);
   const [showShareManagementModal, setShowShareManagementModal] = useState<boolean>(false);
   const [showAiChatDrawer, setShowAiChatDrawer] = useState<boolean>(false);
+  const [aiChatInitialScope, setAiChatInitialScope] = useState<ChatScope>('current_sheet');
   const handlePlanLimit = (title: string, reason: string) => setLimitNotice({ title, reason });
 
   const ws = useWorkspace({
@@ -284,6 +287,7 @@ export default function FileToSheetApp() {
         onDownloadSqlite={handleDownloadSqliteClick}
         onOpenPricingModal={() => setShowPricingModal(true)}
         onOpenBillingHistory={() => setShowBillingHistoryModal(true)}
+        onOpenRemoteDbModal={() => setShowRemoteDbModal(true)}
         onOpenTransferModal={() => setShowTransferModal(true)}
         onOpenShareToManagerModal={() => setShowShareToManagerModal(true)}
         onOpenConsolidatedModal={() => setShowConsolidatedModal(true)}
@@ -599,6 +603,7 @@ export default function FileToSheetApp() {
         activeProjectIndex={ws.activeProjectIndex}
         onAddNewSheetFromAi={handleAddNewSheetFromAi}
         onOpenPricingModal={() => setShowPricingModal(true)}
+        initialScope={aiChatInitialScope}
       />
 
       {/* 20. 결제/충전 및 이용 내역 통합 모달 (영수증 인쇄 / 세금계산서 발행 / 엑셀 다운로드) */}
@@ -608,6 +613,17 @@ export default function FileToSheetApp() {
         currentUser={auth.currentUser}
         currentProject={currentProject}
         onOpenPricingModal={() => setShowPricingModal(true)}
+      />
+
+      {/* 21. 원격지 이지데스크 터널링 My DB(Product) 연동 모달 */}
+      <RemoteDbModal
+        isOpen={showRemoteDbModal}
+        onClose={() => setShowRemoteDbModal(false)}
+        onImportToSheet={handleAddNewSheetFromAi}
+        onOpenAiChatWithScope={(scope) => {
+          setAiChatInitialScope(scope);
+          setShowAiChatDrawer(true);
+        }}
       />
     </div>
   );

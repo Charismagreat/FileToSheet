@@ -22,6 +22,7 @@ interface HeaderProps {
   onOpenPricingModal?: () => void;
   onOpenTransferModal?: () => void;
   onOpenBillingHistory?: () => void;
+  onOpenRemoteDbModal?: () => void;
   onOpenShareToManagerModal?: () => void;
   onOpenConsolidatedModal?: () => void;
   onOpenShareManagementModal?: () => void;
@@ -46,6 +47,7 @@ export function Header({
   onOpenPricingModal,
   onOpenTransferModal,
   onOpenBillingHistory,
+  onOpenRemoteDbModal,
   onOpenShareToManagerModal,
   onOpenConsolidatedModal,
   onOpenShareManagementModal,
@@ -107,6 +109,19 @@ export function Header({
           <Crown className="w-3.5 h-3.5 text-amber-500" />
           <span>요금제</span>
         </button>
+
+        {/* 원격 My DB 연동 모달 버튼 */}
+        {onOpenRemoteDbModal && (
+          <button
+            onClick={onOpenRemoteDbModal}
+            className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/80 hover:border-blue-400 text-blue-900 shadow-2xs transition active:scale-98"
+            title="원격지 이지데스크 터널링 My DB(Product) 연동 및 조회"
+          >
+            <Globe className="w-3.5 h-3.5 text-blue-600" />
+            <span>원격 My DB</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          </button>
+        )}
 
         {currentUser ? (
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-blue-50/80 border border-blue-200 text-xs">

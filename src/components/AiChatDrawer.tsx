@@ -23,12 +23,14 @@ import {
   ChevronRight,
   ArrowLeft,
   Zap,
+  Globe,
 } from 'lucide-react';
 import { ProjectWorkspace } from '@/types/workspace';
 import { apiFetch } from '@/lib/api';
 import { getBonusCredits } from '@/lib/coupon-helpers';
+import { getRemoteDbConfig } from '@/lib/remote-db';
 
-export type ChatScope = 'current_sheet' | 'current_project' | 'all_projects';
+export type ChatScope = 'current_sheet' | 'current_project' | 'all_projects' | 'remote_db';
 
 export interface ChatMessage {
   id: string;
@@ -59,6 +61,7 @@ interface AiChatDrawerProps {
   activeProjectIndex: number;
   onAddNewSheetFromAi?: (sheet: { name: string; headers: string[]; rows: Record<string, any>[] }) => void;
   onOpenPricingModal?: () => void;
+  initialScope?: ChatScope;
 }
 
 const QUICK_CHIPS = [
@@ -66,6 +69,13 @@ const QUICK_CHIPS = [
   '💰 금액/수량 컬럼의 합계와 평균 구해줘',
   '🔝 가장 큰 수치 상위 5건 목록 뽑아줘',
   '⚠️ 누락되거나 비어있는 필드가 있는지 점검해줘',
+];
+
+const REMOTE_QUICK_CHIPS = [
+  '📦 원격 Product 테이블의 전체 상품 요약과 총 건수 알려줘',
+  '💰 카테고리별 상품 수와 평균 단가 분석해줘',
+  '⚠️ 재고(stock) 부족 품목이나 주의가 필요한 상품 찾아줘',
+  '🔝 가장 가격이 높은 프리미엄 상품 상위 5개 뽑아줘',
 ];
 
 /**
@@ -106,6 +116,7 @@ export function AiChatDrawer({
   activeProjectIndex,
   onAddNewSheetFromAi,
   onOpenPricingModal,
+  initialScope,
 }: AiChatDrawerProps) {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string>('');
@@ -117,6 +128,12 @@ export function AiChatDrawer({
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [createdSheetMsgId, setCreatedSheetMsgId] = useState<string | null>(null);
   const [bonusCredits, setBonusCredits] = useState<{ bonusTokens: number; bonusDocs: number }>({ bonusTokens: 0, bonusDocs: 0 });
+
+  useEffect(() => {
+    if (initialScope) {
+      setScope(initialScope);
+    }
+  }, [initialScope]);
 
   // 보너스 크레딧 (쿠폰/충전) 실시간 동기화
   useEffect(() => {
@@ -374,6 +391,16 @@ export function AiChatDrawer({
           totalRows: s.rows.length,
           sampleRows: s.rows.slice(0, 30),
         })),
+      };
+    } else if (scope === 'remote_db') {
+      const remoteConf = getRemoteDbConfig();
+      return {
+        source: 'remote_egdesk_tunnel',
+        tunnelUrl: remoteConf.tunnelUrl,
+        tableName: remoteConf.tableName || 'Product',
+        headers: remoteConf.cachedColumns || ['id', 'name', 'category', 'price', 'stock', 'description'],
+        totalRows: remoteConf.cachedRowCount || remoteConf.cachedRows?.length || 0,
+        sampleRows: (remoteConf.cachedRows || []).slice(0, 100),
       };
     } else {
       return {
@@ -764,6 +791,19 @@ export function AiChatDrawer({
                   <FolderOpen className="w-3 h-3" />
                   <span>전체 프로젝트</span>
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setScope('remote_db')}
+                  className={`px-2 py-1 rounded-md transition flex items-center gap-1 ${
+                    scope === 'remote_db'
+                      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-2xs font-extrabold'
+                      : 'bg-white text-indigo-700 hover:bg-indigo-50 border border-indigo-200'
+                  }`}
+                  title="원격지 이지데스크 터널 My DB (Product) 분석"
+                >
+                  <Globe className="w-3 h-3 text-indigo-400" />
+                  <span>원격 Product DB</span>
+                </button>
               </div>
             </div>
 
@@ -824,7 +864,7 @@ export function AiChatDrawer({
                   {/* 퀵 프롬프트 칩 */}
                   <div className="w-full space-y-1.5 text-left">
                     <div className="text-[11px] font-bold text-slate-400 mb-1">💡 추천 질문</div>
-                    {QUICK_CHIPS.map((chip, idx) => (
+                    {(scope === 'remote_db' ? REMOTE_QUICK_CHIPS : QUICK_CHIPS).map((chip, idx) => (
                       <button
                         key={idx}
                         type="button"

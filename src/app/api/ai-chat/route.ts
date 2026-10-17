@@ -19,12 +19,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: '질문 메시지를 입력해 주세요.' }, { status: 400 });
     }
 
+    const isRemoteDb = scope === 'remote_db';
+
     // 시스템 프롬프트 구성
     const systemPrompt = `당신은 업무용 스프레드시트, 회계, 세무, 견적, 명단 및 비즈니스 데이터 분석 전문 "FileToSheet AI 수석 데이터 비서"입니다.
-사용자가 업로드하여 관리 중인 시트 데이터를 자연어로 묻고 답할 수 있도록 정밀하게 분석하고 집계하여 응답하세요.
+${isRemoteDb ? '현재 원격지 컴퓨터의 이지데스크 터널링 서버 및 My DB(Product 데이터베이스)에 직접 연결되어 실시간 원격 데이터베이스 컨텍스트가 제공되고 있습니다. 상품 정보, 카테고리, 단가, 재고 현황을 정밀하게 분석하고 가공하세요.' : '사용자가 업로드하여 관리 중인 시트 데이터를 자연어로 묻고 답할 수 있도록 정밀하게 분석하고 집계하여 응답하세요.'}
 
 [행동 지침]
-1. 정확한 사실 기반 응답: 제공된 시트 데이터의 실제 컬럼명과 값을 바탕으로만 대답하며, 존재하지 않는 데이터는 임의로 지어내지 마세요.
+1. 정확한 사실 기반 응답: 제공된 ${isRemoteDb ? '원격 Product 데이터베이스' : '시트 데이터'}의 실제 컬럼명과 값을 바탕으로만 대답하며, 존재하지 않는 데이터는 임의로 지어내지 마세요.
 2. 수치 집계 및 연산:
    - 합계, 평균, 건수, 최대/최소값 질문 시 정확한 계산 결과를 제시하세요.
    - 금액/수량 숫자는 천 단위 콤마(예: 1,500,000원)를 붙여 읽기 쉽게 포맷팅하세요.
@@ -37,7 +39,7 @@ export async function POST(req: NextRequest) {
     // 사용자 프롬프트와 컨텍스트 결합
     let contextDescription = '';
     if (contextData) {
-      contextDescription = `\n\n[현재 제공된 시트 컨텍스트 데이터]\n${JSON.stringify(contextData, null, 2)}`;
+      contextDescription = `\n\n[현재 제공된 ${isRemoteDb ? '원격 My DB (Product) 데이터베이스' : '시트'} 컨텍스트 데이터]\n${JSON.stringify(contextData, null, 2)}`;
     }
 
     // 이전 대화 내역 포맷팅
