@@ -50,6 +50,7 @@ export async function POST(req: NextRequest) {
 
     let lastError: any = null;
     let answerText = '';
+    let lastResponse: any = null;
 
     for (const model of FALLBACK_MODELS) {
       try {
@@ -60,6 +61,7 @@ export async function POST(req: NextRequest) {
           temperature: 0.2,
         });
 
+        lastResponse = response;
         answerText =
           typeof response === 'string'
             ? response
@@ -81,9 +83,31 @@ export async function POST(req: NextRequest) {
       throw new Error(`AI 응답 생성 실패: ${lastError?.message || lastError}`);
     }
 
+    // 토큰 사용량 및 Gemini 3.8 Flash 기준 원가(KRW) 계산
+    const promptFull = (systemPrompt || '') + fullUserPrompt;
+    const promptTokens =
+      (lastResponse as any)?.usageMetadata?.promptTokenCount ||
+      (lastResponse as any)?.usage?.prompt_tokens ||
+      Math.max(20, Math.ceil(promptFull.length * 0.75));
+
+    const completionTokens =
+      (lastResponse as any)?.usageMetadata?.candidatesTokenCount ||
+      (lastResponse as any)?.usage?.completion_tokens ||
+      Math.max(10, Math.ceil(answerText.length * 0.8));
+
+    const totalTokens = promptTokens + completionTokens;
+    // Gemini 3.8 Flash: 입력 1,000토큰당 1원, 출력 1,000토큰당 5원
+    const estimatedCostKrw = Number(((promptTokens * 0.001) + (completionTokens * 0.005)).toFixed(2));
+
     return NextResponse.json({
       success: true,
       answer: answerText,
+      usage: {
+        promptTokens,
+        completionTokens,
+        totalTokens,
+        estimatedCostKrw,
+      },
     });
   } catch (error: any) {
     console.error('[AI Chat API 오류]:', error);

@@ -22,6 +22,7 @@ import {
   MessageSquare,
   ChevronRight,
   ArrowLeft,
+  Zap,
 } from 'lucide-react';
 import { ProjectWorkspace } from '@/types/workspace';
 import { apiFetch } from '@/lib/api';
@@ -33,6 +34,12 @@ export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   timestamp: string;
+  usage?: {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+    estimatedCostKrw?: number;
+  };
 }
 
 export interface ChatSession {
@@ -50,6 +57,7 @@ interface AiChatDrawerProps {
   projects: ProjectWorkspace[];
   activeProjectIndex: number;
   onAddNewSheetFromAi?: (sheet: { name: string; headers: string[]; rows: Record<string, any>[] }) => void;
+  onOpenPricingModal?: () => void;
 }
 
 const QUICK_CHIPS = [
@@ -96,6 +104,7 @@ export function AiChatDrawer({
   projects,
   activeProjectIndex,
   onAddNewSheetFromAi,
+  onOpenPricingModal,
 }: AiChatDrawerProps) {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string>('');
@@ -106,6 +115,16 @@ export function AiChatDrawer({
   const [loading, setLoading] = useState<boolean>(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [createdSheetMsgId, setCreatedSheetMsgId] = useState<string | null>(null);
+
+  // 🌟 이번 달 누적 소모 토큰 집계 (기본 3만 토큰)
+  const monthlyTokensUsed = sessions.reduce((acc, sess) => {
+    return (
+      acc +
+      sess.messages.reduce((mAcc, m) => mAcc + (m.usage?.totalTokens || 0), 0)
+    );
+  }, 0);
+  const monthlyTokenLimit = 30000;
+  const usagePercent = Math.min(100, Math.round((monthlyTokensUsed / monthlyTokenLimit) * 100));
 
   // 🌟 1. 대화창 가로폭 조절 상태 (기본 480px, 최소 380px, 로컬 저장)
   const [drawerWidth, setDrawerWidth] = useState<number>(480);
@@ -414,6 +433,7 @@ export function AiChatDrawer({
         role: 'assistant',
         content: json.answer,
         timestamp: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
+        usage: json.usage,
       };
 
       setSessions((prev) =>
@@ -735,6 +755,39 @@ export function AiChatDrawer({
               </div>
             </div>
 
+            {/* 🌟 이번 달 AI 토큰 사용량 게이지 & 충전 팩 버튼 */}
+            <div className="px-4 py-2 bg-slate-100/80 border-b border-slate-200 flex items-center justify-between gap-3 text-[11px]">
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <Zap className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between text-[10px] text-slate-600 mb-0.5 font-bold">
+                    <span>월간 AI 토큰 (Gemini 3.8 Flash)</span>
+                    <span className="text-slate-800">
+                      {monthlyTokensUsed.toLocaleString()} / {monthlyTokenLimit.toLocaleString()} 토큰 ({usagePercent}%)
+                    </span>
+                  </div>
+                  <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-300 ${
+                        usagePercent >= 90 ? 'bg-rose-500' : usagePercent >= 70 ? 'bg-amber-500' : 'bg-blue-600'
+                      }`}
+                      style={{ width: `${Math.min(100, Math.max(3, usagePercent))}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+              {onOpenPricingModal && (
+                <button
+                  type="button"
+                  onClick={onOpenPricingModal}
+                  className="shrink-0 px-2.5 py-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold text-[10px] rounded-lg transition shadow-2xs flex items-center gap-1 active:scale-95"
+                  title="2,000원 / 5,000원 / 8,000원 초과 종량 크레딧 충전"
+                >
+                  <span>⚡ 크레딧 충전</span>
+                </button>
+              )}
+            </div>
+
             {/* 메시지 영역 */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4 font-sans text-xs">
               {currentMessages.length === 0 ? (
@@ -806,6 +859,16 @@ export function AiChatDrawer({
                                 </span>
                               </button>
                               <span className="text-[10px] text-slate-400">표 데이터 자동 파싱</span>
+                            </div>
+                          )}
+
+                          {/* 🌟 실시간 소모 토큰 및 환산액 배지 (Gemini 3.8 Flash 기준) */}
+                          {msg.role === 'assistant' && msg.usage && (
+                            <div className="flex items-center gap-1.5 text-[10px] text-indigo-700 bg-indigo-50/90 border border-indigo-100 px-2 py-1 rounded-lg mt-2.5 font-medium shadow-2xs">
+                              <Zap className="w-3 h-3 text-amber-500 fill-amber-500 shrink-0" />
+                              <span>입력 {msg.usage.promptTokens.toLocaleString()} / 출력 {msg.usage.completionTokens.toLocaleString()} 토큰</span>
+                              <span className="text-slate-300">•</span>
+                              <span className="font-bold text-indigo-900">총 {msg.usage.totalTokens.toLocaleString()} 토큰 (약 {msg.usage.estimatedCostKrw}원)</span>
                             </div>
                           )}
 

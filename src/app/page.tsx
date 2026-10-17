@@ -594,6 +594,7 @@ export default function FileToSheetApp() {
         projects={ws.projects}
         activeProjectIndex={ws.activeProjectIndex}
         onAddNewSheetFromAi={handleAddNewSheetFromAi}
+        onOpenPricingModal={() => setShowPricingModal(true)}
       />
     </div>
   );
