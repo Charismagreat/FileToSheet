@@ -21,6 +21,7 @@ interface HeaderProps {
   onOpenPlanModal?: () => void;
   onOpenPricingModal?: () => void;
   onOpenTransferModal?: () => void;
+  onOpenBillingHistory?: () => void;
   onOpenShareToManagerModal?: () => void;
   onOpenConsolidatedModal?: () => void;
   onOpenShareManagementModal?: () => void;
@@ -44,6 +45,7 @@ export function Header({
   onOpenPlanModal,
   onOpenPricingModal,
   onOpenTransferModal,
+  onOpenBillingHistory,
   onOpenShareToManagerModal,
   onOpenConsolidatedModal,
   onOpenShareManagementModal,
@@ -161,6 +163,7 @@ export function Header({
               onOpenPlanModal={onOpenPlanModal || (() => {})}
               onOpenPricingModal={onOpenPricingModal}
               onOpenTransferModal={onOpenTransferModal}
+              onOpenBillingHistory={onOpenBillingHistory}
             />
           </div>
         )}

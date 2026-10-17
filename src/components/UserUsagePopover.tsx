@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Sparkles, Check, Database, Zap, ArrowRight, ShieldCheck, X, Smartphone } from 'lucide-react';
+import { Sparkles, Check, Database, Zap, ArrowRight, ShieldCheck, X, Smartphone, CreditCard } from 'lucide-react';
 import { UserSession, ProjectWorkspace } from '@/types/workspace';
 import { getPlanLimits } from '@/lib/plan-limits';
 import { getBonusCredits } from '@/lib/coupon-helpers';
@@ -14,6 +14,7 @@ interface UserUsagePopoverProps {
   onOpenPlanModal: () => void;
   onOpenPricingModal?: () => void;
   onOpenTransferModal?: () => void;
+  onOpenBillingHistory?: () => void;
 }
 
 export function UserUsagePopover({
@@ -24,6 +25,7 @@ export function UserUsagePopover({
   onOpenPlanModal,
   onOpenPricingModal,
   onOpenTransferModal,
+  onOpenBillingHistory,
 }: UserUsagePopoverProps) {
   const [bonusCredits, setBonusCredits] = useState<{ bonusTokens: number; bonusDocs: number }>({ bonusTokens: 0, bonusDocs: 0 });
 
@@ -219,6 +221,26 @@ export function UserUsagePopover({
         <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
           <span>다음 결제 예정일: 매월 1일</span>
           <span className="text-indigo-600 font-semibold">월 9,900원 / 정상 이용 중</span>
+        </div>
+      )}
+
+      {onOpenBillingHistory && (
+        <div className="mt-2.5 pt-2 border-t border-slate-100">
+          <button
+            onClick={() => {
+              onClose();
+              onOpenBillingHistory();
+            }}
+            className="w-full py-2 px-2.5 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 text-blue-900 font-bold text-xs flex items-center justify-between border border-blue-200 transition active:scale-98 shadow-2xs"
+          >
+            <div className="flex items-center gap-2">
+              <CreditCard className="w-3.5 h-3.5 text-blue-600" />
+              <span>결제 · 충전 · 사용 내역</span>
+            </div>
+            <span className="text-[10px] text-blue-600 font-extrabold bg-white px-1.5 py-0.5 rounded-md border border-blue-200">
+              영수증/세금계산서 ➔
+            </span>
+          </button>
         </div>
       )}
 

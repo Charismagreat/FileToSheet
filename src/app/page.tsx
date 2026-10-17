@@ -17,6 +17,7 @@ import {
 } from '@/components/modals';
 import { UploadUndoToast } from '@/components/UploadUndoToast';
 import { AiChatDrawer } from '@/components/AiChatDrawer';
+import { BillingHistoryModal } from '@/components/BillingHistoryModal';
 import { Sparkles } from 'lucide-react';
 import { ExportTargetType } from '@/components/ExportScopeModal';
 import { FilterState } from '@/components/DataFilterPopover';
@@ -30,6 +31,7 @@ export default function FileToSheetApp() {
   const auth = useAuth();
   const [limitNotice, setLimitNotice] = useState<{ title: string; reason: string } | null>(null);
   const [showPricingModal, setShowPricingModal] = useState<boolean>(false);
+  const [showBillingHistoryModal, setShowBillingHistoryModal] = useState<boolean>(false);
   const [showEnterpriseModal, setShowEnterpriseModal] = useState<boolean>(false);
   const [showTransferModal, setShowTransferModal] = useState<boolean>(false);
   const [showShareToManagerModal, setShowShareToManagerModal] = useState<boolean>(false);
@@ -281,6 +283,7 @@ export default function FileToSheetApp() {
         onDownloadXlsx={handleDownloadXlsxClick}
         onDownloadSqlite={handleDownloadSqliteClick}
         onOpenPricingModal={() => setShowPricingModal(true)}
+        onOpenBillingHistory={() => setShowBillingHistoryModal(true)}
         onOpenTransferModal={() => setShowTransferModal(true)}
         onOpenShareToManagerModal={() => setShowShareToManagerModal(true)}
         onOpenConsolidatedModal={() => setShowConsolidatedModal(true)}
@@ -493,6 +496,7 @@ export default function FileToSheetApp() {
           });
         }}
         onOpenEnterpriseInquiry={() => setShowEnterpriseModal(true)}
+        onOpenBillingHistory={() => setShowBillingHistoryModal(true)}
       />
 
       {/* 9. B2B 사내 구축형(Enterprise On-Premise) 견적 및 도입 상담 모달 */}
@@ -594,6 +598,15 @@ export default function FileToSheetApp() {
         projects={ws.projects}
         activeProjectIndex={ws.activeProjectIndex}
         onAddNewSheetFromAi={handleAddNewSheetFromAi}
+        onOpenPricingModal={() => setShowPricingModal(true)}
+      />
+
+      {/* 20. 결제/충전 및 이용 내역 통합 모달 (영수증 인쇄 / 세금계산서 발행 / 엑셀 다운로드) */}
+      <BillingHistoryModal
+        isOpen={showBillingHistoryModal}
+        onClose={() => setShowBillingHistoryModal(false)}
+        currentUser={auth.currentUser}
+        currentProject={currentProject}
         onOpenPricingModal={() => setShowPricingModal(true)}
       />
     </div>

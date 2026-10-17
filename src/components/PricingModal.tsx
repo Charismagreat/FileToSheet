@@ -1,9 +1,8 @@
-'use client';
-
 import React, { useState } from 'react';
-import { Check, Sparkles, X, ArrowRight, Zap, Shield, Database, Ticket, Tag } from 'lucide-react';
+import { Check, Sparkles, X, ArrowRight, Zap, Shield, Database, Ticket, Tag, Clock } from 'lucide-react';
 import { UserSession } from '@/types/workspace';
 import { validateCoupon, markCouponUsed, CouponDefinition, addBonusCredits } from '@/lib/coupon-helpers';
+import { addBillingRecord } from '@/lib/billing-history';
 
 interface PricingModalProps {
   isOpen: boolean;
@@ -11,6 +10,7 @@ interface PricingModalProps {
   currentUser: UserSession | null;
   onUpgrade?: () => void;
   onOpenEnterpriseInquiry?: () => void;
+  onOpenBillingHistory?: () => void;
 }
 
 const COMPARISON_FEATURES = [
@@ -64,17 +64,26 @@ export function PricingModal({ isOpen, onClose, currentUser, onUpgrade, onOpenEn
       markCouponUsed(appliedCoupon.code);
     }
 
+    const tokens = originalAmount === 2000 ? 250000 : originalAmount === 5000 ? 750000 : 1250000;
+    const docs = originalAmount === 2000 ? 50 : originalAmount === 5000 ? 135 : 225;
+
     // 보너스 크레딧 (토큰 및 파싱 장수) 영구 적립
-    if (originalAmount === 2000) {
-      addBonusCredits(250000, 50);
-    } else if (originalAmount === 5000) {
-      addBonusCredits(750000, 135);
-    } else if (originalAmount === 8000) {
-      addBonusCredits(1250000, 225);
-    }
+    addBonusCredits(tokens, docs);
+
+    // 결제 / 충전 거래 내역 영구 보관 (영수증 및 세금계산서 연동)
+    addBillingRecord({
+      type: appliedCoupon && finalAmount === 0 ? 'coupon' : 'charge',
+      title: packName,
+      originalAmount,
+      finalAmount,
+      paymentMethod: finalAmount === 0 ? `프로모션 바우처 100% 무료 (${appliedCoupon?.code})` : '신용카드/간편결제',
+      couponCode: appliedCoupon?.code,
+      benefitsDesc,
+      benefits: { tokens, docs },
+    });
 
     const costText = finalAmount === 0 ? '무료 (0원 쿠폰 적용)' : `${finalAmount.toLocaleString()}원`;
-    alert(`[${packName}] ${costText} 충전이 완료되었습니다!\n혜택: ${benefitsDesc}\n(AI 비서 대화창 상단 게이지에 잔여 토큰이 즉시 반영되었습니다)`);
+    alert(`[${packName}] ${costText} 충전이 완료되었습니다!\n혜택: ${benefitsDesc}\n(결제 및 충전 내역 메뉴에서 영수증 인쇄와 세금계산서 신청이 가능합니다)`);
     onClose();
   };
 
@@ -85,12 +94,27 @@ export function PricingModal({ isOpen, onClose, currentUser, onUpgrade, onOpenEn
           <X className="w-5 h-5" />
         </button>
 
-        {/* 타이틀 및 연간 토글 */}
+        {/* 타이틀 및 상단 바로가기 */}
         <div className="text-center mb-6">
-          <span className="text-[11px] font-bold text-blue-600 bg-blue-50 border border-blue-200 px-3 py-1 rounded-full uppercase tracking-wider">
-            Pricing & Deployment
-          </span>
-          <h2 className="text-xl sm:text-2xl font-black text-slate-900 mt-2">개인부터 사내 폐쇄망 구축까지</h2>
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <span className="text-[11px] font-bold text-blue-600 bg-blue-50 border border-blue-200 px-3 py-1 rounded-full uppercase tracking-wider">
+              Pricing & Deployment
+            </span>
+            {onOpenBillingHistory && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onOpenBillingHistory();
+                }}
+                className="text-[11px] font-bold text-slate-700 hover:text-blue-600 bg-slate-100 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 px-3 py-1 rounded-full transition flex items-center gap-1 active:scale-95"
+              >
+                <Clock className="w-3.5 h-3.5 text-blue-600" />
+                <span>나의 결제 / 충전 / 영수증 내역 ➔</span>
+              </button>
+            )}
+          </div>
+          <h2 className="text-xl sm:text-2xl font-black text-slate-900 mt-1">개인부터 사내 폐쇄망 구축까지</h2>
           <p className="text-xs text-slate-500 mt-1">업무 환경과 보안 정책에 최적화된 플랜을 선택하세요.</p>
 
           <div className="inline-flex items-center gap-2 mt-4 p-1 rounded-xl bg-slate-100 border border-slate-200 text-xs font-semibold">
@@ -159,7 +183,27 @@ export function PricingModal({ isOpen, onClose, currentUser, onUpgrade, onOpenEn
               onClick={() => {
                 if (appliedCoupon?.type === 'pro_trial') {
                   markCouponUsed(appliedCoupon.code);
+                  addBillingRecord({
+                    type: 'pro_trial',
+                    title: 'PRO 플랜 1개월 무료 체험 (프로모션)',
+                    originalAmount: isAnnual ? 7900 : 9900,
+                    finalAmount: 0,
+                    paymentMethod: `프로모션 바우처 (${appliedCoupon.code})`,
+                    couponCode: appliedCoupon.code,
+                    benefitsDesc: 'PRO 플랜 1개월 무료 개방 (행 수 무제한, 월 500장 파싱, SQLite DB)',
+                    benefits: { durationMonths: 1, docs: 500 },
+                  });
                   alert('PRO 1개월 무료 체험 쿠폰이 등록되었습니다! 즉시 PRO 플랜 혜택이 적용됩니다.');
+                } else if (!isPro) {
+                  addBillingRecord({
+                    type: 'subscription',
+                    title: `PRO 플랜 ${isAnnual ? '연간 구독' : '월간 구독'}`,
+                    originalAmount: isAnnual ? 94800 : 9900,
+                    finalAmount: isAnnual ? 94800 : 9900,
+                    paymentMethod: '신용카드/정기결제',
+                    benefitsDesc: '행 수 무제한, 월 500장 기본 파싱, 영구 보관, SQLite 실시간 동기화',
+                    benefits: { durationMonths: isAnnual ? 12 : 1, docs: 500 },
+                  });
                 }
                 onClose();
                 if (!isPro && onUpgrade) onUpgrade();
