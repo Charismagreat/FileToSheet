@@ -3,11 +3,9 @@
 import { useState, useRef } from 'react';
 import { ProjectWorkspace, OriginalDocFile } from '@/types/workspace';
 import { parseFileOnClient } from '@/lib/file-parser-client';
-import {
-  createUploadedFileRecord, uploadToEgdeskStorage,
-  updateFileParseResult, saveParsedSheetRows,
-} from '@/lib/egdesk-db';
+import { createUploadedFileRecord, uploadToEgdeskStorage, updateFileParseResult, saveParsedSheetRows } from '@/lib/egdesk-db';
 import { getPlanLimits, checkSheetLimit, truncateRowsToLimit, validateUploadFile } from '@/lib/plan-limits';
+import { generateFileUid, getUniqueFileName } from '@/lib/sheet-helpers';
 
 interface UseFileUploadOptions {
   projects: ProjectWorkspace[];
@@ -39,25 +37,14 @@ export function useFileUpload({
     uploadTimestampsRef.current = uploadTimestampsRef.current.filter((t) => now - t < 60000);
     const val = validateUploadFile(plan, file, uploadTimestampsRef.current.length, todayUploadsRef.current.count);
     if (!val.allowed) {
-      if (onPlanLimit) onPlanLimit(val.reason === 'file_size' ? '파일 용량 제한' : '업로드 제한', val.message || '');
+      if (onPlanLimit) onPlanLimit('업로드 안전 한도 제한', val.message || '업로드 제한 초과');
       else alert(val.message);
       return false;
     }
+    uploadTimestampsRef.current.push(now);
+    todayUploadsRef.current.count += 1;
     return true;
   };
-
-  const handleFileDropOrSelect = (file: File, prompt?: string) => {
-    if (!file || !checkSafety(file)) return;
-    if (prompt !== undefined) setInitialPrompt(prompt);
-    setPendingUploadFile(file);
-  };
-
-  const handleDropDirectlyToTable = (file: File) => {
-    if (!file || !checkSafety(file)) return;
-    processFile(file, 'append_rows');
-  };
-
-
 
   const processFile = async (file: File, mode: 'new_document' | 'new_sheet' | 'append_rows', customPrompt?: string) => {
     setPendingUploadFile(null);
@@ -68,11 +55,10 @@ export function useFileUpload({
 
     try {
       const targetHeaders = mode === 'append_rows' && currentSheet?.headers?.length ? currentSheet.headers : undefined;
-
       const { sheets: parsedSheets, category } = await parseFileOnClient(file, setProcessStatus, customPrompt, targetHeaders);
+
       setProcessStatus('이지데스크 My DB에 레코드 생성 중...');
       const fileId = await createUploadedFileRecord(file, category);
-
       if (fileId) {
         setProcessStatus('sheet_rows 테이블에 데이터 영구 적재 중...');
         const totalRows = parsedSheets.reduce((sum, s) => sum + s.rows.length, 0);
@@ -85,10 +71,15 @@ export function useFileUpload({
         }
       }
 
-      const docItem: OriginalDocFile = {
-        id: fileId || undefined, name: file.name, url: fileBlobUrl, type: file.type, size: file.size, uploadedAt: nowKst,
-      };
+      // 🌟 중복 파일명 방지 자동 넘버링 및 나노초 고유 UID 발급
+      const existingDocNames = (currentProject?.originalFiles || []).map((f) => f.name);
+      const resolvedFileName = getUniqueFileName(existingDocNames, file.name);
+      const fileUid = generateFileUid();
 
+      const docItem: OriginalDocFile = {
+        id: fileId || undefined, uid: fileUid, name: resolvedFileName,
+        url: fileBlobUrl, type: file.type, size: file.size, uploadedAt: nowKst,
+      };
 
       setProjects((prev) => {
         const next = [...prev];
@@ -101,15 +92,13 @@ export function useFileUpload({
           if (!target.rows || target.rows.length === 0) {
             const tr = truncateRowsToLimit(plan, 0, parsedSheets[0]?.rows || []);
             s[proj.activeSheetIndex] = {
-              ...target,
-              headers: fixedHeaders,
-              rows: tr.rows.map((r) => ({ ...r, _fileId: fileId, _fileName: file.name })),
+              ...target, headers: fixedHeaders,
+              rows: tr.rows.map((r) => ({ ...r, _fileId: fileId, _fileUid: fileUid, _fileName: resolvedFileName })),
               originalFiles: [...(target.originalFiles || []), docItem],
             };
           } else {
             const rawIncoming = parsedSheets.flatMap((sh) => sh.rows);
             const tr = truncateRowsToLimit(plan, target.rows.length, rawIncoming);
-            // 기존 컬럼 엄격 유지 (기존 컬럼 목록 변경 없이 1:1 매핑)
             const mappedRows = tr.rows.map((row, i) => {
               const cleanRow: Record<string, any> = {};
               for (const h of fixedHeaders) cleanRow[h] = row[h] !== undefined && row[h] !== null ? row[h] : '';
@@ -118,19 +107,19 @@ export function useFileUpload({
               cleanRow['일련번호'] = target.rows.length + i + 1;
               cleanRow['등록일시'] = cleanRow['등록일시'] || row.등록일시 || nowKst;
               cleanRow._fileId = fileId;
-              cleanRow._fileName = file.name;
+              cleanRow._fileUid = fileUid;
+              cleanRow._fileName = resolvedFileName;
               return cleanRow;
             });
             s[proj.activeSheetIndex] = {
-              ...target,
-              headers: fixedHeaders, // 기존 컬럼 100% 엄격 유지
+              ...target, headers: fixedHeaders,
               rows: [...target.rows, ...mappedRows],
               originalFiles: [...(target.originalFiles || []), docItem],
             };
           }
 
           const prevDocs = proj.originalFiles || (proj.originalFileUrl ? [{
-            name: proj.name || '기존 문서', url: proj.originalFileUrl, type: proj.originalFileType, size: proj.originalFileSize, uploadedAt: proj.uploadedAt,
+            uid: generateFileUid(), name: proj.name || '기존 문서', url: proj.originalFileUrl, type: proj.originalFileType, size: proj.originalFileSize, uploadedAt: proj.uploadedAt,
           }] : []);
           proj.originalFiles = [...prevDocs, docItem];
           proj.originalFileUrl = fileBlobUrl;
@@ -149,7 +138,10 @@ export function useFileUpload({
           }
           const incomingSheets = parsedSheets.map((sh) => {
             const tr = truncateRowsToLimit(plan, 0, sh.rows);
-            return { ...sh, originalFiles: [docItem], rows: tr.rows.map((r) => ({ ...r, _fileId: fileId, _fileName: file.name })) };
+            return {
+              ...sh, originalFiles: [docItem],
+              rows: tr.rows.map((r) => ({ ...r, _fileId: fileId, _fileUid: fileUid, _fileName: resolvedFileName })),
+            };
           });
           proj.sheets = [...proj.sheets, ...incomingSheets];
           proj.activeSheetIndex = proj.sheets.length - 1;
@@ -160,39 +152,44 @@ export function useFileUpload({
           const maxSheets = getPlanLimits(plan).maxSheetsPerProject;
           const createdSheets = parsedSheets.slice(0, maxSheets).map((sh) => {
             const tr = truncateRowsToLimit(plan, 0, sh.rows);
-            return { ...sh, originalFiles: [docItem], rows: tr.rows.map((r) => ({ ...r, _fileId: fileId, _fileName: file.name })) };
+            return {
+              ...sh, originalFiles: [docItem],
+              rows: tr.rows.map((r) => ({ ...r, _fileId: fileId, _fileUid: fileUid, _fileName: resolvedFileName })),
+            };
           });
           next.push({
-            id: null,
-            name: file.name.replace(/\.[^/.]+$/, ''),
-            category,
-            sheets: createdSheets,
-            activeSheetIndex: 0,
-            activeSubTab: 'table',
-            originalFileUrl: fileBlobUrl,
-            originalFileType: file.type,
-            originalFileSize: file.size,
-            originalFiles: [docItem],
-            uploadedAt: nowKst,
+            id: null, name: resolvedFileName.replace(/\.[^/.]+$/, ''), category, sheets: createdSheets,
+            activeSheetIndex: 0, activeSubTab: 'table', originalFileUrl: fileBlobUrl, originalFileType: file.type,
+            originalFileSize: file.size, originalFiles: [docItem], uploadedAt: nowKst,
           });
           setActiveProjectIndex(next.length - 1);
         }
         return next;
       });
-
-      setProcessStatus('완료되었습니다!');
     } catch (err: any) {
-      alert(`오류: ${err.message}`);
+      console.error('파일 처리 실패:', err);
+      alert(`파일 처리 중 오류가 발생했습니다: ${err?.message || '알 수 없는 오류'}`);
     } finally {
       setIsProcessing(false);
+      setProcessStatus('');
+      setStorageProgress(0);
     }
   };
 
+  const handleFileDropOrSelect = (file: File) => {
+    if (!checkSafety(file)) return;
+    if (projects.length === 0) processFile(file, 'new_document');
+    else setPendingUploadFile(file);
+  };
+
+  const handleDropDirectlyToTable = (file: File) => {
+    if (!checkSafety(file)) return;
+    if (projects.length === 0) processFile(file, 'new_document');
+    else processFile(file, 'append_rows');
+  };
+
   return {
-    isProcessing, processStatus, storageProgress,
-    pendingUploadFile, setPendingUploadFile,
-    initialPrompt, setInitialPrompt,
-    handleFileDropOrSelect, handleDropDirectlyToTable, processFile,
+    isProcessing, processStatus, storageProgress, pendingUploadFile, setPendingUploadFile,
+    initialPrompt, setInitialPrompt, processFile, handleFileDropOrSelect, handleDropDirectlyToTable,
   };
 }
-

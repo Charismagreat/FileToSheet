@@ -31,17 +31,20 @@ export function getSheetOriginalFiles(
 
   if (allProjectFiles.length === 0) return [];
 
-  // 2. 시트의 행(row)에 기록된 _fileName 또는 _fileId 역추적 필터링
+  // 2. 시트의 행(row)에 기록된 _fileUid 또는 _fileName 또는 _fileId 역추적 필터링
+  const fileUidsInSheet = new Set<string>();
   const fileNamesInSheet = new Set<string>();
   const fileIdsInSheet = new Set<number>();
 
   for (const row of sheet.rows || []) {
+    if (row._fileUid) fileUidsInSheet.add(String(row._fileUid));
     if (row._fileName) fileNamesInSheet.add(String(row._fileName).trim());
     if (row._fileId) fileIdsInSheet.add(Number(row._fileId));
   }
 
-  if (fileNamesInSheet.size > 0 || fileIdsInSheet.size > 0) {
+  if (fileUidsInSheet.size > 0 || fileNamesInSheet.size > 0 || fileIdsInSheet.size > 0) {
     const matched = allProjectFiles.filter((f) => {
+      if (f.uid && fileUidsInSheet.has(f.uid)) return true;
       if (f.id && fileIdsInSheet.has(f.id)) return true;
       if (f.name && fileNamesInSheet.has(f.name.trim())) return true;
       return false;
@@ -56,4 +59,30 @@ export function getSheetOriginalFiles(
 
   // 4. 시트에 행이 없거나 매핑 정보가 없으면 타 시트 오염 방지를 위해 빈 배열 반환
   return [];
+}
+
+/**
+ * 나노초 타임스탬프와 난수 기반 전역 고유 파일 UID 생성
+ */
+export function generateFileUid(): string {
+  return `f_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+/**
+ * 중복 파일명 방지 및 자동 넘버링 (예: 영수증.pdf -> 영수증 (1).pdf)
+ */
+export function getUniqueFileName(existingNames: string[], originalName: string): string {
+  const trimmed = originalName.trim();
+  const lowerSet = new Set(existingNames.map((n) => n.trim().toLowerCase()));
+  if (!lowerSet.has(trimmed.toLowerCase())) return trimmed;
+
+  const dotIdx = trimmed.lastIndexOf('.');
+  const base = dotIdx !== -1 ? trimmed.slice(0, dotIdx) : trimmed;
+  const ext = dotIdx !== -1 ? trimmed.slice(dotIdx) : '';
+
+  let count = 1;
+  while (lowerSet.has(`${base} (${count})${ext}`.toLowerCase())) {
+    count++;
+  }
+  return `${base} (${count})${ext}`;
 }

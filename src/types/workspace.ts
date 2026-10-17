@@ -3,6 +3,7 @@ import { ParsedSheet } from '@/lib/parser';
 // 원본 증빙 문서 파일 정보 (다중 파일 지원)
 export interface OriginalDocFile {
   id?: number;
+  uid?: string; // 클라이언트/세션 고유 식별자 (중복 파일명 격리용)
   name: string;
   url: string;
   type?: string;

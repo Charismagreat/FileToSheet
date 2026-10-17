@@ -158,14 +158,17 @@ export function useWorkspace({ phoneNumber, plan, onPlanLimit }: UseWorkspaceOpt
 
     setProjects((prev) => prev.map((proj, pIdx) => {
       if (pIdx !== activeProjectIndex) return proj;
+      const isTargetFile = (f: OriginalDocFile) => target.uid ? f.uid === target.uid : (target.id ? f.id === target.id : f.name === target.name);
+      const isTargetRow = (r: any) => target.uid ? r._fileUid === target.uid : (target.id && r._fileId ? r._fileId === target.id : r._fileName === target.name);
+
       const sheets = proj.sheets.map((s) => ({
         ...s,
-        originalFiles: s.originalFiles?.filter((f) => f.name !== target.name && (!target.id || f.id !== target.id)),
+        originalFiles: s.originalFiles?.filter((f) => !isTargetFile(f)),
         rows: deleteDataRows
-          ? s.rows.filter((r) => r._fileName ? r._fileName !== target.name : (target.id && r._fileId ? r._fileId !== target.id : files.length > 1)).map((r, i) => ({ ...r, 일련번호: i + 1 }))
+          ? s.rows.filter((r) => !isTargetRow(r)).map((r, i) => ({ ...r, 일련번호: i + 1 }))
           : s.rows,
       }));
-      const nextFiles = files.filter((f) => f.name !== target.name && (!target.id || f.id !== target.id));
+      const nextFiles = files.filter((f) => !isTargetFile(f));
       return { ...proj, sheets, originalFiles: nextFiles, originalFileUrl: nextFiles[0]?.url, originalFileType: nextFiles[0]?.type, originalFileSize: nextFiles[0]?.size };
     }));
     if (target.id) deleteUploadedFile(target.id).catch((e) => console.warn('스토리지 파일 삭제 무시:', e));

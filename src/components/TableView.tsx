@@ -82,11 +82,10 @@ export function TableView({
           <tbody className="divide-y divide-slate-100 font-sans">
             {filteredRows.map((row, rowIdx) => {
               const actualIdx = row._originIdx !== undefined ? row._originIdx : rowIdx;
-              const rowFileKey = row._fileId || row._fileName || docFilename;
+              const rowFileKey = row._fileUid || (row._fileId ? `id_${row._fileId}` : undefined) || row._fileName || docFilename;
               const rowFileName = row._fileName || docFilename;
-              const isSame = hoveredFileKey && rowFileKey && (
-                row._fileId === hoveredFileKey || row._fileName === hoveredFileKey || (!row._fileId && !row._fileName && docFilename === hoveredFileKey)
-              );
+              const rowUploadTime = row.등록일시 ? ` (${row.등록일시} 적재)` : '';
+              const isSame = hoveredFileKey && rowFileKey && rowFileKey === hoveredFileKey;
 
               return (
                 <tr
@@ -100,7 +99,7 @@ export function TableView({
                       <span>{rowIdx + 1}</span>
                       {rowFileName && (
                         <span
-                          title={`📄 원본 증빙: ${rowFileName}\n(동일 파일에서 추출된 행들이 함께 하이라이트됩니다)`}
+                          title={`📄 원본 증빙: ${rowFileName}${rowUploadTime}\n(동일 파일에서 추출된 행들이 함께 하이라이트됩니다)`}
                           className={`p-0.5 rounded cursor-help transition ${isSame ? 'text-indigo-600 bg-indigo-100' : 'text-slate-400 hover:text-indigo-600'}`}
                         >
                           <FileText className="w-3 h-3" />
