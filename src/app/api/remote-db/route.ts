@@ -5,16 +5,17 @@ interface RemoteDbRequest {
   tunnelUrl: string;
   apiKey?: string;
   tableName?: string;
+  environment?: 'production' | 'development';
   limit?: number;
 }
 
 /**
- * 원격 이지데스크 터널링 서비스를 통해 My DB(Product 등)에 안전하게 프록시 통신하는 백엔드 API
+ * 원격 이지데스크 터널링 서비스를 통해 운용서버 My DB(Product 등)에 안전하게 프록시 통신하는 백엔드 API
  */
 export async function POST(req: NextRequest) {
   try {
     const body: RemoteDbRequest = await req.json();
-    const { action, tunnelUrl, apiKey = '', tableName = 'Product', limit = 200 } = body;
+    const { action, tunnelUrl, apiKey = '', tableName = 'Product', environment = 'production', limit = 200 } = body;
 
     if (!tunnelUrl || typeof tunnelUrl !== 'string') {
       return NextResponse.json(
@@ -30,6 +31,7 @@ export async function POST(req: NextRequest) {
 
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
+      'X-EGDesk-Env': environment, // 🚀 운용서버 (production) 우선 바인딩
     };
     if (apiKey) {
       headers['X-Api-Key'] = apiKey.trim();
@@ -43,7 +45,9 @@ export async function POST(req: NextRequest) {
           headers,
           body: JSON.stringify({
             tool: 'user_data_list_tables',
-            arguments: {},
+            arguments: {
+              environment,
+            },
           }),
           signal: AbortSignal.timeout(10000), // 10초 타임아웃
         });
@@ -102,6 +106,7 @@ export async function POST(req: NextRequest) {
             arguments: {
               tableName,
               limit,
+              environment,
             },
           }),
           signal: AbortSignal.timeout(12000),
@@ -118,6 +123,7 @@ export async function POST(req: NextRequest) {
               arguments: {
                 tableName: fallbackName,
                 limit,
+                environment,
               },
             }),
             signal: AbortSignal.timeout(12000),

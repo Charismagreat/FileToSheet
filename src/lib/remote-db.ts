@@ -6,6 +6,7 @@ export interface RemoteDbConfig {
   tunnelUrl: string;
   apiKey: string;
   tableName: string;
+  environment: 'production' | 'development';
   isConnected: boolean;
   lastConnectedAt?: string;
   cachedColumns?: string[];
@@ -20,6 +21,7 @@ export const DEFAULT_REMOTE_CONFIG: RemoteDbConfig = {
   tunnelUrl: 'https://tunneling-service.onrender.com/t/mcp-server-fxkud1',
   apiKey: 'a67ddc0f-7e2b-4997-9a0b-9667a74c89d0',
   tableName: 'Product',
+  environment: 'production',
   isConnected: false,
 };
 
@@ -65,6 +67,7 @@ export async function testRemoteDbConnection(config: RemoteDbConfig): Promise<{
         tunnelUrl: config.tunnelUrl,
         apiKey: config.apiKey,
         tableName: config.tableName,
+        environment: config.environment || 'production',
       }),
     });
 
@@ -98,6 +101,7 @@ export async function fetchRemoteTableData(config: RemoteDbConfig, limit: number
         tunnelUrl: config.tunnelUrl,
         apiKey: config.apiKey,
         tableName: config.tableName,
+        environment: config.environment || 'production',
         limit,
       }),
     });

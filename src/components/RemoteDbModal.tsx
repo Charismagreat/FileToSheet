@@ -108,13 +108,14 @@ export function RemoteDbModal({
     }
 
     if (onImportToSheet) {
-      const sheetName = `원격_${config.tableName}_DB`;
+      const envPrefix = config.environment === 'development' ? '개발' : '운용';
+      const sheetName = `${envPrefix}_${config.tableName}_DB`;
       onImportToSheet({
         name: sheetName,
         headers: previewCols,
         rows: previewRows,
       });
-      alert(`원격 [${config.tableName}] 테이블 데이터(${previewRows.length}행)가 새로운 시트 ['${sheetName}']로 추가되었습니다!`);
+      alert(`원격 [${envPrefix}서버 ${config.tableName}] 데이터(${previewRows.length}행)가 새로운 시트 ['${sheetName}']로 추가되었습니다!`);
       onClose();
     }
   };
@@ -140,6 +141,13 @@ export function RemoteDbModal({
               <div className="flex items-center gap-2">
                 <h3 className="font-extrabold text-base text-slate-900">원격지 이지데스크 My DB 연동</h3>
                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 ${
+                  config.environment === 'production'
+                    ? 'bg-purple-100 text-purple-700 border border-purple-200'
+                    : 'bg-amber-100 text-amber-700 border border-amber-200'
+                }`}>
+                  {config.environment === 'production' ? '🚀 운용서버 (Production)' : '🛠️ 개발서버 (Development)'}
+                </span>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 ${
                   config.isConnected
                     ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
                     : 'bg-slate-100 text-slate-600'
@@ -149,7 +157,7 @@ export function RemoteDbModal({
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
-                터널링 서비스를 통해 원격 서버의 <strong>Product</strong> 데이터베이스에 접속하여 실시간 조회 및 AI 분석
+                터널링 서비스를 통해 원격 <strong>운용서버 My DB (Product)</strong>에 접속하여 실시간 조회 및 AI 분석
               </p>
             </div>
           </div>
@@ -163,6 +171,57 @@ export function RemoteDbModal({
 
         {/* 바디 */}
         <div className="flex-1 overflow-y-auto p-6 space-y-5 bg-slate-50/40 text-xs">
+          {/* 환경 선택 바 및 안내 */}
+          <div className="bg-gradient-to-r from-indigo-50/80 via-blue-50/80 to-purple-50/80 border border-indigo-100 rounded-2xl p-3.5 flex flex-wrap items-center justify-between gap-3 shadow-2xs">
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-xs text-indigo-950 flex items-center gap-1.5">
+                <Database className="w-4 h-4 text-indigo-600" />
+                접속 대상 환경:
+              </span>
+              <div className="inline-flex rounded-xl p-1 bg-white border border-slate-200 shadow-2xs">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const updated = { ...config, environment: 'production' as const };
+                    setConfig(updated);
+                    saveRemoteDbConfig(updated);
+                  }}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+                    config.environment === 'production'
+                      ? 'bg-indigo-600 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <span>🚀 운용서버 (Production)</span>
+                  <span className="text-[10px] bg-indigo-500 text-white px-1.5 py-0.2 rounded-full font-normal">권장</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const updated = { ...config, environment: 'development' as const };
+                    setConfig(updated);
+                    saveRemoteDbConfig(updated);
+                  }}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+                    config.environment === 'development'
+                      ? 'bg-amber-600 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <span>🛠️ 개발서버 (Development)</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="text-[11px] text-indigo-900 font-medium flex items-center gap-1">
+              <ShieldCheck className="w-3.5 h-3.5 text-indigo-600" />
+              <span>
+                {config.environment === 'production'
+                  ? '※ 개발서버가 아닌 운용서버(Production) 실서비스 My DB에 직접 연결됩니다.'
+                  : '※ 개발/테스트용 개발서버(Development) My DB에 연결됩니다.'}
+              </span>
+            </div>
+          </div>
           {/* 1. 연결 설정 섹션 */}
           <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-2xs space-y-3.5">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
@@ -383,7 +442,7 @@ export function RemoteDbModal({
               title="AI 비서 대화창을 열고 원격 Product DB 분석을 시작합니다"
             >
               <Sparkles className="w-4 h-4 text-amber-300" />
-              <span>AI 비서로 Product 분석하기</span>
+              <span>AI 비서로 {config.environment === 'production' ? '운용' : '개발'} Product 분석하기</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
