@@ -95,7 +95,7 @@ export function ShareModal({ isOpen, onClose, projects, initialProjectIndex = 0 
         <div className="flex items-center justify-between mb-3.5">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center"><Share2 className="w-3.5 h-3.5" /></div>
-            <h3 className="font-bold text-slate-800 text-sm">단계별 선택적 공유 설정</h3>
+            <h3 className="font-bold text-slate-800 text-sm">공유 설정</h3>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X className="w-4 h-4" /></button>
         </div>
