@@ -9,18 +9,16 @@ import { SubTabBar } from '@/components/SubTabBar';
 import { TableView } from '@/components/TableView';
 import { OriginalDocView } from '@/components/OriginalDocView';
 import { SummaryView } from '@/components/SummaryView';
-import { PhoneAuthModal } from '@/components/PhoneAuthModal';
-import { UploadOptionModal } from '@/components/UploadOptionModal';
-import { OriginalFileModal } from '@/components/OriginalFileModal';
-import { AddColumnModal } from '@/components/AddColumnModal';
-import { ExportOptionModal } from '@/components/ExportOptionModal';
-import { ShareModal } from '@/components/ShareModal';
-import { PlanLimitModal } from '@/components/PlanLimitModal';
+import {
+  PhoneAuthModal, UploadOptionModal, OriginalFileModal,
+  AddColumnModal, ExportOptionModal, ShareModal, PlanLimitModal,
+} from '@/components/modals';
 import { useAuth } from '@/hooks/useAuth';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import { useFileExport } from '@/hooks/useFileExport';
 import { getSheetOriginalFiles } from '@/lib/sheet-helpers';
+
 
 export default function FileToSheetApp() {
   const auth = useAuth();
@@ -69,6 +67,11 @@ export default function FileToSheetApp() {
         onOpenLoginModal={() => auth.setShowPhoneAuthModal(true)}
         onLogout={auth.handleLogout}
         onDownloadXlsx={fileExport.handleDownloadXlsx}
+        onDownloadSqlite={fileExport.handleDownloadSqlite}
+        onOpenPlanModal={() => setLimitNotice({
+          title: 'PRO 전용 기능',
+          reason: 'SQLite DB 직접 다운로드 및 10,000건 초과 대용량 데이터 처리는 PRO 플랜 회원 혜택입니다.'
+        })}
         onExportGoogleSheets={fileExport.handleExportGoogleSheets}
         onOpenOriginalModal={() => setShowOriginalModal(true)}
         onOpenShareModal={() => setShowShareModal(true)}
@@ -76,6 +79,7 @@ export default function FileToSheetApp() {
         hasSheetData={Boolean(currentSheet && currentSheet.rows.length > 0)}
         exportLoading={fileExport.exportLoading}
       />
+
 
       <main className="flex-1 w-full px-4 sm:px-6 lg:px-8 py-3 flex flex-col gap-3">
         {ws.projects.length === 0 ? (
@@ -165,22 +169,15 @@ export default function FileToSheetApp() {
       </main>
 
       <PhoneAuthModal
-        show={auth.showPhoneAuthModal}
-        onClose={() => auth.setShowPhoneAuthModal(false)}
-        authStep={auth.authStep}
-        setAuthStep={auth.setAuthStep}
-        authPhoneNumber={auth.authPhoneNumber}
-        setAuthPhoneNumber={auth.setAuthPhoneNumber}
-        authCode={auth.authCode}
-        setAuthCode={auth.setAuthCode}
-        authLoading={auth.authLoading}
-        authError={auth.authError}
-        setAuthError={auth.setAuthError}
-        timerSeconds={auth.timerSeconds}
-        testCodeHint={auth.testCodeHint}
-        onSendCode={auth.handleSendAuthCode}
-        onVerifyCode={auth.handleVerifyAuthCode}
+        show={auth.showPhoneAuthModal} onClose={() => auth.setShowPhoneAuthModal(false)}
+        authStep={auth.authStep} setAuthStep={auth.setAuthStep}
+        authPhoneNumber={auth.authPhoneNumber} setAuthPhoneNumber={auth.setAuthPhoneNumber}
+        authCode={auth.authCode} setAuthCode={auth.setAuthCode}
+        authLoading={auth.authLoading} authError={auth.authError} setAuthError={auth.setAuthError}
+        timerSeconds={auth.timerSeconds} testCodeHint={auth.testCodeHint}
+        onSendCode={auth.handleSendAuthCode} onVerifyCode={auth.handleVerifyAuthCode}
       />
+
 
       <UploadOptionModal pendingFile={upload.pendingUploadFile} onClose={() => upload.setPendingUploadFile(null)} onSelectOption={upload.processFile} />
       <OriginalFileModal show={showOriginalModal} onClose={() => setShowOriginalModal(false)} project={currentProject} />

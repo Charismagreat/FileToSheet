@@ -87,12 +87,47 @@ export function useFileExport({ currentProject, setProjects, activeProjectIndex 
     }
   };
 
+  const handleDownloadSqlite = async () => {
+    if (!currentProject || currentProject.sheets.length === 0) {
+      alert('데이터가 없습니다.');
+      return;
+    }
+    setExportLoading(true);
+    try {
+      const res = await apiFetch('/api/export-sqlite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ project: currentProject }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'SQLite 변환에 실패했습니다.');
+      }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const safeName = (currentProject.name || 'project').replace(/[\\/:*?"<>|]/g, '_');
+      a.download = `FileToSheet_${safeName}.sqlite`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (e: any) {
+      alert(`SQLite 내보내기 실패: ${e.message}`);
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
   return {
     exportLoading,
     isExportOptionModalOpen,
     setIsExportOptionModalOpen,
     handleDownloadXlsx,
+    handleDownloadSqlite,
     handleExportGoogleSheets,
     executeExportGoogleSheets,
   };
 }
+

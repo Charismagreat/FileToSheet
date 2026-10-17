@@ -10,6 +10,8 @@ import {
   Smartphone,
   LogOut,
   User,
+  Database,
+  Crown,
 } from 'lucide-react';
 import { UserSession } from '@/types/workspace';
 
@@ -18,6 +20,8 @@ interface HeaderProps {
   onOpenLoginModal: () => void;
   onLogout: () => void;
   onDownloadXlsx: () => void;
+  onDownloadSqlite?: () => void;
+  onOpenPlanModal?: () => void;
   onExportGoogleSheets: () => void;
   onOpenOriginalModal: () => void;
   onOpenShareModal: () => void;
@@ -25,6 +29,7 @@ interface HeaderProps {
   hasSheetData: boolean;
   exportLoading: boolean;
 }
+
 
 export function Header({
   currentUser,
@@ -86,11 +91,32 @@ export function Header({
         <button
           onClick={onDownloadXlsx}
           disabled={!hasSheetData}
-          className="flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:hover:bg-emerald-600 text-white shadow-xs transition active:scale-98"
+          className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:hover:bg-emerald-600 text-white shadow-xs transition active:scale-98"
         >
           <Download className="w-3.5 h-3.5" />
-          .xlsx 다운로드
+          .xlsx
         </button>
+
+        {/* SQLite DB 다운로드 (PRO 전용/우선 제공) */}
+        <button
+          onClick={() => {
+            if (currentUser?.plan === 'pro') {
+              onDownloadSqlite?.();
+            } else {
+              onOpenPlanModal ? onOpenPlanModal() : onDownloadSqlite?.();
+            }
+          }}
+          disabled={!hasSheetData || exportLoading}
+          className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:hover:bg-indigo-600 text-white shadow-xs transition active:scale-98"
+          title={currentUser?.plan === 'pro' ? '프로젝트를 SQLite 데이터베이스 파일로 다운로드' : 'PRO 전용: SQLite DB 다운로드'}
+        >
+          <Database className="w-3.5 h-3.5 text-indigo-200" />
+          <span>.sqlite DB</span>
+          {currentUser?.plan !== 'pro' && (
+            <Crown className="w-3 h-3 text-amber-300 ml-0.5" />
+          )}
+        </button>
+
 
         {/* Google 시트 내보내기 */}
         <button

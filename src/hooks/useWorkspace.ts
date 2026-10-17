@@ -66,6 +66,13 @@ export function useWorkspace({ phoneNumber, plan, onPlanLimit }: UseWorkspaceOpt
             return next;
           });
         }
+        if (plan === 'pro') {
+          fetch('/api/sync-sqlite', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ project: { ...currentProject, id: savedId || currentProject.id } }),
+          }).catch(() => {});
+        }
       } catch (err) {
         console.warn('자동 저장 중 경고:', err);
       } finally {
@@ -74,7 +81,8 @@ export function useWorkspace({ phoneNumber, plan, onPlanLimit }: UseWorkspaceOpt
     }, 1000);
 
     return () => { if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current); };
-  }, [projects, phoneNumber, activeProjectIndex]);
+  }, [projects, phoneNumber, activeProjectIndex, plan]);
+
 
   const saveProjectName = () => {
     if (editingProjectIdx === null || !editingProjectName.trim()) return setEditingProjectIdx(null);
@@ -97,6 +105,7 @@ export function useWorkspace({ phoneNumber, plan, onPlanLimit }: UseWorkspaceOpt
       return [...prev, newProj];
     });
   };
+
 
   const handleCloseProject = async (idx: number, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -165,28 +174,13 @@ export function useWorkspace({ phoneNumber, plan, onPlanLimit }: UseWorkspaceOpt
   const tableEditor = useTableEditor({ projects, setProjects, activeProjectIndex, plan, onPlanLimit });
 
   return {
-    projects,
-    setProjects,
-    activeProjectIndex,
-    setActiveProjectIndex,
-    currentProject,
-    currentSheet,
-    editingProjectIdx,
-    setEditingProjectIdx,
-    editingProjectName,
-    setEditingProjectName,
-    saveProjectName,
-    handleAddNewProject,
-    handleCloseProject,
-    editingSheetIdx,
-    setEditingSheetIdx,
-    editingSheetName,
-    setEditingSheetName,
-    saveSheetName,
-    handleAddNewSheet,
-    handleDeleteSheet,
-    handleSelectSheet,
-    handleDeleteOriginalFile,
+    projects, setProjects, activeProjectIndex, setActiveProjectIndex,
+    currentProject, currentSheet,
+    editingProjectIdx, setEditingProjectIdx, editingProjectName, setEditingProjectName, saveProjectName,
+    handleAddNewProject, handleCloseProject,
+    editingSheetIdx, setEditingSheetIdx, editingSheetName, setEditingSheetName, saveSheetName,
+    handleAddNewSheet, handleDeleteSheet, handleSelectSheet, handleDeleteOriginalFile,
     ...tableEditor,
   };
 }
+
