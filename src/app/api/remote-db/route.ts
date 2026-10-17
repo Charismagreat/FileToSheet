@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 interface RemoteDbRequest {
-  action: 'test-connection' | 'fetch-table' | 'list-tables';
+  action: 'test-connection' | 'fetch-table' | 'list-tables' | 'fetch-multiple-tables';
   tunnelUrl: string;
   apiKey?: string;
   tableName?: string;
+  tableNames?: string[];
   environment?: 'production' | 'development';
   limit?: number;
 }
@@ -15,7 +16,7 @@ interface RemoteDbRequest {
 export async function POST(req: NextRequest) {
   try {
     const body: RemoteDbRequest = await req.json();
-    const { action, tunnelUrl, apiKey = '', tableName = 'Product', environment = 'production', limit = 200 } = body;
+    const { action, tunnelUrl, apiKey = '', tableName = 'Product', tableNames, environment = 'production', limit = 200 } = body;
 
     if (!tunnelUrl || typeof tunnelUrl !== 'string') {
       return NextResponse.json(
@@ -94,10 +95,9 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 2. 원격 테이블 데이터 조회 (Product 등)
+    // 2. 단일 원격 테이블 데이터 조회
     if (action === 'fetch-table') {
       try {
-        // 우선 user_data_query 호출
         const queryRes = await fetch(toolsCallUrl, {
           method: 'POST',
           headers,
@@ -113,7 +113,6 @@ export async function POST(req: NextRequest) {
         });
 
         if (!queryRes.ok) {
-          // 대소문자 fallback (Product vs products)
           const fallbackName = tableName.toLowerCase() === 'product' ? 'products' : 'Product';
           const retryRes = await fetch(toolsCallUrl, {
             method: 'POST',
@@ -162,6 +161,110 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({
           success: false,
           error: `원격 데이터 읽기 실패: ${err?.message}`,
+        }, { status: 500 });
+      }
+    }
+
+    // 3. 복수 또는 전체 원격 테이블 데이터 일괄 조회 (방안 1: 모든 테이블 시트 매핑 지원)
+    if (action === 'fetch-multiple-tables') {
+      try {
+        let targets = tableNames;
+        // 대상 목록이 지정되지 않은 경우, 원격 테이블 목록을 먼저 조회
+        if (!targets || targets.length === 0) {
+          const listRes = await fetch(toolsCallUrl, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+              tool: 'user_data_list_tables',
+              arguments: { environment },
+            }),
+            signal: AbortSignal.timeout(10000),
+          });
+
+          if (!listRes.ok) {
+            throw new Error('원격 테이블 목록을 가져오지 못했습니다.');
+          }
+
+          const listData = await listRes.json();
+          const tablesResult = listData.result || listData;
+          const rawTables: any[] = Array.isArray(tablesResult.tables)
+            ? tablesResult.tables
+            : Array.isArray(tablesResult)
+            ? tablesResult
+            : [];
+          targets = rawTables.map((t) => t.tableName || t.name).filter(Boolean);
+        }
+
+        if (!targets || targets.length === 0) {
+          return NextResponse.json({
+            success: true,
+            tables: [],
+            message: '조회할 원격 테이블이 없습니다.',
+          });
+        }
+
+        // 병렬로 각 테이블 데이터 조회
+        const results = await Promise.allSettled(
+          targets.map(async (tName) => {
+            const res = await fetch(toolsCallUrl, {
+              method: 'POST',
+              headers,
+              body: JSON.stringify({
+                tool: 'user_data_query',
+                arguments: {
+                  tableName: tName,
+                  limit,
+                  environment,
+                },
+              }),
+              signal: AbortSignal.timeout(15000),
+            });
+
+            if (!res.ok) {
+              return {
+                tableName: tName,
+                columns: ['id', 'name'],
+                rows: [],
+                totalRows: 0,
+                error: `HTTP ${res.status}`,
+              };
+            }
+
+            const data = await res.json();
+            const rows = data.result?.rows || data.rows || [];
+            const columns = extractColumnsFromRows(rows);
+            return {
+              tableName: tName,
+              columns,
+              rows,
+              totalRows: rows.length,
+            };
+          })
+        );
+
+        const fetchedTables = results.map((r, i) => {
+          if (r.status === 'fulfilled') {
+            return r.value;
+          }
+          return {
+            tableName: targets![i],
+            columns: ['id', 'name'],
+            rows: [],
+            totalRows: 0,
+            error: r.reason?.message || '조회 실패',
+          };
+        });
+
+        return NextResponse.json({
+          success: true,
+          environment,
+          totalTables: fetchedTables.length,
+          tables: fetchedTables,
+        });
+      } catch (err: any) {
+        return NextResponse.json({
+          success: false,
+          error: `원격 복수 테이블 조회 실패: ${err?.message}`,
         }, { status: 500 });
       }
     }

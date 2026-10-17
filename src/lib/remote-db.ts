@@ -126,3 +126,48 @@ export async function fetchRemoteTableData(config: RemoteDbConfig, limit: number
     };
   }
 }
+
+export interface RemoteTableResult {
+  tableName: string;
+  columns: string[];
+  rows: Record<string, any>[];
+  totalRows: number;
+  error?: string;
+}
+
+/**
+ * 원격 복수 또는 모든 테이블의 데이터 및 스키마 일괄 가져오기 (방안 1: 시트 매핑 전용)
+ */
+export async function fetchRemoteMultipleTables(
+  config: RemoteDbConfig,
+  tableNames?: string[],
+  limit: number = 200
+): Promise<{
+  success: boolean;
+  tables?: RemoteTableResult[];
+  environment?: string;
+  error?: string;
+}> {
+  try {
+    const res = await fetch('/api/remote-db', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'fetch-multiple-tables',
+        tunnelUrl: config.tunnelUrl,
+        apiKey: config.apiKey,
+        tableNames,
+        environment: config.environment || 'production',
+        limit,
+      }),
+    });
+
+    const data = await res.json();
+    return data;
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err?.message || '원격 테이블 목록 데이터를 일괄 조회하지 못했습니다.',
+    };
+  }
+}

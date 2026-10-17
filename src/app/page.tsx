@@ -27,6 +27,7 @@ import { useWorkspace } from '@/hooks/useWorkspace';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import { useFileExport } from '@/hooks/useFileExport';
 import { getSheetOriginalFiles } from '@/lib/sheet-helpers';
+import { ProjectWorkspace } from '@/types/workspace';
 
 export default function FileToSheetApp() {
   const auth = useAuth();
@@ -273,6 +274,68 @@ export default function FileToSheetApp() {
       next[ws.activeProjectIndex] = proj;
       return next;
     });
+  };
+
+  // [방안 1 핵심] 원격 DB의 모든(또는 선택된) 테이블을 각각 시트로 갖는 새 전용 프로젝트 열기
+  const handleImportTablesToNewProject = (newProjectData: {
+    name: string;
+    sheets: Array<{ name: string; headers: string[]; rows: Record<string, any>[] }>;
+  }) => {
+    const newProj: ProjectWorkspace = {
+      id: null,
+      name: newProjectData.name,
+      filename: `${newProjectData.name}.db`,
+      category: '원격 데이터베이스',
+      sheets: newProjectData.sheets.length > 0
+        ? newProjectData.sheets.map((s) => ({
+            name: s.name,
+            headers: s.headers,
+            rows: s.rows,
+            rawRows: [],
+          }))
+        : [{ name: '기본시트', headers: ['id', 'name'], rows: [], rawRows: [] }],
+      activeSheetIndex: 0,
+      activeSubTab: 'table',
+      uploadedAt: new Date().toLocaleString('ko-KR'),
+    };
+
+    ws.setProjects((prev) => {
+      const next = [...prev, newProj];
+      ws.setActiveProjectIndex(next.length - 1);
+      return next;
+    });
+    setActiveSubTab('table');
+  };
+
+  // [방안 1 확장] 현재 열려 있는 프로젝트에 선택된 원격 테이블들을 시트로 일괄 추가
+  const handleImportMultipleSheetsToCurrentProject = (
+    newSheets: Array<{ name: string; headers: string[]; rows: Record<string, any>[] }>
+  ) => {
+    if (!currentProject) {
+      handleImportTablesToNewProject({
+        name: '🚀 운용 My DB (이지데스크)',
+        sheets: newSheets,
+      });
+      return;
+    }
+
+    ws.setProjects((prev) => {
+      const next = [...prev];
+      if (!next[ws.activeProjectIndex]) return prev;
+      const proj = { ...next[ws.activeProjectIndex] };
+      const formattedSheets = newSheets.map((s) => ({
+        name: s.name,
+        headers: s.headers,
+        rows: s.rows,
+        rawRows: [],
+      }));
+      const startIndex = proj.sheets.length;
+      proj.sheets = [...proj.sheets, ...formattedSheets];
+      proj.activeSheetIndex = startIndex;
+      next[ws.activeProjectIndex] = proj;
+      return next;
+    });
+    setActiveSubTab('table');
   };
 
   return (
@@ -615,11 +678,13 @@ export default function FileToSheetApp() {
         onOpenPricingModal={() => setShowPricingModal(true)}
       />
 
-      {/* 21. 원격지 이지데스크 터널링 My DB(Product) 연동 모달 */}
+      {/* 21. 원격지 이지데스크 터널링 My DB(Product 등) 연동 모달 */}
       <RemoteDbModal
         isOpen={showRemoteDbModal}
         onClose={() => setShowRemoteDbModal(false)}
         onImportToSheet={handleAddNewSheetFromAi}
+        onImportTablesToNewProject={handleImportTablesToNewProject}
+        onImportMultipleSheetsToCurrentProject={handleImportMultipleSheetsToCurrentProject}
         onOpenAiChatWithScope={(scope) => {
           setAiChatInitialScope(scope);
           setShowAiChatDrawer(true);
