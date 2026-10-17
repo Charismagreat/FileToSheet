@@ -12,7 +12,7 @@ const FALLBACK_MODELS = [
 
 export async function POST(request: NextRequest) {
   try {
-    const { filename, fileBase64, customPrompt } = await request.json();
+    const { filename, fileBase64, customPrompt, targetHeaders } = await request.json();
 
     if (!fileBase64) {
       return NextResponse.json(
@@ -20,6 +20,9 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    const hasTargetHeaders = Array.isArray(targetHeaders) && targetHeaders.length > 0;
+    const targetHeadersList = hasTargetHeaders ? targetHeaders.filter((h: any) => typeof h === 'string' && h.trim()) : [];
 
     const systemPrompt = `당신은 거래명세서, 세금계산서, 영수증, 카드전표, 견적서, 발주서, 통장내역, 급여명세서, 각종 계약서 및 비정형 서식/표 등 모든 종류의 문서를 정밀한 2차원 스프레드시트 표로 완벽하게 변환하는 범용(Universal) 문서 파서 AI입니다.
 
@@ -49,10 +52,16 @@ export async function POST(request: NextRequest) {
 }
 마크다운(\`\`\`json) 없이 순수 JSON만 반환하세요.`;
 
-    const userPrompt = `파일명: ${filename}\n이 문서의 종류를 파악하여 본문 데이터를 최대한 상세한 독립 컬럼들로 분리해 추출하고, 독립 컬럼에 담기지 않는 상하단 거래처 상세, 주소, 대표자, 승인/문서번호, 계좌, 조건, 메모 등 모든 부가 정보는 누락 없이 반드시 '비고' 컬럼에 모아서 완벽히 적재해 주세요.` +
+    const targetHeaderConstraint = targetHeadersList.length > 0
+      ? `\n\n[★ 기존 시트 컬럼 100% 유지 지침 - 최우선 필수]\n현재 시트의 컬럼 목록: [ ${targetHeadersList.join(', ')} ]\n- 새 컬럼을 추가하지 마시고, headers는 위 컬럼 목록을 정확히 유지하세요.\n- 추출하는 데이터의 모든 필드는 위 컬럼 중 가장 부합하는 컬럼에 매핑하세요.\n- 컬럼에 없는 기타 정보는 '비고' 컬럼에 모아서 적재하세요.`
+      : '';
+
+    const userPrompt = `파일명: ${filename}\n이 문서의 종류를 파악하여 본문 데이터를 상세한 독립 컬럼들로 분리해 추출하고, 독립 컬럼에 담기지 않는 상하단 거래처 상세, 주소, 대표자, 승인/문서번호, 계좌, 메모 등 부가 정보는 반드시 '비고' 컬럼에 모아서 적재해 주세요.` +
+      targetHeaderConstraint +
       (customPrompt?.trim()
-        ? `\n\n[★ 사용자의 필수 최우선 지시사항]\n다음은 사용자가 특별히 요청한 규칙입니다. 기본 원칙보다 아래 규칙을 무조건 최우선으로 반영하여 headers와 rows를 설계하세요:\n${customPrompt.trim()}`
+        ? `\n\n[★ 사용자의 필수 최우선 지시사항]\n다음은 사용자가 특별히 요청한 규칙입니다:\n${customPrompt.trim()}`
         : '');
+
 
     const cleanBase64 = fileBase64.replace(/^data:[^;]+;base64,/, '');
 
@@ -100,14 +109,29 @@ export async function POST(request: NextRequest) {
       throw new Error(`모든 AI 모델 호출 실패. 마지막 오류: ${lastError?.message || lastError}`);
     }
 
+    let finalHeaders = successfulResult.headers || [];
+    let finalRows = successfulResult.rows || [];
+
+    if (targetHeadersList.length > 0) {
+      finalHeaders = targetHeadersList;
+      finalRows = finalRows.map((r: any) => {
+        const rowObj: Record<string, any> = {};
+        for (const h of targetHeadersList) {
+          rowObj[h] = r[h] !== undefined && r[h] !== null ? r[h] : '';
+        }
+        return rowObj;
+      });
+    }
+
     return NextResponse.json({
       success: true,
       category: successfulResult.category || '비정형 문서 추출',
       sheetName: successfulResult.sheetName || '추출데이터',
-      headers: successfulResult.headers || [],
-      rows: successfulResult.rows || [],
+      headers: finalHeaders,
+      rows: finalRows,
       usedModel: successfulModel,
     });
+
   } catch (error: any) {
     console.error('범용 문서 AI 파싱 최종 오류:', error);
     return NextResponse.json(

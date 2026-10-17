@@ -61,7 +61,8 @@ export function useFileUpload({
     const nowKst = new Intl.DateTimeFormat('ko-KR', { dateStyle: 'short', timeStyle: 'medium' }).format(new Date());
 
     try {
-      const { sheets: parsedSheets, category } = await parseFileOnClient(file, setProcessStatus, customPrompt);
+      const targetHeaders = mode === 'append_rows' && currentSheet?.headers?.length ? currentSheet.headers : undefined;
+      const { sheets: parsedSheets, category } = await parseFileOnClient(file, setProcessStatus, customPrompt, targetHeaders);
       setProcessStatus('이지데스크 My DB에 레코드 생성 중...');
       const fileId = await createUploadedFileRecord(file, category);
 
@@ -69,26 +70,18 @@ export function useFileUpload({
         setProcessStatus('sheet_rows 테이블에 데이터 영구 적재 중...');
         const totalRows = parsedSheets.reduce((sum, s) => sum + s.rows.length, 0);
         await updateFileParseResult(fileId, parsedSheets.map((s) => s.name), totalRows, category);
-        for (const sheet of parsedSheets) {
-          await saveParsedSheetRows(fileId, sheet.name, sheet.rows, category);
-        }
+        for (const sheet of parsedSheets) await saveParsedSheetRows(fileId, sheet.name, sheet.rows, category);
         try {
-          await uploadToEgdeskStorage(fileId, file, ({ sentBytes, totalBytes }) => {
-            setStorageProgress(Math.round((sentBytes / totalBytes) * 100));
-          });
+          await uploadToEgdeskStorage(fileId, file, ({ sentBytes, totalBytes }) => setStorageProgress(Math.round((sentBytes / totalBytes) * 100)));
         } catch (e) {
           console.warn('스토리지 청크 업로드 건너뜀:', e);
         }
       }
 
       const docItem: OriginalDocFile = {
-        id: fileId || undefined,
-        name: file.name,
-        url: fileBlobUrl,
-        type: file.type,
-        size: file.size,
-        uploadedAt: nowKst,
+        id: fileId || undefined, name: file.name, url: fileBlobUrl, type: file.type, size: file.size, uploadedAt: nowKst,
       };
+
 
       setProjects((prev) => {
         const next = [...prev];
@@ -96,32 +89,41 @@ export function useFileUpload({
           const proj = { ...next[activeProjectIndex] };
           const s = [...proj.sheets];
           const target = s[proj.activeSheetIndex];
+          const fixedHeaders = target.headers && target.headers.length > 0 ? target.headers : (parsedSheets[0]?.headers || []);
+
           if (!target.rows || target.rows.length === 0) {
             const tr = truncateRowsToLimit(plan, 0, parsedSheets[0]?.rows || []);
             s[proj.activeSheetIndex] = {
               ...target,
-              headers: parsedSheets[0]?.headers || target.headers,
+              headers: fixedHeaders,
               rows: tr.rows.map((r) => ({ ...r, _fileId: fileId, _fileName: file.name })),
               originalFiles: [...(target.originalFiles || []), docItem],
             };
           } else {
             const rawIncoming = parsedSheets.flatMap((sh) => sh.rows);
             const tr = truncateRowsToLimit(plan, target.rows.length, rawIncoming);
-            const curSet = new Set(target.headers);
-            const mergedH = [...target.headers, ...parsedSheets.flatMap((sh) => sh.headers).filter((h) => !curSet.has(h))];
+            // 기존 컬럼 엄격 유지 (기존 컬럼 목록 변경 없이 1:1 매핑)
+            const mappedRows = tr.rows.map((row, i) => {
+              const cleanRow: Record<string, any> = {};
+              for (const h of fixedHeaders) cleanRow[h] = row[h] !== undefined && row[h] !== null ? row[h] : '';
+              const extra = Object.entries(row).filter(([k]) => !fixedHeaders.includes(k) && !k.startsWith('_')).map(([k, v]) => `[${k}] ${v}`).join(' | ');
+              if (extra && fixedHeaders.includes('비고')) cleanRow['비고'] = cleanRow['비고'] ? `${cleanRow['비고']} | ${extra}` : extra;
+              cleanRow['일련번호'] = target.rows.length + i + 1;
+              cleanRow['등록일시'] = cleanRow['등록일시'] || row.등록일시 || nowKst;
+              cleanRow._fileId = fileId;
+              cleanRow._fileName = file.name;
+              return cleanRow;
+            });
             s[proj.activeSheetIndex] = {
               ...target,
-              headers: mergedH,
-              rows: [...target.rows, ...tr.rows.map((r, i) => ({ ...r, 일련번호: target.rows.length + i + 1, 등록일시: r.등록일시 || nowKst, _fileId: fileId, _fileName: file.name }))],
+              headers: fixedHeaders, // 기존 컬럼 100% 엄격 유지
+              rows: [...target.rows, ...mappedRows],
               originalFiles: [...(target.originalFiles || []), docItem],
             };
           }
+
           const prevDocs = proj.originalFiles || (proj.originalFileUrl ? [{
-            name: proj.name || '기존 문서',
-            url: proj.originalFileUrl,
-            type: proj.originalFileType,
-            size: proj.originalFileSize,
-            uploadedAt: proj.uploadedAt,
+            name: proj.name || '기존 문서', url: proj.originalFileUrl, type: proj.originalFileType, size: proj.originalFileSize, uploadedAt: proj.uploadedAt,
           }] : []);
           proj.originalFiles = [...prevDocs, docItem];
           proj.originalFileUrl = fileBlobUrl;
@@ -129,6 +131,7 @@ export function useFileUpload({
           proj.originalFileSize = file.size;
           proj.sheets = s;
           next[activeProjectIndex] = proj;
+
         } else if (mode === 'new_sheet' && next[activeProjectIndex]) {
           const proj = { ...next[activeProjectIndex] };
           const check = checkSheetLimit(plan, proj.sheets.length);
