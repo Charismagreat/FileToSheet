@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { ProjectWorkspace } from '@/types/workspace';
 import { apiFetch } from '@/lib/api';
+import { getBonusCredits } from '@/lib/coupon-helpers';
 
 export type ChatScope = 'current_sheet' | 'current_project' | 'all_projects';
 
@@ -115,15 +116,26 @@ export function AiChatDrawer({
   const [loading, setLoading] = useState<boolean>(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [createdSheetMsgId, setCreatedSheetMsgId] = useState<string | null>(null);
+  const [bonusCredits, setBonusCredits] = useState<{ bonusTokens: number; bonusDocs: number }>({ bonusTokens: 0, bonusDocs: 0 });
 
-  // 🌟 이번 달 누적 소모 토큰 집계 (기본 3만 토큰)
+  // 보너스 크레딧 (쿠폰/충전) 실시간 동기화
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const sync = () => setBonusCredits(getBonusCredits());
+    sync();
+    window.addEventListener('filetosheet_credit_updated', sync);
+    return () => window.removeEventListener('filetosheet_credit_updated', sync);
+  }, []);
+
+  // 🌟 이번 달 누적 소모 토큰 집계 (기본 3만 토큰 + 쿠폰/충전 보너스)
   const monthlyTokensUsed = sessions.reduce((acc, sess) => {
     return (
       acc +
       sess.messages.reduce((mAcc, m) => mAcc + (m.usage?.totalTokens || 0), 0)
     );
   }, 0);
-  const monthlyTokenLimit = 30000;
+  const baseTokenLimit = 30000;
+  const monthlyTokenLimit = baseTokenLimit + bonusCredits.bonusTokens;
   const usagePercent = Math.min(100, Math.round((monthlyTokensUsed / monthlyTokenLimit) * 100));
 
   // 🌟 1. 대화창 가로폭 조절 상태 (기본 480px, 최소 380px, 로컬 저장)
@@ -763,7 +775,14 @@ export function AiChatDrawer({
                   <div className="flex items-center justify-between text-[10px] text-slate-600 mb-0.5 font-bold">
                     <span>월간 AI 토큰 (Gemini 3.8 Flash)</span>
                     <span className="text-slate-800">
-                      {monthlyTokensUsed.toLocaleString()} / {monthlyTokenLimit.toLocaleString()} 토큰 ({usagePercent}%)
+                      {monthlyTokensUsed.toLocaleString()} / {monthlyTokenLimit.toLocaleString()} 토큰
+                      {bonusCredits.bonusTokens > 0 ? (
+                        <span className="text-blue-600 font-extrabold ml-1 bg-blue-100/80 border border-blue-200 px-1.5 py-0.2 rounded text-[9px]">
+                          +{(bonusCredits.bonusTokens / 10000).toFixed(0)}만 보너스
+                        </span>
+                      ) : (
+                        ` (${usagePercent}%)`
+                      )}
                     </span>
                   </div>
                   <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">

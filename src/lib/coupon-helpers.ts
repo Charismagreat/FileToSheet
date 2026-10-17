@@ -107,3 +107,62 @@ export function validateCoupon(code: string): {
 
   return { success: true, coupon: found };
 }
+
+const BONUS_TOKENS_KEY = 'filetosheet_bonus_tokens';
+const BONUS_DOCS_KEY = 'filetosheet_bonus_docs';
+
+/**
+ * 누적 보너스 크레딧 (토큰 및 파싱 장수) 조회
+ */
+export function getBonusCredits(): { bonusTokens: number; bonusDocs: number } {
+  if (typeof window === 'undefined') return { bonusTokens: 0, bonusDocs: 0 };
+  try {
+    syncWelcomeBonusIfNeeded();
+    const tokens = Number(localStorage.getItem(BONUS_TOKENS_KEY) || '0');
+    const docs = Number(localStorage.getItem(BONUS_DOCS_KEY) || '0');
+    return {
+      bonusTokens: isNaN(tokens) ? 0 : tokens,
+      bonusDocs: isNaN(docs) ? 0 : docs,
+    };
+  } catch {
+    return { bonusTokens: 0, bonusDocs: 0 };
+  }
+}
+
+/**
+ * 보너스 크레딧 적립
+ */
+export function addBonusCredits(tokens: number, docs: number) {
+  if (typeof window === 'undefined') return;
+  const currentTokens = Number(localStorage.getItem(BONUS_TOKENS_KEY) || '0');
+  const currentDocs = Number(localStorage.getItem(BONUS_DOCS_KEY) || '0');
+  const nextTokens = (isNaN(currentTokens) ? 0 : currentTokens) + tokens;
+  const nextDocs = (isNaN(currentDocs) ? 0 : currentDocs) + docs;
+
+  localStorage.setItem(BONUS_TOKENS_KEY, String(nextTokens));
+  localStorage.setItem(BONUS_DOCS_KEY, String(nextDocs));
+  window.dispatchEvent(new Event('filetosheet_credit_updated'));
+}
+
+/**
+ * 이미 WELCOME2026을 사용한 사용자에게 25만 토큰 / 50장 자동 보정 연동
+ */
+export function syncWelcomeBonusIfNeeded() {
+  if (typeof window === 'undefined') return;
+  try {
+    const used = getUsedCoupons();
+    if (used.includes('WELCOME2026')) {
+      const currentTokens = Number(localStorage.getItem(BONUS_TOKENS_KEY) || '0');
+      if (!currentTokens || currentTokens < 250000) {
+        localStorage.setItem(BONUS_TOKENS_KEY, '250000');
+        const currentDocs = Number(localStorage.getItem(BONUS_DOCS_KEY) || '0');
+        if (!currentDocs || currentDocs < 50) {
+          localStorage.setItem(BONUS_DOCS_KEY, '50');
+        }
+      }
+    }
+  } catch {
+    // ignore
+  }
+}
+

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   FileSpreadsheet, Download, Share2, RefreshCw, Smartphone, LogOut,
   User, Database, Crown, UploadCloud, Zap, ChevronDown, Building2, BarChart3,
@@ -9,6 +9,7 @@ import {
 import { UserSession, ProjectWorkspace } from '@/types/workspace';
 import { UserUsagePopover } from './UserUsagePopover';
 import { getPlanLimits } from '@/lib/plan-limits';
+import { getBonusCredits } from '@/lib/coupon-helpers';
 
 interface HeaderProps {
   currentUser: UserSession | null;
@@ -55,8 +56,19 @@ export function Header({
 }: HeaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUsageOpen, setIsUsageOpen] = useState<boolean>(false);
+  const [bonusCredits, setBonusCredits] = useState<{ bonusTokens: number; bonusDocs: number }>({ bonusTokens: 0, bonusDocs: 0 });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const sync = () => setBonusCredits(getBonusCredits());
+    sync();
+    window.addEventListener('filetosheet_credit_updated', sync);
+    return () => window.removeEventListener('filetosheet_credit_updated', sync);
+  }, []);
+
   const planPolicy = getPlanLimits(currentUser?.plan);
   const parsedDocsCount = currentProject?.originalFiles?.length || 1;
+  const maxDocs = planPolicy.includedMonthlyDocs + bonusCredits.bonusDocs;
 
   return (
     <header className="border-b border-slate-200/80 bg-white/95 backdrop-blur sticky top-0 z-30 px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-4 shadow-xs">
@@ -133,7 +145,12 @@ export function Header({
               title="이번 달 사용량 및 잔여량 확인"
             >
               <Zap className="w-3.5 h-3.5 text-amber-500" />
-              <span>{parsedDocsCount}/{planPolicy.includedMonthlyDocs}장</span>
+              <span>{parsedDocsCount}/{maxDocs}장</span>
+              {bonusCredits.bonusDocs > 0 && (
+                <span className="text-[10px] font-extrabold text-blue-600 bg-blue-100/90 border border-blue-200 px-1.5 py-0.2 rounded-full">
+                  +{bonusCredits.bonusDocs}
+                </span>
+              )}
               <ChevronDown className="w-3 h-3 text-slate-400" />
             </button>
             <UserUsagePopover

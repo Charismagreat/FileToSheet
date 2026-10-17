@@ -1,9 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Sparkles, Check, Database, Zap, ArrowRight, ShieldCheck, X, Smartphone } from 'lucide-react';
 import { UserSession, ProjectWorkspace } from '@/types/workspace';
 import { getPlanLimits } from '@/lib/plan-limits';
+import { getBonusCredits } from '@/lib/coupon-helpers';
 
 interface UserUsagePopoverProps {
   isOpen: boolean;
@@ -24,6 +25,15 @@ export function UserUsagePopover({
   onOpenPricingModal,
   onOpenTransferModal,
 }: UserUsagePopoverProps) {
+  const [bonusCredits, setBonusCredits] = useState<{ bonusTokens: number; bonusDocs: number }>({ bonusTokens: 0, bonusDocs: 0 });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const sync = () => setBonusCredits(getBonusCredits());
+    sync();
+    window.addEventListener('filetosheet_credit_updated', sync);
+    return () => window.removeEventListener('filetosheet_credit_updated', sync);
+  }, []);
 
   if (!isOpen) return null;
 
@@ -36,9 +46,9 @@ export function UserUsagePopover({
   const sheetCount = currentProject?.sheets.length || 0;
   const currentRowsCount = currentSheet?.rows.length || 0;
 
-  // 파싱 사용량 추정치 (프로젝트 내 원본 파일 총 개수 또는 데모 수치)
+  // 파싱 사용량 추정치 (기본 제공량 + 보너스 파싱 건수)
   const totalParsedDocs = currentProject?.originalFiles?.length || 1;
-  const monthlyMaxDocs = policy.includedMonthlyDocs;
+  const monthlyMaxDocs = policy.includedMonthlyDocs + bonusCredits.bonusDocs;
   const parsedPercent = Math.min(100, Math.round((totalParsedDocs / monthlyMaxDocs) * 100));
 
   const overageDocs = isPro && totalParsedDocs > monthlyMaxDocs ? totalParsedDocs - monthlyMaxDocs : 0;
@@ -69,7 +79,7 @@ export function UserUsagePopover({
         </button>
       </div>
 
-      {/* 핵심 지표 3종 */}
+      {/* 핵심 지표 */}
       <div className="py-3.5 space-y-3.5">
         {/* 1. 월간 AI 파싱량 */}
         <div>
@@ -80,6 +90,11 @@ export function UserUsagePopover({
             </span>
             <span className="font-mono text-[11px] font-bold text-slate-800">
               {totalParsedDocs} / {monthlyMaxDocs}장
+              {bonusCredits.bonusDocs > 0 && (
+                <span className="text-blue-600 font-extrabold ml-1.5 bg-blue-100 border border-blue-200 px-1.5 py-0.2 rounded text-[10px]">
+                  +{bonusCredits.bonusDocs}장 보너스
+                </span>
+              )}
             </span>
           </div>
           <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
@@ -97,7 +112,34 @@ export function UserUsagePopover({
           )}
         </div>
 
-        {/* 2. 프로젝트 시트 생성 수 */}
+        {/* 2. AI 비서 대화 토큰 (Gemini 3.8 Flash) */}
+        <div>
+          <div className="flex justify-between items-center text-xs mb-1">
+            <span className="font-semibold text-slate-700 flex items-center gap-1">
+              <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+              AI 비서 대화 토큰
+            </span>
+            <span className="font-mono text-[11px] font-bold text-slate-800">
+              {(30000 + bonusCredits.bonusTokens).toLocaleString()} 토큰
+              {bonusCredits.bonusTokens > 0 && (
+                <span className="text-blue-600 font-extrabold ml-1.5 bg-blue-100 border border-blue-200 px-1.5 py-0.2 rounded text-[10px]">
+                  +{(bonusCredits.bonusTokens / 10000).toFixed(0)}만 보너스
+                </span>
+              )}
+            </span>
+          </div>
+          <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-600"
+              style={{ width: '100%' }}
+            />
+          </div>
+          <p className="text-[10px] text-slate-400 mt-1">
+            AI 비서 대화창 상단에서 실시간 소모량 및 잔여 게이지 확인
+          </p>
+        </div>
+
+        {/* 3. 프로젝트 시트 생성 수 */}
         <div>
           <div className="flex justify-between items-center text-xs mb-1">
             <span className="font-semibold text-slate-700 flex items-center gap-1">
@@ -117,7 +159,7 @@ export function UserUsagePopover({
           </div>
         </div>
 
-        {/* 3. 현재 시트 데이터 행 수 */}
+        {/* 4. 현재 시트 데이터 행 수 */}
         <div>
           <div className="flex justify-between items-center text-xs mb-1">
             <span className="font-semibold text-slate-700 flex items-center gap-1">

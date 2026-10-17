@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Check, Sparkles, X, ArrowRight, Zap, Shield, Database, Ticket, Tag } from 'lucide-react';
 import { UserSession } from '@/types/workspace';
-import { validateCoupon, markCouponUsed, CouponDefinition } from '@/lib/coupon-helpers';
+import { validateCoupon, markCouponUsed, CouponDefinition, addBonusCredits } from '@/lib/coupon-helpers';
 
 interface PricingModalProps {
   isOpen: boolean;
@@ -63,8 +63,18 @@ export function PricingModal({ isOpen, onClose, currentUser, onUpgrade, onOpenEn
     if (appliedCoupon) {
       markCouponUsed(appliedCoupon.code);
     }
+
+    // 보너스 크레딧 (토큰 및 파싱 장수) 영구 적립
+    if (originalAmount === 2000) {
+      addBonusCredits(250000, 50);
+    } else if (originalAmount === 5000) {
+      addBonusCredits(750000, 135);
+    } else if (originalAmount === 8000) {
+      addBonusCredits(1250000, 225);
+    }
+
     const costText = finalAmount === 0 ? '무료 (0원 쿠폰 적용)' : `${finalAmount.toLocaleString()}원`;
-    alert(`[${packName}] ${costText} 충전이 완료되었습니다!\n혜택: ${benefitsDesc}`);
+    alert(`[${packName}] ${costText} 충전이 완료되었습니다!\n혜택: ${benefitsDesc}\n(AI 비서 대화창 상단 게이지에 잔여 토큰이 즉시 반영되었습니다)`);
     onClose();
   };
 
