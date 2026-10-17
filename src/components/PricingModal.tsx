@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Check, Sparkles, X, ArrowRight, Zap, Shield, Database } from 'lucide-react';
+import { Check, Sparkles, X, ArrowRight, Zap, Shield, Database, Ticket, Tag } from 'lucide-react';
 import { UserSession } from '@/types/workspace';
+import { validateCoupon, markCouponUsed, CouponDefinition } from '@/lib/coupon-helpers';
 
 interface PricingModalProps {
   isOpen: boolean;
@@ -25,8 +26,47 @@ const COMPARISON_FEATURES = [
 
 export function PricingModal({ isOpen, onClose, currentUser, onUpgrade, onOpenEnterpriseInquiry }: PricingModalProps) {
   const [isAnnual, setIsAnnual] = useState<boolean>(true);
+  const [couponInput, setCouponInput] = useState<string>('');
+  const [appliedCoupon, setAppliedCoupon] = useState<CouponDefinition | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [couponSuccessMsg, setCouponSuccessMsg] = useState<string | null>(null);
+
   if (!isOpen) return null;
   const isPro = currentUser?.plan === 'pro';
+
+  // 쿠폰 코드 검증 및 적용
+  const handleApplyCoupon = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setCouponError(null);
+    setCouponSuccessMsg(null);
+
+    const result = validateCoupon(couponInput);
+    if (!result.success || !result.coupon) {
+      setCouponError(result.error || '유효하지 않은 쿠폰입니다.');
+      return;
+    }
+
+    setAppliedCoupon(result.coupon);
+    setCouponSuccessMsg(`✓ [${result.coupon.code}] ${result.coupon.name}이 적용되었습니다!`);
+  };
+
+  // 쿠폰 취소
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponInput('');
+    setCouponError(null);
+    setCouponSuccessMsg(null);
+  };
+
+  // 충전 실행 핸들러
+  const handleExecuteTopup = (packName: string, originalAmount: number, finalAmount: number, benefitsDesc: string) => {
+    if (appliedCoupon) {
+      markCouponUsed(appliedCoupon.code);
+    }
+    const costText = finalAmount === 0 ? '무료 (0원 쿠폰 적용)' : `${finalAmount.toLocaleString()}원`;
+    alert(`[${packName}] ${costText} 충전이 완료되었습니다!\n혜택: ${benefitsDesc}`);
+    onClose();
+  };
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
@@ -84,8 +124,18 @@ export function PricingModal({ isOpen, onClose, currentUser, onUpgrade, onOpenEn
                 <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-blue-100 text-blue-700">추천</span>
               </div>
               <div className="flex items-baseline gap-1 mb-1">
-                <span className="text-2xl font-black text-slate-900">{isAnnual ? '7,900' : '9,900'}원</span>
-                <span className="text-xs text-slate-500 font-normal">/ 월 {isAnnual && '(연 94,800원)'}</span>
+                {appliedCoupon?.type === 'pro_trial' ? (
+                  <>
+                    <span className="text-sm line-through text-slate-400">{isAnnual ? '7,900' : '9,900'}원</span>
+                    <span className="text-2xl font-black text-blue-600">0원</span>
+                    <span className="text-xs text-blue-600 font-bold ml-1">(1개월 무료 체험)</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-2xl font-black text-slate-900">{isAnnual ? '7,900' : '9,900'}원</span>
+                    <span className="text-xs text-slate-500 font-normal">/ 월 {isAnnual && '(연 94,800원)'}</span>
+                  </>
+                )}
               </div>
               <p className="text-[11px] text-blue-700/80 mb-4">대용량 처리와 실시간 SQLite 데이터베이스</p>
               <ul className="text-xs space-y-2 text-slate-800">
@@ -95,8 +145,28 @@ export function PricingModal({ isOpen, onClose, currentUser, onUpgrade, onOpenEn
                 <li className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-blue-600 shrink-0" /> <strong>.sqlite DB 실시간 동기화</strong></li>
               </ul>
             </div>
-            <button onClick={() => { onClose(); if (!isPro && onUpgrade) onUpgrade(); }} className={`w-full mt-5 py-2.5 rounded-xl font-bold text-xs shadow-md transition flex items-center justify-center gap-1.5 ${isPro ? 'bg-slate-100 text-slate-600 cursor-default' : 'bg-blue-600 hover:bg-blue-700 text-white active:scale-98'}`}>
-              <span>{isPro ? '현재 이용 중인 플랜' : '⭐ 지금 PRO 시작하기'}</span>
+            <button
+              onClick={() => {
+                if (appliedCoupon?.type === 'pro_trial') {
+                  markCouponUsed(appliedCoupon.code);
+                  alert('PRO 1개월 무료 체험 쿠폰이 등록되었습니다! 즉시 PRO 플랜 혜택이 적용됩니다.');
+                }
+                onClose();
+                if (!isPro && onUpgrade) onUpgrade();
+              }}
+              className={`w-full mt-5 py-2.5 rounded-xl font-bold text-xs shadow-md transition flex items-center justify-center gap-1.5 ${
+                isPro
+                  ? 'bg-slate-100 text-slate-600 cursor-default'
+                  : 'bg-blue-600 hover:bg-blue-700 text-white active:scale-98'
+              }`}
+            >
+              <span>
+                {isPro
+                  ? '현재 이용 중인 플랜'
+                  : appliedCoupon?.type === 'pro_trial'
+                  ? '🎟️ 1개월 무료로 PRO 시작'
+                  : '⭐ 지금 PRO 시작하기'}
+              </span>
               {!isPro && <ArrowRight className="w-3.5 h-3.5" />}
             </button>
           </div>
@@ -146,7 +216,7 @@ export function PricingModal({ isOpen, onClose, currentUser, onUpgrade, onOpenEn
 
         {/* 🌟 2,000원 / 5,000원 / 8,000원 초과 종량 크레딧 충전 팩 섹션 */}
         <div className="rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50/50 via-indigo-50/30 to-purple-50/40 p-5 sm:p-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
             <div>
               <div className="flex items-center gap-1.5">
                 <Zap className="w-4 h-4 text-amber-500 fill-amber-500" />
@@ -164,103 +234,215 @@ export function PricingModal({ isOpen, onClose, currentUser, onUpgrade, onOpenEn
             </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {/* 라이트 2,000원 */}
-            <div className="bg-white rounded-xl border border-slate-200 p-4 flex flex-col justify-between hover:border-blue-400 hover:shadow-xs transition">
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-extrabold text-xs text-slate-800">라이트 (Lite)</span>
-                  <span className="text-[10px] bg-slate-100 text-slate-600 font-bold px-1.5 py-0.2 rounded">가성비</span>
+          {/* 🎟️ 프로모션 및 쿠폰 코드 등록 바 */}
+          <div className="bg-white/90 border border-blue-200 rounded-xl p-3 mb-4 shadow-2xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center shrink-0">
+                  <Ticket className="w-3.5 h-3.5" />
                 </div>
-                <div className="text-xl font-black text-slate-900 mb-2.5">2,000원</div>
-                <ul className="text-[11px] text-slate-600 space-y-1.5 mb-4">
-                  <li className="flex items-center gap-1.5">
-                    <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                    <span>문서 파싱 <strong>50장</strong></span>
-                  </li>
-                  <li className="flex items-center gap-1.5">
-                    <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                    <span>AI 질문 <strong>100회</strong> (25만 토큰)</span>
-                  </li>
-                </ul>
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-extrabold text-xs text-slate-800">쿠폰 / 프로모션 코드 등록</span>
+                    <span className="text-[9px] bg-amber-100 text-amber-800 font-bold px-1.5 py-0.2 rounded">
+                      WELCOME2026 등
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-slate-500">웰컴 바우처나 제휴 할인 코드를 입력해 추가 혜택을 받으세요</p>
+                </div>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  alert('2,000원 라이트 크레딧(문서 50장 또는 AI 대화 100회)이 계정에 충전되었습니다!');
-                  onClose();
-                }}
-                className="w-full py-2 bg-slate-100 hover:bg-blue-600 hover:text-white text-slate-700 font-bold text-xs rounded-lg transition active:scale-95 shadow-2xs"
-              >
-                2,000원 충전
-              </button>
+
+              <form onSubmit={handleApplyCoupon} className="flex items-center gap-1.5 shrink-0">
+                <input
+                  type="text"
+                  value={couponInput}
+                  onChange={(e) => setCouponInput(e.target.value)}
+                  placeholder="예: WELCOME2026, PROMO50"
+                  className="px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-mono uppercase focus:outline-none focus:border-blue-600 bg-white placeholder:normal-case placeholder:font-sans w-44"
+                />
+                <button
+                  type="submit"
+                  className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition shadow-2xs active:scale-95"
+                >
+                  적용
+                </button>
+                {appliedCoupon && (
+                  <button
+                    type="button"
+                    onClick={handleRemoveCoupon}
+                    className="px-2 py-1.5 rounded-lg border border-slate-300 text-slate-500 hover:text-rose-600 text-xs transition"
+                    title="쿠폰 적용 취소"
+                  >
+                    취소
+                  </button>
+                )}
+              </form>
             </div>
 
-            {/* 비즈니스 5,000원 */}
-            <div className="bg-white rounded-xl border-2 border-blue-600 p-4 flex flex-col justify-between shadow-xs relative">
-              <span className="absolute -top-2.5 right-3 px-2 py-0.2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-extrabold text-[9px] rounded-full shadow-2xs">
-                🔥 추천
-              </span>
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-extrabold text-xs text-blue-950">비즈니스 (Biz)</span>
-                  <span className="text-[10px] bg-blue-100 text-blue-700 font-bold px-1.5 py-0.2 rounded">+10장 덤</span>
-                </div>
-                <div className="text-xl font-black text-blue-900 mb-2.5">5,000원</div>
-                <ul className="text-[11px] text-slate-700 space-y-1.5 mb-4">
-                  <li className="flex items-center gap-1.5">
-                    <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                    <span>문서 파싱 <strong>135장</strong> (보너스 10장)</span>
-                  </li>
-                  <li className="flex items-center gap-1.5">
-                    <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                    <span>AI 질문 <strong>300회</strong> (75만 토큰)</span>
-                  </li>
-                </ul>
+            {/* 쿠폰 적용 메시지 피드백 */}
+            {couponSuccessMsg && (
+              <div className="mt-2.5 px-3 py-1.5 bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-semibold rounded-lg flex items-center gap-1.5 animate-in fade-in">
+                <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                <span>{couponSuccessMsg}</span>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  alert('5,000원 비즈니스 크레딧(문서 135장 또는 AI 대화 300회)이 계정에 충전되었습니다!');
-                  onClose();
-                }}
-                className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-lg transition shadow-xs active:scale-95"
-              >
-                5,000원 충전
-              </button>
-            </div>
-
-            {/* 파워 8,000원 */}
-            <div className="bg-white rounded-xl border border-indigo-200 p-4 flex flex-col justify-between hover:border-indigo-400 hover:shadow-xs transition">
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-extrabold text-xs text-slate-800">파워 (Power)</span>
-                  <span className="text-[10px] bg-indigo-100 text-indigo-700 font-bold px-1.5 py-0.2 rounded">+25장 덤</span>
-                </div>
-                <div className="text-xl font-black text-slate-900 mb-2.5">8,000원</div>
-                <ul className="text-[11px] text-slate-600 space-y-1.5 mb-4">
-                  <li className="flex items-center gap-1.5">
-                    <Check className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-                    <span>문서 파싱 <strong>225장</strong> (보너스 25장)</span>
-                  </li>
-                  <li className="flex items-center gap-1.5">
-                    <Check className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-                    <span>AI 질문 <strong>500회</strong> (125만 토큰)</span>
-                  </li>
-                </ul>
+            )}
+            {couponError && (
+              <div className="mt-2.5 px-3 py-1.5 bg-rose-50 border border-rose-200 text-rose-700 text-[11px] font-semibold rounded-lg flex items-center gap-1.5 animate-in fade-in">
+                <X className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                <span>{couponError}</span>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  alert('8,000원 파워 크레딧(문서 225장 또는 AI 대화 500회)이 계정에 충전되었습니다!');
-                  onClose();
-                }}
-                className="w-full py-2 bg-slate-100 hover:bg-indigo-600 hover:text-white text-slate-700 font-bold text-xs rounded-lg transition active:scale-95 shadow-2xs"
-              >
-                8,000원 충전
-              </button>
-            </div>
+            )}
           </div>
+
+          {/* 3단 충전 팩 카드 */}
+          {(() => {
+            // 라이트(2,000원) 할인 계산
+            const isFreeLite = appliedCoupon?.code === 'WELCOME2026';
+            const liteDiscount = appliedCoupon?.discountPercent ? (2000 * appliedCoupon.discountPercent) / 100 : 0;
+            const liteFinalCost = isFreeLite ? 0 : Math.max(0, 2000 - liteDiscount);
+
+            // 비즈니스(5,000원) 할인 계산
+            const bizDiscount = appliedCoupon?.discountPercent ? (5000 * appliedCoupon.discountPercent) / 100 : 0;
+            const bizFinalCost = Math.max(0, 5000 - bizDiscount);
+
+            // 파워(8,000원) 할인 계산
+            const powerDiscount = appliedCoupon?.discountPercent ? (8000 * appliedCoupon.discountPercent) / 100 : 0;
+            const powerFinalCost = Math.max(0, 8000 - powerDiscount);
+
+            return (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {/* 라이트 2,000원 */}
+                <div className="bg-white rounded-xl border border-slate-200 p-4 flex flex-col justify-between hover:border-blue-400 hover:shadow-xs transition">
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-extrabold text-xs text-slate-800">라이트 (Lite)</span>
+                      <span className="text-[10px] bg-slate-100 text-slate-600 font-bold px-1.5 py-0.2 rounded">가성비</span>
+                    </div>
+
+                    <div className="mb-2.5">
+                      {isFreeLite ? (
+                        <div className="flex items-baseline gap-1.5">
+                          <span className="text-xs line-through text-slate-400">2,000원</span>
+                          <span className="text-xl font-black text-blue-600">0원</span>
+                          <span className="text-[10px] bg-blue-100 text-blue-700 font-bold px-1 rounded">100% 무료</span>
+                        </div>
+                      ) : liteFinalCost < 2000 ? (
+                        <div className="flex items-baseline gap-1.5">
+                          <span className="text-xs line-through text-slate-400">2,000원</span>
+                          <span className="text-xl font-black text-blue-600">{liteFinalCost.toLocaleString()}원</span>
+                        </div>
+                      ) : (
+                        <div className="text-xl font-black text-slate-900">2,000원</div>
+                      )}
+                    </div>
+
+                    <ul className="text-[11px] text-slate-600 space-y-1.5 mb-4">
+                      <li className="flex items-center gap-1.5">
+                        <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                        <span>문서 파싱 <strong>50장</strong></span>
+                      </li>
+                      <li className="flex items-center gap-1.5">
+                        <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                        <span>AI 질문 <strong>100회</strong> (25만 토큰)</span>
+                      </li>
+                    </ul>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleExecuteTopup('라이트 팩', 2000, liteFinalCost, '문서 파싱 50장 또는 AI 대화 100회')}
+                    className={`w-full py-2 font-bold text-xs rounded-lg transition active:scale-95 shadow-2xs ${
+                      liteFinalCost === 0
+                        ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-xs'
+                        : 'bg-slate-100 hover:bg-blue-600 hover:text-white text-slate-700'
+                    }`}
+                  >
+                    {liteFinalCost === 0 ? '✨ 0원에 무료 충전' : `${liteFinalCost.toLocaleString()}원 충전`}
+                  </button>
+                </div>
+
+                {/* 비즈니스 5,000원 */}
+                <div className="bg-white rounded-xl border-2 border-blue-600 p-4 flex flex-col justify-between shadow-xs relative">
+                  <span className="absolute -top-2.5 right-3 px-2 py-0.2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-extrabold text-[9px] rounded-full shadow-2xs">
+                    🔥 추천
+                  </span>
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-extrabold text-xs text-blue-950">비즈니스 (Biz)</span>
+                      <span className="text-[10px] bg-blue-100 text-blue-700 font-bold px-1.5 py-0.2 rounded">+10장 덤</span>
+                    </div>
+
+                    <div className="mb-2.5">
+                      {bizFinalCost < 5000 ? (
+                        <div className="flex items-baseline gap-1.5">
+                          <span className="text-xs line-through text-slate-400">5,000원</span>
+                          <span className="text-xl font-black text-blue-600">{bizFinalCost.toLocaleString()}원</span>
+                        </div>
+                      ) : (
+                        <div className="text-xl font-black text-blue-900">5,000원</div>
+                      )}
+                    </div>
+
+                    <ul className="text-[11px] text-slate-700 space-y-1.5 mb-4">
+                      <li className="flex items-center gap-1.5">
+                        <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                        <span>문서 파싱 <strong>135장</strong> (보너스 10장)</span>
+                      </li>
+                      <li className="flex items-center gap-1.5">
+                        <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                        <span>AI 질문 <strong>300회</strong> (75만 토큰)</span>
+                      </li>
+                    </ul>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleExecuteTopup('비즈니스 팩', 5000, bizFinalCost, '문서 파싱 135장 또는 AI 대화 300회')}
+                    className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-lg transition shadow-xs active:scale-95"
+                  >
+                    {bizFinalCost.toLocaleString()}원 충전
+                  </button>
+                </div>
+
+                {/* 파워 8,000원 */}
+                <div className="bg-white rounded-xl border border-indigo-200 p-4 flex flex-col justify-between hover:border-indigo-400 hover:shadow-xs transition">
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-extrabold text-xs text-slate-800">파워 (Power)</span>
+                      <span className="text-[10px] bg-indigo-100 text-indigo-700 font-bold px-1.5 py-0.2 rounded">+25장 덤</span>
+                    </div>
+
+                    <div className="mb-2.5">
+                      {powerFinalCost < 8000 ? (
+                        <div className="flex items-baseline gap-1.5">
+                          <span className="text-xs line-through text-slate-400">8,000원</span>
+                          <span className="text-xl font-black text-indigo-600">{powerFinalCost.toLocaleString()}원</span>
+                        </div>
+                      ) : (
+                        <div className="text-xl font-black text-slate-900">8,000원</div>
+                      )}
+                    </div>
+
+                    <ul className="text-[11px] text-slate-600 space-y-1.5 mb-4">
+                      <li className="flex items-center gap-1.5">
+                        <Check className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                        <span>문서 파싱 <strong>225장</strong> (보너스 25장)</span>
+                      </li>
+                      <li className="flex items-center gap-1.5">
+                        <Check className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                        <span>AI 질문 <strong>500회</strong> (125만 토큰)</span>
+                      </li>
+                    </ul>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleExecuteTopup('파워 팩', 8000, powerFinalCost, '문서 파싱 225장 또는 AI 대화 500회')}
+                    className="w-full py-2 bg-slate-100 hover:bg-indigo-600 hover:text-white text-slate-700 font-bold text-xs rounded-lg transition active:scale-95 shadow-2xs"
+                  >
+                    {powerFinalCost.toLocaleString()}원 충전
+                  </button>
+                </div>
+              </div>
+            );
+          })()}
         </div>
       </div>
     </div>
