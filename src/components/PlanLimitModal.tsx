@@ -47,8 +47,9 @@ export function PlanLimitModal({ isOpen, onClose, title = '이용 한도 도달 
             </li>
             <li className="flex items-center gap-1.5">
               <Check className="w-3 h-3 text-blue-600 shrink-0" />
-              <span>시트당 데이터 <strong>최대 10,000행</strong> (Free: 500행)</span>
+              <span>시트당 데이터 <strong>무제한 지원</strong> (SQLite DB 고속 탑재)</span>
             </li>
+
             <li className="flex items-center gap-1.5">
               <Check className="w-3 h-3 text-blue-600 shrink-0" />
               <span>월 <strong>300장 기본 파싱</strong> + 초과 시 <strong>장당 20원</strong></span>

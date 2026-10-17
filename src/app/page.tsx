@@ -27,22 +27,17 @@ export default function FileToSheetApp() {
 
   const ws = useWorkspace({
     phoneNumber: auth.currentUser?.phoneNumber,
-    plan: auth.currentUser?.plan,
-    onPlanLimit: handlePlanLimit,
+    plan: auth.currentUser?.plan, onPlanLimit: handlePlanLimit,
   });
   const upload = useFileUpload({
-    projects: ws.projects,
-    setProjects: ws.setProjects,
-    activeProjectIndex: ws.activeProjectIndex,
-    setActiveProjectIndex: ws.setActiveProjectIndex,
-    plan: auth.currentUser?.plan,
-    onPlanLimit: handlePlanLimit,
+    projects: ws.projects, setProjects: ws.setProjects,
+    activeProjectIndex: ws.activeProjectIndex, setActiveProjectIndex: ws.setActiveProjectIndex,
+    plan: auth.currentUser?.plan, onPlanLimit: handlePlanLimit,
   });
   const fileExport = useFileExport({
-    currentProject: ws.currentProject,
-    setProjects: ws.setProjects,
-    activeProjectIndex: ws.activeProjectIndex,
+    currentProject: ws.currentProject, setProjects: ws.setProjects, activeProjectIndex: ws.activeProjectIndex,
   });
+
 
   const [activeSubTab, setActiveSubTab] = useState<'table' | 'original' | 'summary'>('table');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -64,6 +59,7 @@ export default function FileToSheetApp() {
     <div className="flex flex-col min-h-screen bg-slate-50 text-slate-800 font-sans selection:bg-blue-100 selection:text-blue-900">
       <Header
         currentUser={auth.currentUser}
+        currentProject={currentProject}
         onOpenLoginModal={() => auth.setShowPhoneAuthModal(true)}
         onLogout={auth.handleLogout}
         onUploadFile={upload.handleFileDropOrSelect}
@@ -71,7 +67,7 @@ export default function FileToSheetApp() {
         onDownloadSqlite={fileExport.handleDownloadSqlite}
         onOpenPlanModal={() => setLimitNotice({
           title: 'PRO 전용 기능',
-          reason: 'SQLite DB 직접 다운로드 및 10,000건 초과 대용량 데이터 처리는 PRO 플랜 회원 혜택입니다.'
+          reason: 'SQLite DB 직접 다운로드 및 데이터 행 수 무제한 처리는 PRO 플랜 회원 혜택입니다.'
         })}
         onExportGoogleSheets={fileExport.handleExportGoogleSheets}
         onOpenOriginalModal={() => setShowOriginalModal(true)}
@@ -80,6 +76,7 @@ export default function FileToSheetApp() {
         hasSheetData={Boolean(currentSheet && currentSheet.rows.length > 0)}
         exportLoading={fileExport.exportLoading}
       />
+
 
       <main className="flex-1 w-full px-4 sm:px-6 lg:px-8 py-3 flex flex-col gap-3">
 

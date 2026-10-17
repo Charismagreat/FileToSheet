@@ -32,8 +32,8 @@ export const PLAN_LIMITS: Record<string, PlanPolicy> = {
     monthlyPrice: 9900,
     annualMonthlyPrice: 7900,
     maxSheetsPerProject: 30,
-    maxRowsPerSheet: 10000,
-    maxTotalRowsPerProject: 100000,
+    maxRowsPerSheet: Infinity, // 무제한 (SQLite 고속 엔진 탑재)
+    maxTotalRowsPerProject: Infinity, // 무제한
     includedMonthlyDocs: 300,
     overagePricePerDoc: 20,
   },
@@ -65,11 +65,15 @@ export function checkSheetLimit(plan: string | undefined, currentCount: number) 
  */
 export function truncateRowsToLimit(plan: string | undefined, currentRowsCount: number, incomingRows: any[]) {
   const policy = getPlanLimits(plan);
+  if (!isFinite(policy.maxRowsPerSheet)) {
+    return { rows: incomingRows, truncated: false, maxRows: policy.maxRowsPerSheet };
+  }
   const remainingSpace = Math.max(0, policy.maxRowsPerSheet - currentRowsCount);
   
   if (incomingRows.length <= remainingSpace) {
     return { rows: incomingRows, truncated: false, maxRows: policy.maxRowsPerSheet };
   }
+
 
   return {
     rows: incomingRows.slice(0, remainingSpace),

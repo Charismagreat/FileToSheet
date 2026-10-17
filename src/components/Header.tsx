@@ -1,23 +1,17 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import {
-  FileSpreadsheet,
-  Download,
-  Share2,
-  RefreshCw,
-  FolderOpen,
-  Smartphone,
-  LogOut,
-  User,
-  Database,
-  Crown,
-  UploadCloud,
+  FileSpreadsheet, Download, Share2, RefreshCw, Smartphone, LogOut,
+  User, Database, Crown, UploadCloud, Zap, ChevronDown,
 } from 'lucide-react';
-import { UserSession } from '@/types/workspace';
+import { UserSession, ProjectWorkspace } from '@/types/workspace';
+import { UserUsagePopover } from './UserUsagePopover';
+import { getPlanLimits } from '@/lib/plan-limits';
 
 interface HeaderProps {
   currentUser: UserSession | null;
+  currentProject?: ProjectWorkspace | null;
   onOpenLoginModal: () => void;
   onLogout: () => void;
   onDownloadXlsx: () => void;
@@ -34,6 +28,7 @@ interface HeaderProps {
 
 export function Header({
   currentUser,
+  currentProject = null,
   onOpenLoginModal,
   onLogout,
   onDownloadXlsx,
@@ -45,7 +40,11 @@ export function Header({
   hasSheetData,
   exportLoading,
 }: HeaderProps) {
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUsageOpen, setIsUsageOpen] = useState<boolean>(false);
+  const planPolicy = getPlanLimits(currentUser?.plan);
+  const parsedDocsCount = currentProject?.originalFiles?.length || 1;
+
 
   return (
     <header className="border-b border-slate-200/80 bg-white/95 backdrop-blur sticky top-0 z-30 px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-4 shadow-xs">
@@ -107,7 +106,30 @@ export function Header({
           </button>
         )}
 
-        {/* 새 파일 추가 버튼 (항상 자연어 지시사항 모달 연동) */}
+        {/* 잔여 사용량 칩 및 미니 대시보드 팝오버 */}
+        {currentUser && (
+          <div className="relative">
+            <button
+              onClick={() => setIsUsageOpen((prev) => !prev)}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-xs font-semibold text-slate-700 transition"
+              title="이번 달 사용량 및 잔여량 확인"
+            >
+              <Zap className="w-3.5 h-3.5 text-amber-500" />
+              <span>{parsedDocsCount}/{planPolicy.includedMonthlyDocs}장</span>
+              <ChevronDown className="w-3 h-3 text-slate-400" />
+            </button>
+            <UserUsagePopover
+              isOpen={isUsageOpen}
+              onClose={() => setIsUsageOpen(false)}
+              currentUser={currentUser}
+              currentProject={currentProject}
+              onOpenPlanModal={onOpenPlanModal || (() => {})}
+            />
+          </div>
+        )}
+
+
+        {/* 새 파일 추가 버튼 */}
         {onUploadFile && (
           <button
             onClick={() => fileInputRef.current?.click()}
@@ -119,13 +141,11 @@ export function Header({
           </button>
         )}
 
-
-
         {/* 엑셀 다운로드 */}
         <button
           onClick={onDownloadXlsx}
           disabled={!hasSheetData}
-          className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:hover:bg-emerald-600 text-white shadow-xs transition active:scale-98"
+          className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white shadow-xs transition active:scale-98"
         >
           <Download className="w-3.5 h-3.5" />
           .xlsx
@@ -134,22 +154,18 @@ export function Header({
         {/* SQLite DB 다운로드 (PRO 전용/우선 제공) */}
         <button
           onClick={() => {
-            if (currentUser?.plan === 'pro') {
-              onDownloadSqlite?.();
-            } else {
-              onOpenPlanModal ? onOpenPlanModal() : onDownloadSqlite?.();
-            }
+            if (currentUser?.plan === 'pro') onDownloadSqlite?.();
+            else onOpenPlanModal ? onOpenPlanModal() : onDownloadSqlite?.();
           }}
           disabled={!hasSheetData || exportLoading}
-          className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:hover:bg-indigo-600 text-white shadow-xs transition active:scale-98"
+          className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white shadow-xs transition active:scale-98"
           title={currentUser?.plan === 'pro' ? '프로젝트를 SQLite 데이터베이스 파일로 다운로드' : 'PRO 전용: SQLite DB 다운로드'}
         >
           <Database className="w-3.5 h-3.5 text-indigo-200" />
           <span>.sqlite DB</span>
-          {currentUser?.plan !== 'pro' && (
-            <Crown className="w-3 h-3 text-amber-300 ml-0.5" />
-          )}
+          {currentUser?.plan !== 'pro' && <Crown className="w-3 h-3 text-amber-300 ml-0.5" />}
         </button>
+
 
 
         {/* Google 시트 내보내기 */}
