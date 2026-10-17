@@ -10,8 +10,8 @@ import { TableView } from '@/components/TableView';
 import { OriginalDocView } from '@/components/OriginalDocView';
 import { SummaryView } from '@/components/SummaryView';
 import {
-  PhoneAuthModal, UploadOptionModal, OriginalFileModal,
-  AddColumnModal, ExportOptionModal, ShareModal, PlanLimitModal, PricingModal,
+  PhoneAuthModal, UploadOptionModal, OriginalFileModal, AddColumnModal,
+  ExportOptionModal, ShareModal, PlanLimitModal, PricingModal, EnterpriseInquiryModal,
 } from '@/components/modals';
 import { useAuth } from '@/hooks/useAuth';
 import { useWorkspace } from '@/hooks/useWorkspace';
@@ -23,6 +23,7 @@ export default function FileToSheetApp() {
   const auth = useAuth();
   const [limitNotice, setLimitNotice] = useState<{ title: string; reason: string } | null>(null);
   const [showPricingModal, setShowPricingModal] = useState<boolean>(false);
+  const [showEnterpriseModal, setShowEnterpriseModal] = useState<boolean>(false);
   const handlePlanLimit = (title: string, reason: string) => setLimitNotice({ title, reason });
 
   const ws = useWorkspace({
@@ -188,7 +189,8 @@ export default function FileToSheetApp() {
       <ExportOptionModal isOpen={fileExport.isExportOptionModalOpen} onClose={() => fileExport.setIsExportOptionModalOpen(false)} onSelectOption={(mode) => fileExport.executeExportGoogleSheets(mode)} spreadsheetUrl={currentProject?.googleSpreadsheetUrl} loading={fileExport.exportLoading} />
       <ShareModal isOpen={showShareModal} onClose={() => setShowShareModal(false)} projects={ws.projects} initialProjectIndex={ws.activeProjectIndex} />
       <PlanLimitModal isOpen={Boolean(limitNotice)} onClose={() => setLimitNotice(null)} title={limitNotice?.title} reason={limitNotice?.reason || ''} plan={auth.currentUser?.plan} />
-      <PricingModal isOpen={showPricingModal} onClose={() => setShowPricingModal(false)} currentUser={auth.currentUser} onUpgrade={() => { setShowPricingModal(false); setLimitNotice({ title: 'PRO 플랜 업그레이드', reason: '월 9,900원에 500장 AI 파싱과 무제한 데이터 행을 누려보세요.' }); }} />
+      <PricingModal isOpen={showPricingModal} onClose={() => setShowPricingModal(false)} currentUser={auth.currentUser} onUpgrade={() => { setShowPricingModal(false); setLimitNotice({ title: 'PRO 플랜 업그레이드', reason: '월 9,900원에 500장 AI 파싱과 무제한 데이터 행을 누려보세요.' }); }} onOpenEnterpriseInquiry={() => setShowEnterpriseModal(true)} />
+      <EnterpriseInquiryModal isOpen={showEnterpriseModal} onClose={() => setShowEnterpriseModal(false)} />
     </div>
   );
 }

@@ -6,4 +6,5 @@ export { ExportOptionModal } from '../ExportOptionModal';
 export { ShareModal } from '../ShareModal';
 export { PlanLimitModal } from '../PlanLimitModal';
 export { PricingModal } from '../PricingModal';
+export { EnterpriseInquiryModal } from '../EnterpriseInquiryModal';
 
