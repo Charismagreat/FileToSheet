@@ -94,6 +94,7 @@ ${sheetsDesc}
 
 
     const cleanBase64 = fileBase64.replace(/^data:[^;]+;base64,/, '');
+    const isPdf = filename.toLowerCase().endsWith('.pdf') || fileBase64.startsWith('data:application/pdf');
 
     let lastError: any = null;
     let successfulResult: any = null;
@@ -103,12 +104,26 @@ ${sheetsDesc}
       try {
         console.log(`[Universal AI Parser] 표 추출 시도: 모델 = ${model}`);
 
-        const response = await callAiCaller(userPrompt, {
+        const aiCallerOptions: any = {
           systemPrompt,
-          images: [cleanBase64],
           model,
           temperature: 0.1,
-        });
+        };
+
+        if (isPdf) {
+          aiCallerOptions.files = [
+            {
+              name: filename,
+              content: cleanBase64,
+              encoding: 'base64',
+              mimeType: 'application/pdf',
+            },
+          ];
+        } else {
+          aiCallerOptions.images = [cleanBase64];
+        }
+
+        const response = await callAiCaller(userPrompt, aiCallerOptions);
 
         const textContent =
           typeof response === 'string'
