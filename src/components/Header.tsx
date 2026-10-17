@@ -104,7 +104,7 @@ export function Header({
           </div>
           <div>
             <span className="font-extrabold text-lg tracking-tight text-slate-900 leading-tight block">FileToSheet</span>
-            <p className="text-[11px] text-slate-400 font-normal leading-tight hidden sm:block">어떤 파일이든 드롭 즉시 엑셀 표로, FileToSheet</p>
+            <p className="text-[11px] text-slate-400 font-normal leading-tight hidden sm:block">어떤 파일이든 업로드 즉시 엑셀 표로, FileToSheet</p>
           </div>
         </div>
 

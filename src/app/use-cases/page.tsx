@@ -113,39 +113,37 @@ export default function UseCasesPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-sans selection:bg-blue-600 selection:text-white">
-      {/* 1. 상단 글로벌 내비게이션 바 (max-w-5xl 수직 정렬 일치) */}
-      <header className="border-b border-slate-200/80 bg-white/95 backdrop-blur sticky top-0 z-40 px-4 sm:px-6 lg:px-8 py-3 shadow-2xs">
-        <div className="max-w-5xl mx-auto w-full flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3 group">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center shadow-md shadow-blue-500/15 group-hover:scale-105 transition">
-              <FileSpreadsheet className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <span className="font-extrabold text-lg tracking-tight text-slate-900 leading-tight block">FileToSheet</span>
-              <p className="text-[11px] text-slate-400 font-normal leading-tight hidden sm:block">어떤 파일이든 드롭 즉시 엑셀 표로, FileToSheet</p>
-            </div>
-          </Link>
-
-          <div className="flex items-center gap-2.5">
-            <Link
-              href="/"
-              className="text-xs font-bold px-3.5 py-1.5 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition active:scale-95"
-            >
-              시트 작업 화면으로
-            </Link>
-            <Link
-              href="/"
-              className="flex items-center gap-1.5 text-xs font-extrabold px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition transform hover:scale-105 active:scale-95 cursor-pointer"
-            >
-              <span>지금 무료로 변환하기</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
+      {/* 1. 상단 글로벌 내비게이션 바 (메인 화면 헤더와 동일한 전폭 패딩 정렬) */}
+      <header className="border-b border-slate-200/80 bg-white/95 backdrop-blur sticky top-0 z-50 px-4 sm:px-6 lg:px-8 py-2.5 flex items-center justify-between gap-4 shadow-2xs">
+        <Link href="/" className="flex items-center gap-3 group shrink-0">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center shadow-md shadow-blue-500/15 group-hover:scale-105 transition">
+            <FileSpreadsheet className="w-5 h-5 text-white" />
           </div>
+          <div>
+            <span className="font-extrabold text-lg tracking-tight text-slate-900 leading-tight block">FileToSheet</span>
+            <p className="text-[11px] text-slate-400 font-normal leading-tight hidden sm:block">어떤 파일이든 업로드 즉시 엑셀 표로, FileToSheet</p>
+          </div>
+        </Link>
+
+        <div className="flex items-center gap-2.5 shrink-0">
+          <Link
+            href="/"
+            className="text-xs font-bold px-3.5 py-1.5 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition active:scale-95"
+          >
+            시트 작업 화면으로
+          </Link>
+          <Link
+            href="/"
+            className="flex items-center gap-1.5 text-xs font-extrabold px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition transform hover:scale-105 active:scale-95 cursor-pointer"
+          >
+            <span>지금 무료로 변환하기</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
         </div>
       </header>
 
       {/* 2. Hero Section: 밝고 신뢰감 있는 라이트 블루 그라디언트 테마 (max-w-5xl 일치) */}
-      <section className="relative overflow-hidden pt-16 pb-16 px-4 sm:px-6 lg:px-8 border-b border-slate-200 bg-gradient-to-b from-blue-50/70 via-indigo-50/30 to-white">
+      <section className="relative overflow-hidden pt-16 pb-16 px-4 sm:px-6 lg:px-8 border-b border-slate-200 bg-gradient-to-b from-blue-50/70 via-indigo-50/30 to-white w-full">
         <div className="max-w-5xl mx-auto w-full text-center relative z-10 flex flex-col items-center">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-blue-200 text-blue-700 text-xs font-extrabold mb-6 shadow-xs animate-in fade-in slide-in-from-top-3">
             <Sparkles className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
@@ -153,7 +151,7 @@ export default function UseCasesPage() {
           </div>
 
           <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight leading-[1.18] mb-6 break-keep max-w-4xl mx-auto">
-            어떤 파일이든 드롭 즉시, <br className="hidden sm:inline" />
+            어떤 파일이든 업로드 즉시, <br className="hidden sm:inline" />
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600">
               정밀한 엑셀 표로 재탄생합니다
             </span>
@@ -180,7 +178,7 @@ export default function UseCasesPage() {
             </a>
           </div>
 
-          {/* 4대 핵심 지표 카드 그리드 (max-w-5xl 전체 폭 일치) */}
+          {/* 4대 핵심 지표 카드 그리드 (max-w-5xl 기준) */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 w-full pt-8 border-t border-slate-200">
             <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs text-center">
               <div className="text-2xl sm:text-3xl font-black text-blue-600 font-mono">99.8%</div>
@@ -202,81 +200,83 @@ export default function UseCasesPage() {
         </div>
       </section>
 
-      {/* 3. Before vs After 비교 섹션 (일정한 높이와 명확한 대비) */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto w-full">
-        <div className="text-center mb-10">
-          <h2 className="text-xs font-black text-blue-600 uppercase tracking-widest mb-1.5">BEFORE & AFTER</h2>
-          <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-900 break-keep">
-            파일투시트 도입 전과 후, 업무가 이렇게 바뀝니다
-          </h3>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
-          {/* Before 카드 */}
-          <div className="p-6 sm:p-7 rounded-2xl bg-rose-50/50 border border-rose-200 shadow-2xs flex flex-col justify-between">
-            <div>
-              <span className="text-xs font-extrabold px-3 py-1 rounded-full bg-rose-100 text-rose-800 border border-rose-200 inline-block mb-4">
-                ❌ 기존의 고통스러운 업무 방식
-              </span>
-              <ul className="space-y-3.5 text-xs sm:text-sm text-slate-700">
-                <li className="flex items-start gap-2.5 break-keep">
-                  <span className="text-rose-500 font-bold shrink-0 mt-0.5">✕</span>
-                  <span>영수증 50장 보며 공급가, 세액 일일이 수기 타이핑 (평균 3시간 소요)</span>
-                </li>
-                <li className="flex items-start gap-2.5 break-keep">
-                  <span className="text-rose-500 font-bold shrink-0 mt-0.5">✕</span>
-                  <span>타이핑 중 오타(0 하나 더 붙음)로 회계 장부 불일치 및 스트레스 발생</span>
-                </li>
-                <li className="flex items-start gap-2.5 break-keep">
-                  <span className="text-rose-500 font-bold shrink-0 mt-0.5">✕</span>
-                  <span>세무사무소나 감사팀에서 원본 영수증 달라고 할 때 서류함 뒤지느라 시간 낭비</span>
-                </li>
-                <li className="flex items-start gap-2.5 break-keep">
-                  <span className="text-rose-500 font-bold shrink-0 mt-0.5">✕</span>
-                  <span>거래처마다 다른 양식의 견적서/발주서 정리하다 잦은 야근 반복</span>
-                </li>
-              </ul>
-            </div>
-            <div className="mt-6 pt-4 border-t border-rose-200/80 text-xs text-rose-700 font-bold">
-              평균 작업 소요 시간: 건당 3시간 이상 소요
-            </div>
+      {/* 3. Before vs After 비교 섹션 (일정한 높이와 명확한 대비 - max-w-5xl w-full 완전 통일) */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8 border-b border-slate-200 bg-slate-50/50 w-full">
+        <div className="max-w-5xl mx-auto w-full">
+          <div className="text-center mb-10">
+            <h2 className="text-xs font-black text-blue-600 uppercase tracking-widest mb-1.5">BEFORE & AFTER</h2>
+            <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-900 break-keep">
+              파일투시트 도입 전과 후, 업무가 이렇게 바뀝니다
+            </h3>
           </div>
 
-          {/* After 카드 */}
-          <div className="p-6 sm:p-7 rounded-2xl bg-blue-50/70 border border-blue-300 shadow-sm flex flex-col justify-between">
-            <div>
-              <span className="text-xs font-extrabold px-3 py-1 rounded-full bg-blue-600 text-white shadow-2xs inline-block mb-4">
-                ✨ FileToSheet 도입 후의 혁신
-              </span>
-              <ul className="space-y-3.5 text-xs sm:text-sm text-slate-800 font-medium">
-                <li className="flex items-start gap-2.5 break-keep">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                  <span>영수증 묶음을 드래그 앤 드롭하면 10초 만에 완벽한 엑셀 표로 자동 정리</span>
-                </li>
-                <li className="flex items-start gap-2.5 break-keep">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                  <span>AI가 날짜, 가맹점, 품목, 부가세를 정밀 분리해 0의 오차도 없는 정확성</span>
-                </li>
-                <li className="flex items-start gap-2.5 break-keep">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                  <span>[원본 증빙 대조] 탭에서 원본 PDF/영수증과 표 데이터 1:1 전수 영구 보존</span>
-                </li>
-                <li className="flex items-start gap-2.5 break-keep">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                  <span>버튼 클릭 한 번으로 구글 시트 및 My DB(SQLite) 실시간 동기화 완료</span>
-                </li>
-              </ul>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch w-full">
+            {/* Before 카드 */}
+            <div className="p-6 sm:p-7 rounded-2xl bg-rose-50/50 border border-rose-200 shadow-2xs flex flex-col justify-between">
+              <div>
+                <span className="text-xs font-extrabold px-3 py-1 rounded-full bg-rose-100 text-rose-800 border border-rose-200 inline-block mb-4">
+                  ❌ 기존의 고통스러운 업무 방식
+                </span>
+                <ul className="space-y-3.5 text-xs sm:text-sm text-slate-700">
+                  <li className="flex items-start gap-2.5 break-keep">
+                    <span className="text-rose-500 font-bold shrink-0 mt-0.5">✕</span>
+                    <span>영수증 50장 보며 공급가, 세액 일일이 수기 타이핑 (평균 3시간 소요)</span>
+                  </li>
+                  <li className="flex items-start gap-2.5 break-keep">
+                    <span className="text-rose-500 font-bold shrink-0 mt-0.5">✕</span>
+                    <span>타이핑 중 오타(0 하나 더 붙음)로 회계 장부 불일치 및 스트레스 발생</span>
+                  </li>
+                  <li className="flex items-start gap-2.5 break-keep">
+                    <span className="text-rose-500 font-bold shrink-0 mt-0.5">✕</span>
+                    <span>세무사무소나 감사팀에서 원본 영수증 달라고 할 때 서류함 뒤지느라 시간 낭비</span>
+                  </li>
+                  <li className="flex items-start gap-2.5 break-keep">
+                    <span className="text-rose-500 font-bold shrink-0 mt-0.5">✕</span>
+                    <span>거래처마다 다른 양식의 견적서/발주서 정리하다 잦은 야근 반복</span>
+                  </li>
+                </ul>
+              </div>
+              <div className="mt-6 pt-4 border-t border-rose-200/80 text-xs text-rose-700 font-bold">
+                평균 작업 소요 시간: 건당 3시간 이상 소요
+              </div>
             </div>
-            <div className="mt-6 pt-4 border-t border-blue-200 text-xs text-blue-700 font-black flex items-center justify-between">
-              <span>평균 작업 소요 시간: 단 10초 만에 완료</span>
-              <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-mono">94% 시간 단축</span>
+
+            {/* After 카드 */}
+            <div className="p-6 sm:p-7 rounded-2xl bg-blue-50/70 border border-blue-300 shadow-sm flex flex-col justify-between">
+              <div>
+                <span className="text-xs font-extrabold px-3 py-1 rounded-full bg-blue-600 text-white shadow-2xs inline-block mb-4">
+                  ✨ FileToSheet 도입 후의 혁신
+                </span>
+                <ul className="space-y-3.5 text-xs sm:text-sm text-slate-800 font-medium">
+                  <li className="flex items-start gap-2.5 break-keep">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                    <span>영수증 묶음을 드래그 앤 드롭하면 10초 만에 완벽한 엑셀 표로 자동 정리</span>
+                  </li>
+                  <li className="flex items-start gap-2.5 break-keep">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                    <span>AI가 날짜, 가맹점, 품목, 부가세를 정밀 분리해 0의 오차도 없는 정확성</span>
+                  </li>
+                  <li className="flex items-start gap-2.5 break-keep">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                    <span>[원본 증빙 대조] 탭에서 원본 PDF/영수증과 표 데이터 1:1 전수 영구 보존</span>
+                  </li>
+                  <li className="flex items-start gap-2.5 break-keep">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                    <span>버튼 클릭 한 번으로 구글 시트 및 My DB(SQLite) 실시간 동기화 완료</span>
+                  </li>
+                </ul>
+              </div>
+              <div className="mt-6 pt-4 border-t border-blue-200 text-xs text-blue-700 font-black flex items-center justify-between">
+                <span>평균 작업 소요 시간: 단 10초 만에 완료</span>
+                <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-mono">94% 시간 단축</span>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* 4. 직무 및 업종별 6대 핵심 활용사례 인터랙티브 탐색기 */}
-      <section id="use-cases-list" className="py-16 px-4 sm:px-6 lg:px-8 border-t border-slate-200 bg-white">
+      {/* 4. 직무 및 업종별 6대 핵심 활용사례 인터랙티브 탐색기 (max-w-5xl w-full 완전 통일) */}
+      <section id="use-cases-list" className="py-16 px-4 sm:px-6 lg:px-8 border-b border-slate-200 bg-white w-full">
         <div className="max-w-5xl mx-auto w-full">
           <div className="text-center mb-10">
             <h2 className="text-xs font-black text-blue-600 uppercase tracking-widest mb-1.5">INDUSTRY SOLUTIONS</h2>
@@ -286,8 +286,8 @@ export default function UseCasesPage() {
             <p className="text-slate-500 text-sm mt-2 break-keep">원하시는 직무나 업종을 선택하여 구체적인 변환 프로세스를 확인해 보세요.</p>
           </div>
 
-          {/* 카테고리 탭 선택 바 (라이트 테마에 최적화) */}
-          <div className="flex items-center justify-start sm:justify-center gap-2 overflow-x-auto pb-3 no-scrollbar">
+          {/* 카테고리 탭 선택 바 */}
+          <div className="flex items-center justify-start sm:justify-center gap-2 overflow-x-auto pb-3 no-scrollbar w-full">
             {useCases.map((c, idx) => {
               const IconComp = c.icon;
               const isActive = activeCategory === idx;
@@ -313,7 +313,7 @@ export default function UseCasesPage() {
             const current = useCases[activeCategory];
             const Icon = current.icon;
             return (
-              <div className="mt-8 bg-white border border-slate-200 rounded-3xl p-6 sm:p-10 shadow-sm relative overflow-hidden animate-in fade-in duration-300">
+              <div className="mt-8 bg-white border border-slate-200 rounded-3xl p-6 sm:p-10 shadow-sm relative overflow-hidden animate-in fade-in duration-300 w-full">
                 <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-2xl bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center shadow-2xs">
@@ -332,7 +332,7 @@ export default function UseCasesPage() {
                 <p className="text-slate-600 text-sm leading-relaxed mb-8 break-keep">{current.subtitle}</p>
 
                 {/* 문제와 솔루션 2열 그리드 (균형 잡힌 박스) */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8 items-stretch">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8 items-stretch w-full">
                   <div className="bg-slate-50 border border-slate-200 p-5 rounded-2xl flex flex-col justify-between">
                     <div>
                       <span className="text-xs font-black text-rose-600 flex items-center gap-1.5 mb-2.5">
@@ -353,7 +353,7 @@ export default function UseCasesPage() {
                 </div>
 
                 {/* 입력 문서 ➔ 추출 컬럼 매핑 파이프라인 */}
-                <div className="bg-slate-50/80 border border-slate-200 p-6 rounded-2xl mb-8">
+                <div className="bg-slate-50/80 border border-slate-200 p-6 rounded-2xl mb-8 w-full">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <span className="text-xs font-bold text-slate-500 block mb-2.5">📂 지원되는 원본 문서 형태:</span>
@@ -406,94 +406,96 @@ export default function UseCasesPage() {
         </div>
       </section>
 
-      {/* 5. FileToSheet만의 4대 차별화 핵심 기술 (Why Us?) */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto w-full">
-        <div className="text-center mb-10">
-          <h2 className="text-xs font-black text-blue-600 uppercase tracking-widest mb-1.5">WHY FILETOSHEET</h2>
-          <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-900 break-keep">
-            단순 OCR을 넘어선 엔터프라이즈급 데이터 인프라
-          </h3>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 items-stretch">
-          <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-2xs hover:shadow-md hover:border-blue-300 transition flex flex-col justify-between">
-            <div>
-              <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-4">
-                <Layers className="w-5 h-5" />
-              </div>
-              <h4 className="text-base font-extrabold text-slate-900 mb-2">스마트 시트 자동 분류</h4>
-              <p className="text-xs text-slate-600 leading-relaxed break-keep">
-                여러 파일을 한꺼번에 던져도 AI가 성격(영수증, 계산서, 계약서)을 판별하여 적합한 시트를 찾아 알아서 분배 적재합니다.
-              </p>
-            </div>
-            <span className="text-[11px] text-blue-600 font-bold mt-4 block">Auto-Router 탑재 →</span>
+      {/* 5. FileToSheet만의 4대 차별화 핵심 기술 (Why Us? - max-w-5xl w-full 완전 통일) */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8 border-b border-slate-200 bg-slate-50/40 w-full">
+        <div className="max-w-5xl mx-auto w-full">
+          <div className="text-center mb-10">
+            <h2 className="text-xs font-black text-blue-600 uppercase tracking-widest mb-1.5">WHY FILETOSHEET</h2>
+            <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-900 break-keep">
+              단순 OCR을 넘어선 엔터프라이즈급 데이터 인프라
+            </h3>
           </div>
 
-          <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-2xs hover:shadow-md hover:border-indigo-300 transition flex flex-col justify-between">
-            <div>
-              <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-4">
-                <Eye className="w-5 h-5" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 items-stretch w-full">
+            <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-2xs hover:shadow-md hover:border-blue-300 transition flex flex-col justify-between">
+              <div>
+                <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-4">
+                  <Layers className="w-5 h-5" />
+                </div>
+                <h4 className="text-base font-extrabold text-slate-900 mb-2">스마트 시트 자동 분류</h4>
+                <p className="text-xs text-slate-600 leading-relaxed break-keep">
+                  여러 파일을 한꺼번에 던져도 AI가 성격(영수증, 계산서, 계약서)을 판별하여 적합한 시트를 찾아 알아서 분배 적재합니다.
+                </p>
               </div>
-              <h4 className="text-base font-extrabold text-slate-900 mb-2">원본 증빙 1:1 대조 보존</h4>
-              <p className="text-xs text-slate-600 leading-relaxed break-keep">
-                변환된 데이터와 원본 PDF/영수증 파일을 한 화면에서 1:1로 영구 대조 보존하여 회계 감사 시 100% 무결성을 보장합니다.
-              </p>
+              <span className="text-[11px] text-blue-600 font-bold mt-4 block">Auto-Router 탑재 →</span>
             </div>
-            <span className="text-[11px] text-indigo-600 font-bold mt-4 block">Audit Trail 보장 →</span>
-          </div>
 
-          <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-2xs hover:shadow-md hover:border-emerald-300 transition flex flex-col justify-between">
-            <div>
-              <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-4">
-                <Database className="w-5 h-5" />
+            <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-2xs hover:shadow-md hover:border-indigo-300 transition flex flex-col justify-between">
+              <div>
+                <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-4">
+                  <Eye className="w-5 h-5" />
+                </div>
+                <h4 className="text-base font-extrabold text-slate-900 mb-2">원본 증빙 1:1 대조 보존</h4>
+                <p className="text-xs text-slate-600 leading-relaxed break-keep">
+                  변환된 데이터와 원본 PDF/영수증 파일을 한 화면에서 1:1로 영구 대조 보존하여 회계 감사 시 100% 무결성을 보장합니다.
+                </p>
               </div>
-              <h4 className="text-base font-extrabold text-slate-900 mb-2">구글 시트 & My DB 동기화</h4>
-              <p className="text-xs text-slate-600 leading-relaxed break-keep">
-                클릭 한 번으로 팀원들이 공유하는 구글 스프레드시트에 즉시 탭을 생성하거나 SQLite 파일 및 원격 My DB로 자동 백업합니다.
-              </p>
+              <span className="text-[11px] text-indigo-600 font-bold mt-4 block">Audit Trail 보장 →</span>
             </div>
-            <span className="text-[11px] text-emerald-600 font-bold mt-4 block">클라우드 연동 완료 →</span>
-          </div>
 
-          <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-2xs hover:shadow-md hover:border-purple-300 transition flex flex-col justify-between">
-            <div>
-              <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center mb-4">
-                <ShieldCheck className="w-5 h-5" />
+            <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-2xs hover:shadow-md hover:border-emerald-300 transition flex flex-col justify-between">
+              <div>
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-4">
+                  <Database className="w-5 h-5" />
+                </div>
+                <h4 className="text-base font-extrabold text-slate-900 mb-2">구글 시트 & My DB 동기화</h4>
+                <p className="text-xs text-slate-600 leading-relaxed break-keep">
+                  클릭 한 번으로 팀원들이 공유하는 구글 스프레드시트에 즉시 탭을 생성하거나 SQLite 파일 및 원격 My DB로 자동 백업합니다.
+                </p>
               </div>
-              <h4 className="text-base font-extrabold text-slate-900 mb-2">철저한 보안 및 데이터 보호</h4>
-              <p className="text-xs text-slate-600 leading-relaxed break-keep">
-                모든 업로드 파일은 최고 등급의 암호화 처리되며, AI 학습에 절대 사용되지 않고 사용자의 명시적 삭제 시 원천 파기됩니다.
-              </p>
+              <span className="text-[11px] text-emerald-600 font-bold mt-4 block">클라우드 연동 완료 →</span>
             </div>
-            <span className="text-[11px] text-purple-600 font-bold mt-4 block">안심 보안 아키텍처 →</span>
+
+            <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-2xs hover:shadow-md hover:border-purple-300 transition flex flex-col justify-between">
+              <div>
+                <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center mb-4">
+                  <ShieldCheck className="w-5 h-5" />
+                </div>
+                <h4 className="text-base font-extrabold text-slate-900 mb-2">철저한 보안 및 데이터 보호</h4>
+                <p className="text-xs text-slate-600 leading-relaxed break-keep">
+                  모든 업로드 파일은 최고 등급의 암호화 처리되며, AI 학습에 절대 사용되지 않고 사용자의 명시적 삭제 시 원천 파기됩니다.
+                </p>
+              </div>
+              <span className="text-[11px] text-purple-600 font-bold mt-4 block">안심 보안 아키텍처 →</span>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* 6. 자주 묻는 질문 (FAQ) */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8 border-t border-slate-200 bg-slate-50/60">
+      {/* 6. 자주 묻는 질문 (FAQ - max-w-5xl w-full 완전 통일) */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8 border-b border-slate-200 bg-white w-full">
         <div className="max-w-5xl mx-auto w-full">
           <div className="text-center mb-10">
             <h2 className="text-xs font-black text-blue-600 uppercase tracking-widest mb-1.5">FAQ</h2>
             <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-900">자주 묻는 질문</h3>
           </div>
 
-          <div className="space-y-4">
-            <div className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200 shadow-2xs">
+          <div className="space-y-4 w-full">
+            <div className="p-5 sm:p-6 rounded-2xl bg-slate-50/70 border border-slate-200 shadow-2xs">
               <h4 className="text-sm font-bold text-slate-900 mb-2">Q. 어떤 형식의 파일을 올릴 수 있나요?</h4>
               <p className="text-xs sm:text-sm text-slate-600 leading-relaxed break-keep">
                 엑셀 파일(.xlsx, .xls), 텍스트/표 데이터(.csv), PDF 문서(.pdf), 그리고 스마트폰으로 촬영하거나 스캔한 모든 이미지 포맷(.png, .jpg, .jpeg, .webp 등)을 완벽하게 지원합니다.
               </p>
             </div>
 
-            <div className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200 shadow-2xs">
+            <div className="p-5 sm:p-6 rounded-2xl bg-slate-50/70 border border-slate-200 shadow-2xs">
               <h4 className="text-sm font-bold text-slate-900 mb-2">Q. 여러 개의 영수증을 한 번에 올려도 되나요?</h4>
               <p className="text-xs sm:text-sm text-slate-600 leading-relaxed break-keep">
                 네, 하단 중앙의 파일 업로드 버튼에서 여러 파일을 한 번에 선택하거나 테이블 영역으로 드래그 앤 드롭하시면, 우측 하단의 실시간 큐 모니터링 창이 작동하여 순차적으로 자동 파싱 및 분배 적재합니다.
               </p>
             </div>
 
-            <div className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200 shadow-2xs">
+            <div className="p-5 sm:p-6 rounded-2xl bg-slate-50/70 border border-slate-200 shadow-2xs">
               <h4 className="text-sm font-bold text-slate-900 mb-2">Q. 회사 기밀이나 개인정보 유출 위험은 없나요?</h4>
               <p className="text-xs sm:text-sm text-slate-600 leading-relaxed break-keep">
                 파일투시트는 엔터프라이즈 보안 가이드라인을 준수합니다. 업로드된 문서는 고객님의 승인 없이 외부에 공유되지 않으며, 인공지능 모델의 학습 데이터로 재활용되지 않습니다.
@@ -503,8 +505,8 @@ export default function UseCasesPage() {
         </div>
       </section>
 
-      {/* 7. 최종 하단 전환 CTA 배너 (세련된 블루-인디고 카드) */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8 border-t border-slate-200 text-center bg-white">
+      {/* 7. 최종 하단 전환 CTA 배너 (max-w-5xl w-full 완전 통일) */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8 border-b border-slate-200 text-center bg-slate-50/60 w-full">
         <div className="max-w-5xl mx-auto w-full rounded-3xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 p-8 sm:p-12 text-white shadow-xl shadow-indigo-500/15 flex flex-col items-center">
           <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center text-white mb-5 shadow-inner">
             <FileSpreadsheet className="w-6 h-6" />
@@ -514,7 +516,7 @@ export default function UseCasesPage() {
             시간을 낭비하지 마세요
           </h2>
           <p className="text-blue-100 text-sm max-w-lg mb-8 leading-relaxed break-keep">
-            지금 바로 첫 파일을 드롭해 보세요. 3초 만에 정리된 엑셀 표를 직접 확인하실 수 있습니다.
+            지금 바로 첫 파일을 업로드해 보세요. 3초 만에 정리된 엑셀 표를 직접 확인하실 수 있습니다.
           </p>
           <Link
             href="/"
@@ -526,14 +528,14 @@ export default function UseCasesPage() {
         </div>
       </section>
 
-      {/* 8. 푸터 */}
-      <footer className="border-t border-slate-200 bg-slate-50 py-8 px-4 sm:px-6 lg:px-8 text-center text-xs text-slate-500">
+      {/* 8. 푸터 (max-w-5xl w-full 완전 통일) */}
+      <footer className="bg-white py-8 px-4 sm:px-6 lg:px-8 text-center text-xs text-slate-500 border-t border-slate-200 w-full">
         <div className="max-w-5xl mx-auto w-full flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <FileSpreadsheet className="w-4 h-4 text-blue-600" />
             <span className="font-extrabold text-slate-700">FileToSheet</span>
             <span className="text-slate-300">|</span>
-            <span>어떤 파일이든 드롭 즉시 엑셀 표로, FileToSheet</span>
+            <span>어떤 파일이든 업로드 즉시 엑셀 표로, FileToSheet</span>
           </div>
           <div>© 2026 FileToSheet. All rights reserved.</div>
         </div>

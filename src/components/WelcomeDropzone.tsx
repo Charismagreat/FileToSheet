@@ -71,7 +71,7 @@ export function WelcomeDropzone({
           어떤 파일이든 여기에 끌어다 놓으세요
         </h2>
         <p className="text-xs sm:text-sm text-slate-500 mt-1.5 max-w-md font-normal leading-relaxed">
-          거래명세서 이미지, 영수증, 통장 엑셀, 카드 내역 등 어떤 파일이든 드롭 즉시 완벽한 2차원 표로 정리됩니다.
+          거래명세서 이미지, 영수증, 통장 엑셀, 카드 내역 등 어떤 파일이든 업로드 즉시 완벽한 2차원 표로 정리됩니다.
         </p>
 
         {/* 🌟 자연어 요청(프롬프트) 입력창 */}

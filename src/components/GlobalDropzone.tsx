@@ -54,7 +54,7 @@ export const GlobalDropzone: React.FC<GlobalDropzoneProps> = ({
         파일을 여기에 끌어다 놓으세요 (새 프로젝트 생성 또는 시트 추가)
       </h3>
       <p className="text-xs text-slate-500 mt-0.5 max-w-md font-normal">
-        거래명세서 이미지, 영수증, 통장 엑셀, 카드 내역 등 어떤 파일이든 드롭 즉시 완벽한 2차원 표로 정리됩니다.
+        거래명세서 이미지, 영수증, 통장 엑셀, 카드 내역 등 어떤 파일이든 업로드 즉시 완벽한 2차원 표로 정리됩니다.
       </p>
 
       <div className="flex flex-wrap items-center justify-center gap-2 mt-3 text-[11px] text-slate-600">
