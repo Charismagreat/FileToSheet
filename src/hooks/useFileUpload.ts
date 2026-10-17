@@ -42,7 +42,11 @@ export function useFileUpload({
     processFile(file, 'append_rows');
   };
 
-  const processFile = async (file: File, mode: 'new_document' | 'new_sheet' | 'append_rows') => {
+  const processFile = async (
+    file: File,
+    mode: 'new_document' | 'new_sheet' | 'append_rows',
+    customPrompt?: string
+  ) => {
     setPendingUploadFile(null);
     setIsProcessing(true);
     setStorageProgress(0);
@@ -50,7 +54,7 @@ export function useFileUpload({
     const nowKst = new Intl.DateTimeFormat('ko-KR', { dateStyle: 'short', timeStyle: 'medium' }).format(new Date());
 
     try {
-      const { sheets: parsedSheets, category } = await parseFileOnClient(file, setProcessStatus);
+      const { sheets: parsedSheets, category } = await parseFileOnClient(file, setProcessStatus, customPrompt);
       setProcessStatus('이지데스크 My DB에 레코드 생성 중...');
       const fileId = await createUploadedFileRecord(file, category);
 

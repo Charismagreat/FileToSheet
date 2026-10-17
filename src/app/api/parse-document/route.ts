@@ -12,7 +12,7 @@ const FALLBACK_MODELS = [
 
 export async function POST(request: NextRequest) {
   try {
-    const { filename, fileBase64 } = await request.json();
+    const { filename, fileBase64, customPrompt } = await request.json();
 
     if (!fileBase64) {
       return NextResponse.json(
@@ -49,7 +49,10 @@ export async function POST(request: NextRequest) {
 }
 마크다운(\`\`\`json) 없이 순수 JSON만 반환하세요.`;
 
-    const userPrompt = `파일명: ${filename}\n이 문서의 종류를 파악하여 본문 데이터를 최대한 상세한 독립 컬럼들로 분리해 추출하고, 독립 컬럼에 담기지 않는 상하단 거래처 상세, 주소, 대표자, 승인/문서번호, 계좌, 조건, 메모 등 모든 부가 정보는 누락 없이 반드시 '비고' 컬럼에 모아서 완벽히 적재해 주세요.`;
+    const userPrompt = `파일명: ${filename}\n이 문서의 종류를 파악하여 본문 데이터를 최대한 상세한 독립 컬럼들로 분리해 추출하고, 독립 컬럼에 담기지 않는 상하단 거래처 상세, 주소, 대표자, 승인/문서번호, 계좌, 조건, 메모 등 모든 부가 정보는 누락 없이 반드시 '비고' 컬럼에 모아서 완벽히 적재해 주세요.` +
+      (customPrompt?.trim()
+        ? `\n\n[★ 사용자의 필수 최우선 지시사항]\n다음은 사용자가 특별히 요청한 규칙입니다. 기본 원칙보다 아래 규칙을 무조건 최우선으로 반영하여 headers와 rows를 설계하세요:\n${customPrompt.trim()}`
+        : '');
 
     const cleanBase64 = fileBase64.replace(/^data:[^;]+;base64,/, '');
 

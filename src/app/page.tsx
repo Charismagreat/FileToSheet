@@ -14,6 +14,7 @@ import { UploadOptionModal } from '@/components/UploadOptionModal';
 import { OriginalFileModal } from '@/components/OriginalFileModal';
 import { AddColumnModal } from '@/components/AddColumnModal';
 import { ExportOptionModal } from '@/components/ExportOptionModal';
+import { ShareModal } from '@/components/ShareModal';
 import { useAuth } from '@/hooks/useAuth';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { useFileUpload } from '@/hooks/useFileUpload';
@@ -38,6 +39,7 @@ export default function FileToSheetApp() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isTableDragging, setIsTableDragging] = useState<boolean>(false);
   const [showOriginalModal, setShowOriginalModal] = useState<boolean>(false);
+  const [showShareModal, setShowShareModal] = useState<boolean>(false);
 
   const currentProject = ws.currentProject;
   const currentSheet = ws.currentSheet;
@@ -57,6 +59,7 @@ export default function FileToSheetApp() {
         onDownloadXlsx={fileExport.handleDownloadXlsx}
         onExportGoogleSheets={fileExport.handleExportGoogleSheets}
         onOpenOriginalModal={() => setShowOriginalModal(true)}
+        onOpenShareModal={() => setShowShareModal(true)}
         hasOriginalFile={Boolean(currentProject?.originalFileUrl)}
         hasSheetData={Boolean(currentSheet && currentSheet.rows.length > 0)}
         exportLoading={fileExport.exportLoading}
@@ -135,6 +138,7 @@ export default function FileToSheetApp() {
                     setEditingHeaderValue={ws.setEditingHeaderValue}
                     onSaveHeaderEdit={ws.saveHeaderEdit}
                     onDeleteColumn={ws.handleDeleteColumn}
+                    onReorderColumns={ws.handleReorderColumns}
                     onDeleteRow={ws.handleDeleteRow}
                   />
                 )}
@@ -171,27 +175,11 @@ export default function FileToSheetApp() {
         onSelectOption={upload.processFile}
       />
 
-      <OriginalFileModal
-        show={showOriginalModal}
-        onClose={() => setShowOriginalModal(false)}
-        project={currentProject}
-      />
+      <OriginalFileModal show={showOriginalModal} onClose={() => setShowOriginalModal(false)} project={currentProject} />
 
-      <AddColumnModal
-        show={ws.isAddingColumn}
-        onClose={() => ws.setIsAddingColumn(false)}
-        newColumnName={ws.newColumnName}
-        setNewColumnName={ws.setNewColumnName}
-        onAddColumn={ws.handleAddColumn}
-      />
-
-      <ExportOptionModal
-        isOpen={fileExport.isExportOptionModalOpen}
-        onClose={() => fileExport.setIsExportOptionModalOpen(false)}
-        onSelectOption={(mode) => fileExport.executeExportGoogleSheets(mode)}
-        spreadsheetUrl={currentProject?.googleSpreadsheetUrl}
-        loading={fileExport.exportLoading}
-      />
+      <AddColumnModal show={ws.isAddingColumn} onClose={() => ws.setIsAddingColumn(false)} newColumnName={ws.newColumnName} setNewColumnName={ws.setNewColumnName} onAddColumn={ws.handleAddColumn} />
+      <ExportOptionModal isOpen={fileExport.isExportOptionModalOpen} onClose={() => fileExport.setIsExportOptionModalOpen(false)} onSelectOption={(mode) => fileExport.executeExportGoogleSheets(mode)} spreadsheetUrl={currentProject?.googleSpreadsheetUrl} loading={fileExport.exportLoading} />
+      <ShareModal isOpen={showShareModal} onClose={() => setShowShareModal(false)} project={currentProject} />
     </div>
   );
 }

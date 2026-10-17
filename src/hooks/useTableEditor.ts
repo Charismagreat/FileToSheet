@@ -9,11 +9,7 @@ interface UseTableEditorOptions {
   activeProjectIndex: number;
 }
 
-export function useTableEditor({
-  projects,
-  setProjects,
-  activeProjectIndex,
-}: UseTableEditorOptions) {
+export function useTableEditor({ projects, setProjects, activeProjectIndex }: UseTableEditorOptions) {
   const [editingCell, setEditingCell] = useState<{ rowIdx: number; colKey: string } | null>(null);
   const [editValue, setEditValue] = useState<string>('');
   const [editingHeaderIdx, setEditingHeaderIdx] = useState<number | null>(null);
@@ -24,87 +20,78 @@ export function useTableEditor({
   const currentProject = projects[activeProjectIndex] || null;
   const currentSheet = currentProject ? currentProject.sheets[currentProject.activeSheetIndex] : null;
 
-  const handleAddColumn = () => {
-    const colName = newColumnName.trim();
-    if (!colName || !currentProject || !currentSheet) return;
-    if (currentSheet.headers.includes(colName)) {
-      alert('이미 동일한 이름의 열이 존재합니다.');
-      return;
-    }
+  const updateActiveSheet = (fn: (sheet: any) => any) => {
+    if (!currentProject || !currentSheet) return;
     setProjects((prev) => {
       const next = [...prev];
       const proj = { ...next[activeProjectIndex] };
       const sheets = [...proj.sheets];
-      const sheet = { ...sheets[proj.activeSheetIndex] };
-      sheet.headers = [...sheet.headers, colName];
-      sheet.rows = sheet.rows.map((row) => ({ ...row, [colName]: '' }));
-      sheets[proj.activeSheetIndex] = sheet;
+      sheets[proj.activeSheetIndex] = fn({ ...sheets[proj.activeSheetIndex] });
       proj.sheets = sheets;
       next[activeProjectIndex] = proj;
       return next;
     });
+  };
+
+  const handleAddColumn = () => {
+    const colName = newColumnName.trim();
+    if (!colName || !currentSheet || currentSheet.headers.includes(colName)) return;
+    updateActiveSheet((sheet) => ({
+      ...sheet,
+      headers: [...sheet.headers, colName],
+      rows: sheet.rows.map((row: any) => ({ ...row, [colName]: '' })),
+    }));
     setNewColumnName('');
     setIsAddingColumn(false);
   };
 
   const handleDeleteColumn = (headerName: string) => {
-    if (!currentProject || !currentSheet) return;
-    if (confirm(`'${headerName}' 열을 삭제하시겠습니까?`)) {
-      setProjects((prev) => {
-        const next = [...prev];
-        const proj = { ...next[activeProjectIndex] };
-        const sheets = [...proj.sheets];
-        const sheet = { ...sheets[proj.activeSheetIndex] };
-        sheet.headers = sheet.headers.filter((h) => h !== headerName);
-        sheet.rows = sheet.rows.map((row) => {
-          const copy = { ...row };
-          delete copy[headerName];
-          return copy;
-        });
-        sheets[proj.activeSheetIndex] = sheet;
-        proj.sheets = sheets;
-        next[activeProjectIndex] = proj;
-        return next;
-      });
-    }
+    if (!currentSheet || !confirm(`'${headerName}' 열을 삭제하시겠습니까?`)) return;
+    updateActiveSheet((sheet) => ({
+      ...sheet,
+      headers: sheet.headers.filter((h: string) => h !== headerName),
+      rows: sheet.rows.map((row: any) => {
+        const copy = { ...row };
+        delete copy[headerName];
+        return copy;
+      }),
+    }));
+  };
+
+  const handleReorderColumns = (fromIdx: number, toIdx: number) => {
+    if (!currentSheet || fromIdx === toIdx || fromIdx < 0 || toIdx < 0 || toIdx >= currentSheet.headers.length) return;
+    updateActiveSheet((sheet) => {
+      const nextHeaders = [...sheet.headers];
+      const [moved] = nextHeaders.splice(fromIdx, 1);
+      nextHeaders.splice(toIdx, 0, moved);
+      return { ...sheet, headers: nextHeaders };
+    });
   };
 
   const saveHeaderEdit = () => {
-    if (editingHeaderIdx === null || !currentProject || !currentSheet) {
-      setEditingHeaderIdx(null);
-      return;
-    }
+    if (editingHeaderIdx === null || !currentSheet) return setEditingHeaderIdx(null);
     const oldHeader = currentSheet.headers[editingHeaderIdx];
     const newHeader = editingHeaderValue.trim();
-    if (!newHeader || oldHeader === newHeader) {
-      setEditingHeaderIdx(null);
-      return;
-    }
-    setProjects((prev) => {
-      const next = [...prev];
-      const proj = { ...next[activeProjectIndex] };
-      const sheets = [...proj.sheets];
-      const sheet = { ...sheets[proj.activeSheetIndex] };
-      const nextHeaders = [...sheet.headers];
-      nextHeaders[editingHeaderIdx] = newHeader;
-      sheet.headers = nextHeaders;
-      sheet.rows = sheet.rows.map((row) => {
-        const newRow: Record<string, any> = {};
-        Object.keys(row).forEach((k) => {
-          newRow[k === oldHeader ? newHeader : k] = row[k];
-        });
-        return newRow;
+    if (newHeader && oldHeader !== newHeader) {
+      updateActiveSheet((sheet) => {
+        const nextHeaders = [...sheet.headers];
+        nextHeaders[editingHeaderIdx] = newHeader;
+        return {
+          ...sheet,
+          headers: nextHeaders,
+          rows: sheet.rows.map((row: any) => {
+            const newRow: Record<string, any> = {};
+            Object.keys(row).forEach((k) => { newRow[k === oldHeader ? newHeader : k] = row[k]; });
+            return newRow;
+          }),
+        };
       });
-      sheets[proj.activeSheetIndex] = sheet;
-      proj.sheets = sheets;
-      next[activeProjectIndex] = proj;
-      return next;
-    });
+    }
     setEditingHeaderIdx(null);
   };
 
   const handleAddRow = () => {
-    if (!currentProject || !currentSheet) return;
+    if (!currentSheet) return;
     const nowKst = new Intl.DateTimeFormat('ko-KR', { dateStyle: 'short', timeStyle: 'medium' }).format(new Date());
     const newRow: Record<string, any> = {};
     currentSheet.headers.forEach((h) => {
@@ -112,77 +99,35 @@ export function useTableEditor({
       else if (h === '등록일시') newRow[h] = nowKst;
       else newRow[h] = '';
     });
-    setProjects((prev) => {
-      const next = [...prev];
-      const proj = { ...next[activeProjectIndex] };
-      const sheets = [...proj.sheets];
-      const sheet = { ...sheets[proj.activeSheetIndex] };
-      sheet.rows = [...sheet.rows, newRow];
-      sheets[proj.activeSheetIndex] = sheet;
-      proj.sheets = sheets;
-      next[activeProjectIndex] = proj;
-      return next;
-    });
+    updateActiveSheet((sheet) => ({ ...sheet, rows: [...sheet.rows, newRow] }));
   };
 
   const handleDeleteRow = (idx: number) => {
-    if (!currentProject || !currentSheet) return;
-    setProjects((prev) => {
-      const next = [...prev];
-      const proj = { ...next[activeProjectIndex] };
-      const sheets = [...proj.sheets];
-      const sheet = { ...sheets[proj.activeSheetIndex] };
-      const updatedRows = sheet.rows.filter((_, i) => i !== idx);
+    if (!currentSheet) return;
+    updateActiveSheet((sheet) => {
+      const updatedRows = sheet.rows.filter((_: any, i: number) => i !== idx);
       if (sheet.headers.includes('일련번호')) {
-        updatedRows.forEach((r, i) => {
-          r['일련번호'] = i + 1;
-        });
+        updatedRows.forEach((r: any, i: number) => { r['일련번호'] = i + 1; });
       }
-      sheet.rows = updatedRows;
-      sheets[proj.activeSheetIndex] = sheet;
-      proj.sheets = sheets;
-      next[activeProjectIndex] = proj;
-      return next;
+      return { ...sheet, rows: updatedRows };
     });
   };
 
   const saveCellEdit = () => {
     if (!editingCell || !currentProject) return;
     const { rowIdx, colKey } = editingCell;
-    setProjects((prev) => {
-      const next = [...prev];
-      const proj = { ...next[activeProjectIndex] };
-      const sheets = [...proj.sheets];
-      const sheet = { ...sheets[proj.activeSheetIndex] };
+    updateActiveSheet((sheet) => {
       const newRows = [...sheet.rows];
       newRows[rowIdx] = { ...newRows[rowIdx], [colKey]: editValue };
-      sheet.rows = newRows;
-      sheets[proj.activeSheetIndex] = sheet;
-      proj.sheets = sheets;
-      next[activeProjectIndex] = proj;
-      return next;
+      return { ...sheet, rows: newRows };
     });
     setEditingCell(null);
   };
 
   return {
-    editingCell,
-    setEditingCell,
-    editValue,
-    setEditValue,
-    saveCellEdit,
-    editingHeaderIdx,
-    setEditingHeaderIdx,
-    editingHeaderValue,
-    setEditingHeaderValue,
-    saveHeaderEdit,
-    isAddingColumn,
-    setIsAddingColumn,
-    newColumnName,
-    setNewColumnName,
-    handleAddColumn,
-    handleDeleteColumn,
-    handleAddRow,
-    handleDeleteRow,
+    editingCell, setEditingCell, editValue, setEditValue, saveCellEdit,
+    editingHeaderIdx, setEditingHeaderIdx, editingHeaderValue, setEditingHeaderValue, saveHeaderEdit,
+    isAddingColumn, setIsAddingColumn, newColumnName, setNewColumnName,
+    handleAddColumn, handleDeleteColumn, handleReorderColumns, handleAddRow, handleDeleteRow,
   };
 }

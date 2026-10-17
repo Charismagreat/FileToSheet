@@ -28,8 +28,9 @@ interface TableViewProps {
   editingHeaderValue: string;
   setEditingHeaderValue: (val: string) => void;
   onSaveHeaderEdit: () => void;
-  // 삭제
+  // 삭제 및 순서 변경
   onDeleteColumn: (col: string) => void;
+  onReorderColumns: (fromIdx: number, toIdx: number) => void;
   onDeleteRow: (rowIdx: number) => void;
 }
 
@@ -54,6 +55,7 @@ export function TableView({
   setEditingHeaderValue,
   onSaveHeaderEdit,
   onDeleteColumn,
+  onReorderColumns,
   onDeleteRow,
 }: TableViewProps) {
   return (
@@ -111,6 +113,7 @@ export function TableView({
             setEditingHeaderValue={setEditingHeaderValue}
             onSaveHeaderEdit={onSaveHeaderEdit}
             onDeleteColumn={onDeleteColumn}
+            onReorderColumns={onReorderColumns}
           />
 
           <tbody className="divide-y divide-slate-100 font-sans">

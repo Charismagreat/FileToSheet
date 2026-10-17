@@ -20,6 +20,7 @@ interface HeaderProps {
   onDownloadXlsx: () => void;
   onExportGoogleSheets: () => void;
   onOpenOriginalModal: () => void;
+  onOpenShareModal: () => void;
   hasOriginalFile: boolean;
   hasSheetData: boolean;
   exportLoading: boolean;
@@ -31,6 +32,7 @@ export function Header({
   onLogout,
   onDownloadXlsx,
   onExportGoogleSheets,
+  onOpenShareModal,
   hasSheetData,
   exportLoading,
 }: HeaderProps) {
@@ -102,6 +104,17 @@ export function Header({
             <Share2 className="w-3.5 h-3.5" />
           )}
           Google 시트로 내보내기
+        </button>
+
+        {/* 선택적 공유 버튼 */}
+        <button
+          onClick={onOpenShareModal}
+          disabled={!hasSheetData}
+          className="flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 disabled:opacity-40 disabled:hover:bg-indigo-50 shadow-xs transition active:scale-98"
+          title="시트 및 탭을 선택하여 읽기 전용 링크로 공유"
+        >
+          <Share2 className="w-3.5 h-3.5" />
+          공유
         </button>
       </div>
     </header>
