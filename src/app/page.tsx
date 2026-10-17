@@ -42,6 +42,7 @@ export default function FileToSheetApp() {
 
   const [activeSubTab, setActiveSubTab] = useState<'table' | 'original' | 'summary'>('table');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc'); // 최신순 기본값
   const [isTableDragging, setIsTableDragging] = useState<boolean>(false);
   const [showOriginalModal, setShowOriginalModal] = useState<boolean>(false);
   const [showShareModal, setShowShareModal] = useState<boolean>(false);
@@ -50,11 +51,11 @@ export default function FileToSheetApp() {
   const currentSheet = ws.currentSheet;
   const sheetOriginalFiles = getSheetOriginalFiles(currentProject, currentSheet);
 
-  const filteredRows = currentSheet
-    ? currentSheet.rows.filter((row) =>
-        !searchQuery.trim() || Object.values(row).some((val) => String(val ?? '').toLowerCase().includes(searchQuery.toLowerCase()))
-      )
-    : [];
+  const rawRowsWithOrigin = currentSheet ? currentSheet.rows.map((r, i) => ({ ...r, _originIdx: i })) : [];
+  const searchedRows = rawRowsWithOrigin.filter((row) =>
+    !searchQuery.trim() || Object.values(row).some((val) => String(val ?? '').toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+  const filteredRows = sortOrder === 'desc' ? [...searchedRows].reverse() : searchedRows;
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-50 text-slate-800 font-sans selection:bg-blue-100 selection:text-blue-900">
@@ -129,6 +130,8 @@ export default function FileToSheetApp() {
                   setSearchQuery={setSearchQuery}
                   onAddRow={ws.handleAddRow}
                   onOpenAddColumn={() => ws.setIsAddingColumn(true)}
+                  sortOrder={sortOrder}
+                  onToggleSort={() => setSortOrder((prev) => prev === 'desc' ? 'asc' : 'desc')}
                 />
 
                 {activeSubTab === 'table' && (

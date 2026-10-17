@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Table as TableIcon, Eye, BarChart3, Search, Plus, Columns } from 'lucide-react';
+import { Table as TableIcon, Eye, BarChart3, Search, Plus, Columns, ArrowUpDown } from 'lucide-react';
 
 interface SubTabBarProps {
   activeSubTab: 'table' | 'original' | 'summary';
@@ -13,6 +13,8 @@ interface SubTabBarProps {
   setSearchQuery: (query: string) => void;
   onAddRow: () => void;
   onOpenAddColumn: () => void;
+  sortOrder?: 'desc' | 'asc';
+  onToggleSort?: () => void;
 }
 
 export function SubTabBar({
@@ -25,18 +27,17 @@ export function SubTabBar({
   setSearchQuery,
   onAddRow,
   onOpenAddColumn,
+  sortOrder = 'desc',
+  onToggleSort,
 }: SubTabBarProps) {
   return (
     <div className="border-b border-slate-200 bg-white px-4 py-2 flex flex-wrap items-center justify-between gap-3 shadow-2xs">
-      {/* 3단계 탭 버튼들 */}
       <div className="flex items-center gap-1.5">
         <span className="text-[11px] font-bold text-slate-400 mr-1.5 shrink-0">📌 탭:</span>
         <button
           onClick={() => setActiveSubTab('table')}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-            activeSubTab === 'table'
-              ? 'bg-blue-50 text-blue-700 border border-blue-200 shadow-2xs'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+            activeSubTab === 'table' ? 'bg-blue-50 text-blue-700 border border-blue-200 shadow-2xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
           }`}
         >
           <TableIcon className="w-3.5 h-3.5" />
@@ -46,23 +47,17 @@ export function SubTabBar({
         <button
           onClick={() => setActiveSubTab('original')}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-            activeSubTab === 'original'
-              ? 'bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-2xs'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+            activeSubTab === 'original' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-2xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
           }`}
         >
           <Eye className="w-3.5 h-3.5" />
-          <span>
-            👁️ 원본 증빙 대조 {originalFilesCount > 0 ? `(${originalFilesCount}개)` : hasOriginalFile ? '✓' : ''}
-          </span>
+          <span>👁️ 원본 증빙 대조 {originalFilesCount > 0 ? `(${originalFilesCount}개)` : hasOriginalFile ? '✓' : ''}</span>
         </button>
 
         <button
           onClick={() => setActiveSubTab('summary')}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-            activeSubTab === 'summary'
-              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+            activeSubTab === 'summary' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
           }`}
         >
           <BarChart3 className="w-3.5 h-3.5" />
@@ -70,9 +65,20 @@ export function SubTabBar({
         </button>
       </div>
 
-      {/* 표 데이터 전용 제어 툴바 (검색, 행/열 추가) */}
       {activeSubTab === 'table' && (
         <div className="flex items-center gap-2">
+          {/* 최신순 / 등록순 정렬 토글 */}
+          {onToggleSort && (
+            <button
+              onClick={onToggleSort}
+              className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg transition"
+              title={sortOrder === 'desc' ? '현재 최신 데이터 우선 정렬 (클릭 시 과거 등록순)' : '현재 과거 등록순 정렬 (클릭 시 최신순)'}
+            >
+              <ArrowUpDown className="w-3.5 h-3.5 text-blue-600" />
+              <span>{sortOrder === 'desc' ? '⬇️ 최신순 (기본)' : '⬆️ 과거순'}</span>
+            </button>
+          )}
+
           <div className="relative">
             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
             <input
@@ -84,20 +90,12 @@ export function SubTabBar({
             />
           </div>
 
-          <button
-            onClick={onAddRow}
-            className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg transition"
-            title="새 데이터 행 추가"
-          >
+          <button onClick={onAddRow} className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg transition" title="새 데이터 행 추가">
             <Plus className="w-3.5 h-3.5 text-blue-600" />
             <span>행 추가</span>
           </button>
 
-          <button
-            onClick={onOpenAddColumn}
-            className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg transition"
-            title="새 열(Header) 추가"
-          >
+          <button onClick={onOpenAddColumn} className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg transition" title="새 열(Header) 추가">
             <Columns className="w-3.5 h-3.5 text-indigo-600" />
             <span>열 추가</span>
           </button>
