@@ -11,6 +11,7 @@ interface UserUsagePopoverProps {
   currentUser: UserSession | null;
   currentProject: ProjectWorkspace | null;
   onOpenPlanModal: () => void;
+  onOpenPricingModal?: () => void;
 }
 
 export function UserUsagePopover({
@@ -19,7 +20,9 @@ export function UserUsagePopover({
   currentUser,
   currentProject,
   onOpenPlanModal,
+  onOpenPricingModal,
 }: UserUsagePopoverProps) {
+
   if (!isOpen) return null;
 
   const plan = currentUser?.plan === 'pro' ? 'pro' : 'free';
@@ -174,6 +177,21 @@ export function UserUsagePopover({
           <span className="text-indigo-600 font-semibold">월 9,900원 / 정상 이용 중</span>
         </div>
       )}
+
+      {onOpenPricingModal && (
+        <div className="mt-2.5 pt-2 border-t border-slate-100 text-center">
+          <button
+            onClick={() => {
+              onClose();
+              onOpenPricingModal();
+            }}
+            className="text-[11px] font-semibold text-blue-600 hover:text-blue-700 hover:underline"
+          >
+            전체 요금제 및 기능 상세 비교 ➔
+          </button>
+        </div>
+      )}
     </div>
   );
 }
+

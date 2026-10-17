@@ -17,6 +17,7 @@ interface HeaderProps {
   onDownloadXlsx: () => void;
   onDownloadSqlite?: () => void;
   onOpenPlanModal?: () => void;
+  onOpenPricingModal?: () => void;
   onExportGoogleSheets: () => void;
   onOpenOriginalModal: () => void;
   onOpenShareModal: () => void;
@@ -34,6 +35,7 @@ export function Header({
   onDownloadXlsx,
   onDownloadSqlite,
   onOpenPlanModal,
+  onOpenPricingModal,
   onExportGoogleSheets,
   onOpenShareModal,
   onUploadFile,
@@ -44,7 +46,6 @@ export function Header({
   const [isUsageOpen, setIsUsageOpen] = useState<boolean>(false);
   const planPolicy = getPlanLimits(currentUser?.plan);
   const parsedDocsCount = currentProject?.originalFiles?.length || 1;
-
 
   return (
     <header className="border-b border-slate-200/80 bg-white/95 backdrop-blur sticky top-0 z-30 px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-4 shadow-xs">
@@ -59,8 +60,6 @@ export function Header({
       </div>
 
       <div className="flex items-center gap-2.5">
-
-        {/* 숨김 파일 인풋 */}
         <input
           type="file"
           ref={fileInputRef}
@@ -74,7 +73,16 @@ export function Header({
           className="hidden"
         />
 
-        {/* 회원 로그인 상태 뱃지 또는 가입 버튼 */}
+        {/* 요금제 비교 모달 버튼 */}
+        <button
+          onClick={onOpenPricingModal}
+          className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-50 to-indigo-50 border border-amber-200/80 hover:border-amber-300 text-slate-800 shadow-2xs transition active:scale-98"
+          title="FileToSheet 플랜 및 기능 비교"
+        >
+          <Crown className="w-3.5 h-3.5 text-amber-500" />
+          <span>요금제</span>
+        </button>
+
         {currentUser ? (
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-blue-50/80 border border-blue-200 text-xs">
             <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-[11px]">
@@ -106,7 +114,6 @@ export function Header({
           </button>
         )}
 
-        {/* 잔여 사용량 칩 및 미니 대시보드 팝오버 */}
         {currentUser && (
           <div className="relative">
             <button
@@ -124,12 +131,11 @@ export function Header({
               currentUser={currentUser}
               currentProject={currentProject}
               onOpenPlanModal={onOpenPlanModal || (() => {})}
+              onOpenPricingModal={onOpenPricingModal}
             />
           </div>
         )}
 
-
-        {/* 새 파일 추가 버튼 */}
         {onUploadFile && (
           <button
             onClick={() => fileInputRef.current?.click()}
@@ -141,7 +147,6 @@ export function Header({
           </button>
         )}
 
-        {/* 엑셀 다운로드 */}
         <button
           onClick={onDownloadXlsx}
           disabled={!hasSheetData}
@@ -151,7 +156,6 @@ export function Header({
           .xlsx
         </button>
 
-        {/* SQLite DB 다운로드 (PRO 전용/우선 제공) */}
         <button
           onClick={() => {
             if (currentUser?.plan === 'pro') onDownloadSqlite?.();
@@ -166,23 +170,15 @@ export function Header({
           {currentUser?.plan !== 'pro' && <Crown className="w-3 h-3 text-amber-300 ml-0.5" />}
         </button>
 
-
-
-        {/* Google 시트 내보내기 */}
         <button
           onClick={onExportGoogleSheets}
           disabled={!hasSheetData || exportLoading}
           className="flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:hover:bg-blue-600 text-white shadow-xs transition active:scale-98"
         >
-          {exportLoading ? (
-            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-          ) : (
-            <Share2 className="w-3.5 h-3.5" />
-          )}
+          {exportLoading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Share2 className="w-3.5 h-3.5" />}
           Google 시트로 내보내기
         </button>
 
-        {/* 선택적 공유 버튼 */}
         <button
           onClick={onOpenShareModal}
           disabled={!hasSheetData}

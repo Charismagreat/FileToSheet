@@ -11,7 +11,7 @@ import { OriginalDocView } from '@/components/OriginalDocView';
 import { SummaryView } from '@/components/SummaryView';
 import {
   PhoneAuthModal, UploadOptionModal, OriginalFileModal,
-  AddColumnModal, ExportOptionModal, ShareModal, PlanLimitModal,
+  AddColumnModal, ExportOptionModal, ShareModal, PlanLimitModal, PricingModal,
 } from '@/components/modals';
 import { useAuth } from '@/hooks/useAuth';
 import { useWorkspace } from '@/hooks/useWorkspace';
@@ -19,10 +19,10 @@ import { useFileUpload } from '@/hooks/useFileUpload';
 import { useFileExport } from '@/hooks/useFileExport';
 import { getSheetOriginalFiles } from '@/lib/sheet-helpers';
 
-
 export default function FileToSheetApp() {
   const auth = useAuth();
   const [limitNotice, setLimitNotice] = useState<{ title: string; reason: string } | null>(null);
+  const [showPricingModal, setShowPricingModal] = useState<boolean>(false);
   const handlePlanLimit = (title: string, reason: string) => setLimitNotice({ title, reason });
 
   const ws = useWorkspace({
@@ -65,6 +65,7 @@ export default function FileToSheetApp() {
         onUploadFile={upload.handleFileDropOrSelect}
         onDownloadXlsx={fileExport.handleDownloadXlsx}
         onDownloadSqlite={fileExport.handleDownloadSqlite}
+        onOpenPricingModal={() => setShowPricingModal(true)}
         onOpenPlanModal={() => setLimitNotice({
           title: 'PRO 전용 기능',
           reason: 'SQLite DB 직접 다운로드 및 데이터 행 수 무제한 처리는 PRO 플랜 회원 혜택입니다.'
@@ -77,9 +78,7 @@ export default function FileToSheetApp() {
         exportLoading={fileExport.exportLoading}
       />
 
-
       <main className="flex-1 w-full px-4 sm:px-6 lg:px-8 py-3 flex flex-col gap-3">
-
         {ws.projects.length === 0 ? (
           <WelcomeDropzone
             isProcessing={upload.isProcessing}
@@ -177,7 +176,6 @@ export default function FileToSheetApp() {
       />
 
       <UploadOptionModal
-
         pendingFile={upload.pendingUploadFile}
         onClose={() => upload.setPendingUploadFile(null)}
         onSelectOption={upload.processFile}
@@ -190,6 +188,7 @@ export default function FileToSheetApp() {
       <ExportOptionModal isOpen={fileExport.isExportOptionModalOpen} onClose={() => fileExport.setIsExportOptionModalOpen(false)} onSelectOption={(mode) => fileExport.executeExportGoogleSheets(mode)} spreadsheetUrl={currentProject?.googleSpreadsheetUrl} loading={fileExport.exportLoading} />
       <ShareModal isOpen={showShareModal} onClose={() => setShowShareModal(false)} projects={ws.projects} initialProjectIndex={ws.activeProjectIndex} />
       <PlanLimitModal isOpen={Boolean(limitNotice)} onClose={() => setLimitNotice(null)} title={limitNotice?.title} reason={limitNotice?.reason || ''} plan={auth.currentUser?.plan} />
+      <PricingModal isOpen={showPricingModal} onClose={() => setShowPricingModal(false)} currentUser={auth.currentUser} onUpgrade={() => { setShowPricingModal(false); setLimitNotice({ title: 'PRO 플랜 업그레이드', reason: '월 9,900원에 500장 AI 파싱과 무제한 데이터 행을 누려보세요.' }); }} />
     </div>
   );
 }
