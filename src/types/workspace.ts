@@ -4,6 +4,7 @@ import { ParsedSheet } from '@/lib/parser';
 export interface OriginalDocFile {
   id?: number;
   uid?: string; // 클라이언트/세션 고유 식별자 (중복 파일명 격리용)
+  hash?: string; // 파일 내용의 SHA-256 디지털 지문 (동일 내용 중복 방지용)
   name: string;
   url: string;
   type?: string;

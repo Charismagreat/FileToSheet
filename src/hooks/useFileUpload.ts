@@ -5,7 +5,7 @@ import { ProjectWorkspace, OriginalDocFile } from '@/types/workspace';
 import { parseFileOnClient } from '@/lib/file-parser-client';
 import { createUploadedFileRecord, uploadToEgdeskStorage, updateFileParseResult, saveParsedSheetRows } from '@/lib/egdesk-db';
 import { getPlanLimits, checkSheetLimit, truncateRowsToLimit, validateUploadFile } from '@/lib/plan-limits';
-import { generateFileUid, getUniqueFileName } from '@/lib/sheet-helpers';
+import { generateFileUid, getUniqueFileName, computeFileHash } from '@/lib/sheet-helpers';
 
 interface UseFileUploadOptions {
   projects: ProjectWorkspace[];
@@ -24,6 +24,7 @@ export function useFileUpload({
   const [storageProgress, setStorageProgress] = useState<number>(0);
   const [pendingUploadFile, setPendingUploadFile] = useState<File | null>(null);
   const [initialPrompt, setInitialPrompt] = useState<string>('');
+  const [duplicateWarning, setDuplicateWarning] = useState<{ existingFile: OriginalDocFile; newFile: File; mode: 'new_document' | 'new_sheet' | 'append_rows'; prompt?: string } | null>(null);
   const uploadTimestampsRef = useRef<number[]>([]);
   const todayUploadsRef = useRef<{ date: string; count: number }>({ date: '', count: 0 });
 
@@ -31,8 +32,7 @@ export function useFileUpload({
   const currentSheet = currentProject ? currentProject.sheets[currentProject.activeSheetIndex] : null;
 
   const checkSafety = (file: File): boolean => {
-    const now = Date.now();
-    const today = new Date().toISOString().slice(0, 10);
+    const now = Date.now(), today = new Date().toISOString().slice(0, 10);
     if (todayUploadsRef.current.date !== today) todayUploadsRef.current = { date: today, count: 0 };
     uploadTimestampsRef.current = uploadTimestampsRef.current.filter((t) => now - t < 60000);
     const val = validateUploadFile(plan, file, uploadTimestampsRef.current.length, todayUploadsRef.current.count);
@@ -46,8 +46,14 @@ export function useFileUpload({
     return true;
   };
 
-  const processFile = async (file: File, mode: 'new_document' | 'new_sheet' | 'append_rows', customPrompt?: string) => {
+  const processFile = async (file: File, mode: 'new_document' | 'new_sheet' | 'append_rows', customPrompt?: string, bypassDup = false) => {
     setPendingUploadFile(null);
+    if (!bypassDup && currentProject) {
+      const fileHash = await computeFileHash(file);
+      const existing = (currentProject.originalFiles || []).find((f) => f.hash === fileHash);
+      if (existing) return setDuplicateWarning({ existingFile: existing, newFile: file, mode, prompt: customPrompt });
+    }
+
     setIsProcessing(true);
     setStorageProgress(0);
     const fileBlobUrl = URL.createObjectURL(file);
@@ -66,18 +72,15 @@ export function useFileUpload({
         for (const sheet of parsedSheets) await saveParsedSheetRows(fileId, sheet.name, sheet.rows, category);
         try {
           await uploadToEgdeskStorage(fileId, file, ({ sentBytes, totalBytes }) => setStorageProgress(Math.round((sentBytes / totalBytes) * 100)));
-        } catch (e) {
-          console.warn('스토리지 청크 업로드 건너뜀:', e);
-        }
+        } catch (e) { console.warn('스토리지 업로드 건너뜀:', e); }
       }
 
-      // 🌟 중복 파일명 방지 자동 넘버링 및 나노초 고유 UID 발급
+      const fileHash = await computeFileHash(file);
       const existingDocNames = (currentProject?.originalFiles || []).map((f) => f.name);
       const resolvedFileName = getUniqueFileName(existingDocNames, file.name);
       const fileUid = generateFileUid();
-
       const docItem: OriginalDocFile = {
-        id: fileId || undefined, uid: fileUid, name: resolvedFileName,
+        id: fileId || undefined, uid: fileUid, hash: fileHash, name: resolvedFileName,
         url: fileBlobUrl, type: file.type, size: file.size, uploadedAt: nowKst,
       };
 
@@ -87,33 +90,29 @@ export function useFileUpload({
           const proj = { ...next[activeProjectIndex] };
           const s = [...proj.sheets];
           const target = s[proj.activeSheetIndex];
-          const fixedHeaders = target.headers && target.headers.length > 0 ? target.headers : (parsedSheets[0]?.headers || []);
+          const fixedHeaders = target.headers?.length ? target.headers : (parsedSheets[0]?.headers || []);
 
-          if (!target.rows || target.rows.length === 0) {
+          if (!target.rows?.length) {
             const tr = truncateRowsToLimit(plan, 0, parsedSheets[0]?.rows || []);
             s[proj.activeSheetIndex] = {
-              ...target, headers: fixedHeaders,
+              ...target, headers: fixedHeaders, originalFiles: [...(target.originalFiles || []), docItem],
               rows: tr.rows.map((r) => ({ ...r, _fileId: fileId, _fileUid: fileUid, _fileName: resolvedFileName })),
-              originalFiles: [...(target.originalFiles || []), docItem],
             };
           } else {
             const rawIncoming = parsedSheets.flatMap((sh) => sh.rows);
             const tr = truncateRowsToLimit(plan, target.rows.length, rawIncoming);
             const mappedRows = tr.rows.map((row, i) => {
               const cleanRow: Record<string, any> = {};
-              for (const h of fixedHeaders) cleanRow[h] = row[h] !== undefined && row[h] !== null ? row[h] : '';
+              for (const h of fixedHeaders) cleanRow[h] = row[h] ?? '';
               const extra = Object.entries(row).filter(([k]) => !fixedHeaders.includes(k) && !k.startsWith('_')).map(([k, v]) => `[${k}] ${v}`).join(' | ');
               if (extra && fixedHeaders.includes('비고')) cleanRow['비고'] = cleanRow['비고'] ? `${cleanRow['비고']} | ${extra}` : extra;
               cleanRow['일련번호'] = target.rows.length + i + 1;
               cleanRow['등록일시'] = cleanRow['등록일시'] || row.등록일시 || nowKst;
-              cleanRow._fileId = fileId;
-              cleanRow._fileUid = fileUid;
-              cleanRow._fileName = resolvedFileName;
+              cleanRow._fileId = fileId; cleanRow._fileUid = fileUid; cleanRow._fileName = resolvedFileName;
               return cleanRow;
             });
             s[proj.activeSheetIndex] = {
-              ...target, headers: fixedHeaders,
-              rows: [...target.rows, ...mappedRows],
+              ...target, headers: fixedHeaders, rows: [...target.rows, ...mappedRows],
               originalFiles: [...(target.originalFiles || []), docItem],
             };
           }
@@ -121,11 +120,8 @@ export function useFileUpload({
           const prevDocs = proj.originalFiles || (proj.originalFileUrl ? [{
             uid: generateFileUid(), name: proj.name || '기존 문서', url: proj.originalFileUrl, type: proj.originalFileType, size: proj.originalFileSize, uploadedAt: proj.uploadedAt,
           }] : []);
-          proj.originalFiles = [...prevDocs, docItem];
-          proj.originalFileUrl = fileBlobUrl;
-          proj.originalFileType = file.type;
-          proj.originalFileSize = file.size;
-          proj.sheets = s;
+          proj.originalFiles = [...prevDocs, docItem]; proj.originalFileUrl = fileBlobUrl;
+          proj.originalFileType = file.type; proj.originalFileSize = file.size; proj.sheets = s;
           next[activeProjectIndex] = proj;
 
         } else if (mode === 'new_sheet' && next[activeProjectIndex]) {
@@ -136,27 +132,18 @@ export function useFileUpload({
             else alert(check.message);
             return prev;
           }
-          const incomingSheets = parsedSheets.map((sh) => {
-            const tr = truncateRowsToLimit(plan, 0, sh.rows);
-            return {
-              ...sh, originalFiles: [docItem],
-              rows: tr.rows.map((r) => ({ ...r, _fileId: fileId, _fileUid: fileUid, _fileName: resolvedFileName })),
-            };
-          });
-          proj.sheets = [...proj.sheets, ...incomingSheets];
-          proj.activeSheetIndex = proj.sheets.length - 1;
-          const prevDocs = proj.originalFiles || [];
-          proj.originalFiles = [...prevDocs, docItem];
-          next[activeProjectIndex] = proj;
+          const incomingSheets = parsedSheets.map((sh) => ({
+            ...sh, originalFiles: [docItem],
+            rows: truncateRowsToLimit(plan, 0, sh.rows).rows.map((r) => ({ ...r, _fileId: fileId, _fileUid: fileUid, _fileName: resolvedFileName })),
+          }));
+          proj.sheets = [...proj.sheets, ...incomingSheets]; proj.activeSheetIndex = proj.sheets.length - 1;
+          proj.originalFiles = [...(proj.originalFiles || []), docItem]; next[activeProjectIndex] = proj;
         } else {
           const maxSheets = getPlanLimits(plan).maxSheetsPerProject;
-          const createdSheets = parsedSheets.slice(0, maxSheets).map((sh) => {
-            const tr = truncateRowsToLimit(plan, 0, sh.rows);
-            return {
-              ...sh, originalFiles: [docItem],
-              rows: tr.rows.map((r) => ({ ...r, _fileId: fileId, _fileUid: fileUid, _fileName: resolvedFileName })),
-            };
-          });
+          const createdSheets = parsedSheets.slice(0, maxSheets).map((sh) => ({
+            ...sh, originalFiles: [docItem],
+            rows: truncateRowsToLimit(plan, 0, sh.rows).rows.map((r) => ({ ...r, _fileId: fileId, _fileUid: fileUid, _fileName: resolvedFileName })),
+          }));
           next.push({
             id: null, name: resolvedFileName.replace(/\.[^/.]+$/, ''), category, sheets: createdSheets,
             activeSheetIndex: 0, activeSubTab: 'table', originalFileUrl: fileBlobUrl, originalFileType: file.type,
@@ -170,10 +157,15 @@ export function useFileUpload({
       console.error('파일 처리 실패:', err);
       alert(`파일 처리 중 오류가 발생했습니다: ${err?.message || '알 수 없는 오류'}`);
     } finally {
-      setIsProcessing(false);
-      setProcessStatus('');
-      setStorageProgress(0);
+      setIsProcessing(false); setProcessStatus(''); setStorageProgress(0);
     }
+  };
+
+  const confirmProceedDuplicate = () => {
+    if (!duplicateWarning) return;
+    const { newFile, mode, prompt } = duplicateWarning;
+    setDuplicateWarning(null);
+    processFile(newFile, mode, prompt, true);
   };
 
   const handleFileDropOrSelect = (file: File) => {
@@ -191,5 +183,6 @@ export function useFileUpload({
   return {
     isProcessing, processStatus, storageProgress, pendingUploadFile, setPendingUploadFile,
     initialPrompt, setInitialPrompt, processFile, handleFileDropOrSelect, handleDropDirectlyToTable,
+    duplicateWarning, setDuplicateWarning, confirmProceedDuplicate,
   };
 }

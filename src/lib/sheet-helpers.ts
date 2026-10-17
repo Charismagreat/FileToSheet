@@ -86,3 +86,17 @@ export function getUniqueFileName(existingNames: string[], originalName: string)
   }
   return `${base} (${count})${ext}`;
 }
+
+/**
+ * 파일 내용의 SHA-256 디지털 지문(해시) 비동기 계산
+ */
+export async function computeFileHash(file: File): Promise<string> {
+  try {
+    const buffer = await file.arrayBuffer();
+    const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+  } catch (e) {
+    return `${file.size}_${file.lastModified}`;
+  }
+}

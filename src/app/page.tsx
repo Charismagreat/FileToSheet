@@ -11,7 +11,7 @@ import { OriginalDocView } from '@/components/OriginalDocView';
 import { SummaryView } from '@/components/SummaryView';
 import {
   PhoneAuthModal, UploadOptionModal, OriginalFileModal, AddColumnModal,
-  ExportOptionModal, ShareModal, PlanLimitModal, PricingModal, EnterpriseInquiryModal,
+  ExportOptionModal, ShareModal, PlanLimitModal, PricingModal, EnterpriseInquiryModal, DuplicateFileModal,
 } from '@/components/modals';
 import { useAuth } from '@/hooks/useAuth';
 import { useWorkspace } from '@/hooks/useWorkspace';
@@ -180,10 +180,8 @@ export default function FileToSheetApp() {
       />
 
       <UploadOptionModal
-        pendingFile={upload.pendingUploadFile}
-        onClose={() => upload.setPendingUploadFile(null)}
-        onSelectOption={upload.processFile}
-        hasExistingProject={ws.projects.length > 0}
+        pendingFile={upload.pendingUploadFile} onClose={() => upload.setPendingUploadFile(null)}
+        onSelectOption={upload.processFile} hasExistingProject={ws.projects.length > 0}
         initialPrompt={upload.initialPrompt}
       />
 
@@ -194,6 +192,7 @@ export default function FileToSheetApp() {
       <PlanLimitModal isOpen={Boolean(limitNotice)} onClose={() => setLimitNotice(null)} title={limitNotice?.title} reason={limitNotice?.reason || ''} plan={auth.currentUser?.plan} />
       <PricingModal isOpen={showPricingModal} onClose={() => setShowPricingModal(false)} currentUser={auth.currentUser} onUpgrade={() => { setShowPricingModal(false); setLimitNotice({ title: 'PRO 플랜 업그레이드', reason: '월 9,900원에 500장 AI 파싱과 무제한 데이터 행을 누려보세요.' }); }} onOpenEnterpriseInquiry={() => setShowEnterpriseModal(true)} />
       <EnterpriseInquiryModal isOpen={showEnterpriseModal} onClose={() => setShowEnterpriseModal(false)} />
+      <DuplicateFileModal isOpen={Boolean(upload.duplicateWarning)} onClose={() => upload.setDuplicateWarning(null)} existingFile={upload.duplicateWarning?.existingFile || null} newFile={upload.duplicateWarning?.newFile || null} onProceed={upload.confirmProceedDuplicate} />
     </div>
   );
 }
