@@ -7,6 +7,7 @@ import { apiFetch } from '@/lib/api';
 import { downloadWorkbook } from '@/lib/parser';
 import { TableHeader } from '@/components/TableHeader';
 import { SummaryView } from '@/components/SummaryView';
+import { SharePasswordGate } from '@/components/SharePasswordGate';
 
 function SharedProjectContent() {
   const params = useParams();
@@ -14,22 +15,42 @@ function SharedProjectContent() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
   const [shareConfig, setShareConfig] = useState<any>(null);
+  const [requirePassword, setRequirePassword] = useState<boolean>(false);
+  const [gateMeta, setGateMeta] = useState<{ projectName?: string; createdAt?: string }>({});
+  const [passwordError, setPasswordError] = useState<string>('');
+  const [pwLoading, setPwLoading] = useState<boolean>(false);
   const [activeSheetIdx, setActiveSheetIdx] = useState<number>(0);
   const [activeTab, setActiveTab] = useState<'table' | 'original' | 'summary'>('table');
 
-  useEffect(() => {
+  const fetchShareData = (pwd?: string) => {
     if (!token) return;
-    apiFetch(`/api/share?token=${token}`)
+    const url = pwd ? `/api/share?token=${token}&password=${encodeURIComponent(pwd)}` : `/api/share?token=${token}`;
+    return apiFetch(url)
       .then((res) => res.json())
       .then((data) => {
         if (!data.success) throw new Error(data.error || '문서를 불러올 수 없습니다.');
+        if (data.requirePassword) {
+          setRequirePassword(true);
+          setGateMeta({ projectName: data.projectName, createdAt: data.createdAt });
+          if (data.invalidPassword) setPasswordError('비밀번호가 올바르지 않습니다.');
+          return;
+        }
+        setRequirePassword(false);
         setShareConfig(data.shareConfig);
         const tabs = data.shareConfig.allowedTabs || ['table'];
         if (!tabs.includes('table') && tabs.length > 0) setActiveTab(tabs[0]);
       })
       .catch((e: any) => setError(e.message))
-      .finally(() => setLoading(false));
-  }, [token]);
+      .finally(() => { setLoading(false); setPwLoading(false); });
+  };
+
+  useEffect(() => { fetchShareData(); }, [token]);
+
+  const handlePasswordSubmit = (pwd: string) => {
+    setPwLoading(true);
+    setPasswordError('');
+    fetchShareData(pwd);
+  };
 
   if (loading) {
     return (
@@ -40,6 +61,10 @@ function SharedProjectContent() {
         </div>
       </div>
     );
+  }
+
+  if (requirePassword) {
+    return <SharePasswordGate projectName={gateMeta.projectName} createdAt={gateMeta.createdAt} error={passwordError} loading={pwLoading} onSubmit={handlePasswordSubmit} />;
   }
 
   if (error || !shareConfig) {
@@ -57,10 +82,11 @@ function SharedProjectContent() {
   const allowedTabs: string[] = shareConfig.allowedTabs || ['table', 'original', 'summary'];
   const sheetFiles = currentSheet?.originalFiles?.length > 0 ? currentSheet.originalFiles : (shareConfig.sheets?.length === 1 ? shareConfig.originalFiles : []);
 
-  const handleDownload = () => {
-    if (!shareConfig.sheets) return;
-    downloadWorkbook(shareConfig.sheets, `FileToSheet_${shareConfig.projectName}.xlsx`);
-  };
+  const TABS_DEF = [
+    { id: 'table', label: `표 데이터 (${currentSheet?.rows?.length || 0})`, icon: Table },
+    { id: 'original', label: `원본 증빙 (${sheetFiles?.length || 0})`, icon: FileText },
+    { id: 'summary', label: '요약 통계', icon: BarChart3 },
+  ];
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-800 font-sans">
@@ -75,17 +101,14 @@ function SharedProjectContent() {
             <div className="text-[10px] text-slate-400">공유 일시: {shareConfig.createdAt}</div>
           </div>
         </div>
-
         <div className="flex items-center gap-2">
           {shareConfig.allowDownload && (
-            <button onClick={handleDownload} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition">
-              <Download className="w-3.5 h-3.5" />
-              <span>.xlsx 다운로드</span>
+            <button onClick={() => shareConfig.sheets && downloadWorkbook(shareConfig.sheets, `FileToSheet_${shareConfig.projectName}.xlsx`)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition">
+              <Download className="w-3.5 h-3.5" /><span>.xlsx 다운로드</span>
             </button>
           )}
           <a href="/" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 transition shadow-xs">
-            <span>나도 써보기</span>
-            <ArrowRight className="w-3.5 h-3.5" />
+            <span>나도 써보기</span><ArrowRight className="w-3.5 h-3.5" />
           </a>
         </div>
       </header>
@@ -95,13 +118,7 @@ function SharedProjectContent() {
           {shareConfig.sheets.length > 1 && (
             <div className="flex items-center gap-1 px-3 pt-2 border-b border-slate-200 bg-slate-100/50 overflow-x-auto">
               {shareConfig.sheets.map((s: any, idx: number) => (
-                <button
-                  key={idx}
-                  onClick={() => setActiveSheetIdx(idx)}
-                  className={`px-3 py-1.5 text-xs font-semibold rounded-t-lg transition border-t border-x ${
-                    activeSheetIdx === idx ? 'bg-white border-slate-200 text-blue-700 shadow-2xs' : 'border-transparent text-slate-500 hover:bg-slate-200/50'
-                  }`}
-                >
+                <button key={idx} onClick={() => setActiveSheetIdx(idx)} className={`px-3 py-1.5 text-xs font-semibold rounded-t-lg transition border-t border-x ${activeSheetIdx === idx ? 'bg-white border-slate-200 text-blue-700 shadow-2xs' : 'border-transparent text-slate-500 hover:bg-slate-200/50'}`}>
                   {s.name} ({s.rows?.length || 0})
                 </button>
               ))}
@@ -110,24 +127,15 @@ function SharedProjectContent() {
 
           <div className="flex items-center justify-between px-4 py-2 border-b border-slate-100 bg-slate-50/50">
             <div className="flex items-center gap-1.5">
-              {allowedTabs.includes('table') && (
-                <button onClick={() => setActiveTab('table')} className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition ${activeTab === 'table' ? 'bg-white text-blue-700 shadow-xs border border-slate-200' : 'text-slate-500 hover:bg-slate-200/50'}`}>
-                  <Table className="w-3.5 h-3.5" />
-                  <span>표 데이터 ({currentSheet?.rows?.length || 0})</span>
-                </button>
-              )}
-              {allowedTabs.includes('original') && (
-                <button onClick={() => setActiveTab('original')} className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition ${activeTab === 'original' ? 'bg-white text-blue-700 shadow-xs border border-slate-200' : 'text-slate-500 hover:bg-slate-200/50'}`}>
-                  <FileText className="w-3.5 h-3.5" />
-                  <span>원본 증빙 ({sheetFiles?.length || 0})</span>
-                </button>
-              )}
-              {allowedTabs.includes('summary') && (
-                <button onClick={() => setActiveTab('summary')} className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition ${activeTab === 'summary' ? 'bg-white text-blue-700 shadow-xs border border-slate-200' : 'text-slate-500 hover:bg-slate-200/50'}`}>
-                  <BarChart3 className="w-3.5 h-3.5" />
-                  <span>요약 통계</span>
-                </button>
-              )}
+              {TABS_DEF.filter((t) => allowedTabs.includes(t.id)).map((tab) => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.id;
+                return (
+                  <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition ${isActive ? 'bg-white text-blue-700 shadow-xs border border-slate-200' : 'text-slate-500 hover:bg-slate-200/50'}`}>
+                    <Icon className="w-3.5 h-3.5" /><span>{tab.label}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -135,16 +143,7 @@ function SharedProjectContent() {
             {activeTab === 'table' && currentSheet && (
               <div className="overflow-auto max-h-[75vh]">
                 <table className="w-full text-left border-collapse text-xs">
-                  <TableHeader
-                    headers={currentSheet.headers}
-                    editingHeaderIdx={null}
-                    setEditingHeaderIdx={() => {}}
-                    editingHeaderValue=""
-                    setEditingHeaderValue={() => {}}
-                    onSaveHeaderEdit={() => {}}
-                    onDeleteColumn={() => {}}
-                    onReorderColumns={() => {}}
-                  />
+                  <TableHeader headers={currentSheet.headers} editingHeaderIdx={null} setEditingHeaderIdx={() => {}} editingHeaderValue="" setEditingHeaderValue={() => {}} onSaveHeaderEdit={() => {}} onDeleteColumn={() => {}} onReorderColumns={() => {}} />
                   <tbody className="divide-y divide-slate-100">
                     {currentSheet.rows.map((row: any, rIdx: number) => (
                       <tr key={rIdx} className="hover:bg-slate-50 transition">
@@ -167,9 +166,7 @@ function SharedProjectContent() {
                     {sheetFiles.map((file: any, fIdx: number) => (
                       <div key={fIdx} className="p-4 border border-slate-200 rounded-xl bg-slate-50 flex items-center justify-between">
                         <span className="font-mono font-medium text-slate-700">{file.name}</span>
-                        {file.url && (
-                          <a href={file.url} target="_blank" rel="noreferrer" className="text-blue-600 font-bold hover:underline">원본 열람</a>
-                        )}
+                        {file.url && <a href={file.url} target="_blank" rel="noreferrer" className="text-blue-600 font-bold hover:underline">원본 열람</a>}
                       </div>
                     ))}
                   </div>

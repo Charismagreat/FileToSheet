@@ -20,6 +20,7 @@ export async function POST(request: NextRequest) {
       allowDownload,
       sheets,
       originalFiles,
+      password,
     } = await request.json();
 
     if (!projectName || !Array.isArray(sheets)) {
@@ -32,10 +33,11 @@ export async function POST(request: NextRequest) {
     const token = generateShareToken();
     const now = new Intl.DateTimeFormat('ko-KR', { dateStyle: 'short', timeStyle: 'medium' }).format(new Date());
 
-    // 공유 스냅샷 페이로드 구성 (선택된 시트 및 탭만 필터링)
     const filteredSheets = sheets.filter((s: any) =>
       !allowedSheets || allowedSheets.length === 0 || allowedSheets.includes(s.name)
     );
+
+    const cleanPassword = typeof password === 'string' && password.trim().length > 0 ? password.trim() : null;
 
     const sharePayload = {
       token,
@@ -44,12 +46,13 @@ export async function POST(request: NextRequest) {
       allowedSheets: allowedSheets || [],
       allowedTabs: allowedTabs || ['table', 'original', 'summary'],
       allowDownload: allowDownload ?? true,
+      hasPassword: Boolean(cleanPassword),
+      password: cleanPassword,
       sheets: filteredSheets,
       originalFiles: (allowedTabs || []).includes('original') ? (originalFiles || []) : [],
       createdAt: now,
     };
 
-    // export_history 테이블에 안전하게 영구 저장
     await insertRows('export_history', [
       {
         file_id: projectId ? Number(projectId) : null,
@@ -79,6 +82,7 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const token = request.nextUrl.searchParams.get('token');
+    const inputPassword = request.nextUrl.searchParams.get('password');
     if (!token) {
       return NextResponse.json({ success: false, error: '토큰이 필요합니다.' }, { status: 400 });
     }
@@ -94,7 +98,21 @@ export async function GET(request: NextRequest) {
     }
 
     const shareConfig = JSON.parse(row.target_url);
-    return NextResponse.json({ success: true, shareConfig });
+
+    if (shareConfig.hasPassword) {
+      if (!inputPassword || inputPassword !== shareConfig.password) {
+        return NextResponse.json({
+          success: true,
+          requirePassword: true,
+          projectName: shareConfig.projectName,
+          createdAt: shareConfig.createdAt,
+          invalidPassword: Boolean(inputPassword),
+        });
+      }
+    }
+
+    const { password: _, ...safeConfig } = shareConfig;
+    return NextResponse.json({ success: true, requirePassword: false, shareConfig: safeConfig });
   } catch (error: any) {
     console.error('공유 링크 조회 실패:', error);
     return NextResponse.json(
