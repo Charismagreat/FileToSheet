@@ -72,10 +72,10 @@ const QUICK_CHIPS = [
 ];
 
 const REMOTE_QUICK_CHIPS = [
-  '📦 원격 Product 테이블의 전체 상품 요약과 총 건수 알려줘',
-  '💰 카테고리별 상품 수와 평균 단가 분석해줘',
-  '⚠️ 재고(stock) 부족 품목이나 주의가 필요한 상품 찾아줘',
-  '🔝 가장 가격이 높은 프리미엄 상품 상위 5개 뽑아줘',
+  '📦 원격 My DB 테이블의 데이터 요약과 총 건수 알려줘',
+  '💰 카테고리/항목별 데이터 수와 평균 수치 분석해줘',
+  '⚠️ 재고(stock) 부족이나 주의가 필요한 데이터 찾아줘',
+  '🔝 가장 수치/가격이 높은 상위 5개 데이터 뽑아줘',
 ];
 
 /**
@@ -799,10 +799,10 @@ export function AiChatDrawer({
                       ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-2xs font-extrabold'
                       : 'bg-white text-indigo-700 hover:bg-indigo-50 border border-indigo-200'
                   }`}
-                  title="원격지 이지데스크 터널 My DB (Product) 분석"
+                  title="원격지 이지데스크 터널 My DB 분석"
                 >
                   <Globe className="w-3 h-3 text-indigo-400" />
-                  <span>원격 Product DB</span>
+                  <span>원격 My DB</span>
                 </button>
               </div>
             </div>
