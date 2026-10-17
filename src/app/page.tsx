@@ -15,6 +15,7 @@ import {
   AccountTransferModal, ShareToManagerModal, ConsolidatedStatsModal, EmergencyRecoveryModal,
   ShareManagementModal, ExportScopeModal,
 } from '@/components/modals';
+import { UploadUndoToast } from '@/components/UploadUndoToast';
 import { ExportTargetType } from '@/components/ExportScopeModal';
 import { FilterState } from '@/components/DataFilterPopover';
 import { useAuth } from '@/hooks/useAuth';
@@ -409,6 +410,7 @@ export default function FileToSheetApp() {
         onSelectOption={upload.processFile}
         hasExistingProject={ws.projects.length > 0}
         initialPrompt={upload.initialPrompt}
+        currentProject={currentProject}
       />
 
       {/* 3. 원본 증빙 파일 미리보기 모달 */}
@@ -535,6 +537,13 @@ export default function FileToSheetApp() {
         totalCount={rawRowsWithOrigin.length}
         onConfirm={handleConfirmScope}
         loading={fileExport.exportLoading}
+      />
+
+      {/* 17. 파일 업로드 직후 1-Click 실행 취소 (Undo) 토스트 알림 */}
+      <UploadUndoToast
+        uploadInfo={upload.lastUploadAction}
+        onUndo={upload.undoLastUpload}
+        onDismiss={upload.dismissUndoToast}
       />
     </div>
   );

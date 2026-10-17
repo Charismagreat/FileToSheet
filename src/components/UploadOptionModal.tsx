@@ -1,14 +1,21 @@
 'use client';
 
-import React, { useState } from 'react';
-import { UploadCloud, FolderOpen, Table as TableIcon, Plus, X, Sparkles } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { UploadCloud, FolderOpen, Table as TableIcon, Plus, X, Sparkles, Layers } from 'lucide-react';
+import { ProjectWorkspace } from '@/types/workspace';
 
 interface UploadOptionModalProps {
   pendingFile: File | null;
   onClose: () => void;
-  onSelectOption: (file: File, mode: 'new_document' | 'new_sheet' | 'append_rows', customPrompt?: string) => void;
+  onSelectOption: (
+    file: File,
+    mode: 'new_document' | 'new_sheet' | 'append_rows',
+    customPrompt?: string,
+    targetSheetIndex?: number
+  ) => void;
   hasExistingProject?: boolean;
   initialPrompt?: string;
+  currentProject?: ProjectWorkspace | null;
 }
 
 const QUICK_PROMPTS = [
@@ -24,13 +31,21 @@ export function UploadOptionModal({
   onSelectOption,
   hasExistingProject = true,
   initialPrompt = '',
+  currentProject,
 }: UploadOptionModalProps) {
   const [customPrompt, setCustomPrompt] = useState<string>(initialPrompt);
+  const [targetSheetIdx, setTargetSheetIdx] = useState<number>(currentProject?.activeSheetIndex ?? 0);
 
-  // initialPrompt가 변경되면 반영
-  React.useEffect(() => {
+  // currentProject나 initialPrompt가 변경되면 반영
+  useEffect(() => {
     if (initialPrompt) setCustomPrompt(initialPrompt);
   }, [initialPrompt]);
+
+  useEffect(() => {
+    if (currentProject) {
+      setTargetSheetIdx(currentProject.activeSheetIndex ?? 0);
+    }
+  }, [currentProject]);
 
   if (!pendingFile) return null;
 
@@ -38,6 +53,8 @@ export function UploadOptionModal({
     setCustomPrompt((prev) => (prev ? `${prev.trim()}, ${text}` : text));
   };
 
+  const sheets = currentProject?.sheets || [];
+  const selectedSheet = sheets[targetSheetIdx] || sheets[0];
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
@@ -47,7 +64,7 @@ export function UploadOptionModal({
             <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
               <UploadCloud className="w-4 h-4" />
             </div>
-            <h3 className="font-bold text-slate-800 text-sm">업로드 방식 및 추출 규칙 선택</h3>
+            <h3 className="font-bold text-slate-800 text-sm">업로드 방식 및 적재 대상 시트 선택</h3>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
             <X className="w-4 h-4" />
@@ -90,7 +107,7 @@ export function UploadOptionModal({
         </div>
 
         {/* 업로드 대상 선택 버튼들 */}
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2.5">
           {!hasExistingProject ? (
             <button
               onClick={() => onSelectOption(pendingFile, 'new_document', customPrompt)}
@@ -101,33 +118,65 @@ export function UploadOptionModal({
             </button>
           ) : (
             <>
+              {/* 1. 현재 프로젝트 내 새 시트로 추가 */}
               <button
                 onClick={() => onSelectOption(pendingFile, 'new_sheet', customPrompt)}
-                className="flex items-start gap-3 p-3 rounded-xl border border-blue-200 bg-blue-50/50 hover:bg-blue-50 text-left transition"
+                className="flex items-start gap-3 p-3 rounded-xl border border-blue-200 bg-blue-50/50 hover:bg-blue-50 text-left transition group"
               >
-                <TableIcon className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
+                <TableIcon className="w-4 h-4 text-blue-600 mt-0.5 shrink-0 group-hover:scale-110 transition-transform" />
                 <div>
-                  <div className="text-xs font-bold text-blue-900">현재 프로젝트에 새 시트로 추가 (권장)</div>
-                  <div className="text-[11px] text-blue-700/80 mt-0.5">현재 프로젝트 내부에 새로운 서브 시트(Sheet)로 추가합니다.</div>
+                  <div className="text-xs font-bold text-blue-900">새 시트(Sheet)로 독립 생성 (권장)</div>
+                  <div className="text-[11px] text-blue-700/80 mt-0.5">기존 표와 섞이지 않도록 새 탭을 만들어 독립 적재합니다.</div>
                 </div>
               </button>
 
-              <button
-                onClick={() => onSelectOption(pendingFile, 'append_rows', customPrompt)}
-                className="flex items-start gap-3 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 text-left transition"
-              >
-                <Plus className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
-                <div>
-                  <div className="text-xs font-bold text-slate-800">현재 시트에 데이터 추가 (행 병합)</div>
-                  <div className="text-[11px] text-slate-500 mt-0.5">현재 보고 있는 시트의 아래에 새 데이터 행들을 이어 붙입니다.</div>
+              {/* 2. 대상 시트에 데이터 행 병합 (시트 선택 드롭다운 내장) */}
+              <div className="p-3 rounded-xl border border-slate-200 bg-slate-50/60 hover:bg-slate-50 transition space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-start gap-3">
+                    <Plus className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
+                    <div>
+                      <div className="text-xs font-bold text-slate-800">지정된 시트에 데이터 추가 (행 병합)</div>
+                      <div className="text-[11px] text-slate-500 mt-0.5">선택한 시트 아래에 데이터 행들을 이어 붙입니다.</div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onSelectOption(pendingFile, 'append_rows', customPrompt, targetSheetIdx)}
+                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg shadow-xs transition active:scale-95 shrink-0"
+                  >
+                    이 시트에 병합
+                  </button>
                 </div>
-              </button>
 
+                {/* 📌 적재 대상 시트 명시 및 선택 드롭다운 */}
+                {sheets.length > 0 && (
+                  <div className="mt-2 pt-2 border-t border-slate-200/80 flex items-center justify-between gap-2 bg-white px-3 py-1.5 rounded-lg border border-slate-200">
+                    <span className="text-[11px] font-extrabold text-slate-600 flex items-center gap-1 shrink-0">
+                      <Layers className="w-3.5 h-3.5 text-blue-600" />
+                      <span>적재 대상 시트:</span>
+                    </span>
+                    <select
+                      value={targetSheetIdx}
+                      onChange={(e) => setTargetSheetIdx(Number(e.target.value))}
+                      className="text-xs font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded px-2 py-1 focus:outline-none focus:border-blue-500 truncate max-w-[200px]"
+                    >
+                      {sheets.map((s, idx) => (
+                        <option key={idx} value={idx}>
+                          {s.name} ({s.rows?.length ?? 0}행)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              {/* 3. 새로운 독립 프로젝트로 열기 */}
               <button
                 onClick={() => onSelectOption(pendingFile, 'new_document', customPrompt)}
-                className="flex items-start gap-3 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 text-left transition"
+                className="flex items-start gap-3 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 text-left transition group"
               >
-                <FolderOpen className="w-4 h-4 text-slate-600 mt-0.5 shrink-0" />
+                <FolderOpen className="w-4 h-4 text-slate-600 mt-0.5 shrink-0 group-hover:scale-110 transition-transform" />
                 <div>
                   <div className="text-xs font-bold text-slate-800">새로운 독립 프로젝트로 열기</div>
                   <div className="text-[11px] text-slate-500 mt-0.5">기존 작업과 별개로 상단에 독립된 프로젝트를 생성합니다.</div>
@@ -140,4 +189,3 @@ export function UploadOptionModal({
     </div>
   );
 }
-

@@ -17,6 +17,15 @@ import {
 } from '@/lib/plan-limits';
 import { generateFileUid, getUniqueFileName, computeFileHash } from '@/lib/sheet-helpers';
 
+export interface LastUploadAction {
+  fileUid: string;
+  fileName: string;
+  rowCount: number;
+  sheetName: string;
+  mode: 'append_rows' | 'new_sheet' | 'new_document';
+  snapshot: ProjectWorkspace[];
+}
+
 interface UseFileUploadOptions {
   projects: ProjectWorkspace[];
   setProjects: React.Dispatch<React.SetStateAction<ProjectWorkspace[]>>;
@@ -39,14 +48,18 @@ export function useFileUpload({
   const [storageProgress, setStorageProgress] = useState<number>(0);
   const [pendingUploadFile, setPendingUploadFile] = useState<File | null>(null);
   const [initialPrompt, setInitialPrompt] = useState<string>('');
-  
+
   // 🌟 SHA-256 동일 파일 지문 감지 경고 상태
   const [duplicateWarning, setDuplicateWarning] = useState<{
     existingFile: OriginalDocFile;
     newFile: File;
     mode: 'new_document' | 'new_sheet' | 'append_rows';
     prompt?: string;
+    targetSheetIndex?: number;
   } | null>(null);
+
+  // 🌟 방금 업로드된 내역 1-Click 실행 취소(Undo) 상태
+  const [lastUploadAction, setLastUploadAction] = useState<LastUploadAction | null>(null);
 
   // 분당 호출 제한 및 일일 공정 사용 정책(FUP) 추적용 ref
   const uploadTimestampsRef = useRef<number[]>([]);
@@ -97,7 +110,8 @@ export function useFileUpload({
     file: File,
     mode: 'new_document' | 'new_sheet' | 'append_rows',
     customPrompt?: string,
-    bypassDup = false
+    bypassDup = false,
+    targetSheetIndex?: number
   ) => {
     setPendingUploadFile(null);
 
@@ -111,10 +125,14 @@ export function useFileUpload({
           newFile: file,
           mode,
           prompt: customPrompt,
+          targetSheetIndex,
         });
         return;
       }
     }
+
+    // 롤백(Undo)을 위해 직전 projects 상태 스냅샷 저장
+    const snapshotBeforeUpload: ProjectWorkspace[] = JSON.parse(JSON.stringify(projects));
 
     setIsProcessing(true);
     setStorageProgress(0);
@@ -125,9 +143,14 @@ export function useFileUpload({
     }).format(new Date());
 
     try {
+      const effectiveDestSheet =
+        currentProject && targetSheetIndex !== undefined
+          ? currentProject.sheets[targetSheetIndex]
+          : currentSheet;
+
       const targetHeaders =
-        mode === 'append_rows' && currentSheet?.headers?.length
-          ? currentSheet.headers
+        mode === 'append_rows' && effectiveDestSheet?.headers?.length
+          ? effectiveDestSheet.headers
           : undefined;
 
       // 2. 클라이언트 사이드 파일 파싱 (엑셀은 자체 파싱, PDF/이미지는 AI OCR)
@@ -177,21 +200,27 @@ export function useFileUpload({
         uploadedAt: nowKst,
       };
 
+      let recordedRowCount = 0;
+      let recordedSheetName = '';
+
       // 5. 프로젝트 및 시트 상태 업데이트 (모드별 분기)
       setProjects((prev) => {
         const next = [...prev];
 
-        // [모드 A] 현재 시트 끝에 행 추가 (append_rows)
+        // [모드 A] 지정된 시트(또는 현재 시트) 끝에 행 추가 (append_rows)
         if (mode === 'append_rows' && next[activeProjectIndex]) {
           const proj = { ...next[activeProjectIndex] };
           const s = [...proj.sheets];
-          const target = s[proj.activeSheetIndex];
+          const destIdx = targetSheetIndex !== undefined ? targetSheetIndex : proj.activeSheetIndex;
+          const target = s[destIdx] || s[0];
           const fixedHeaders =
             target.headers?.length ? target.headers : (parsedSheets[0]?.headers || []);
 
           if (!target.rows?.length) {
             const tr = truncateRowsToLimit(plan, 0, parsedSheets[0]?.rows || []);
-            s[proj.activeSheetIndex] = {
+            recordedRowCount = tr.rows.length;
+            recordedSheetName = target.name;
+            s[destIdx] = {
               ...target,
               headers: fixedHeaders,
               originalFiles: [...(target.originalFiles || []), docItem],
@@ -205,6 +234,8 @@ export function useFileUpload({
           } else {
             const rawIncoming = parsedSheets.flatMap((sh) => sh.rows);
             const tr = truncateRowsToLimit(plan, target.rows.length, rawIncoming);
+            recordedRowCount = tr.rows.length;
+            recordedSheetName = target.name;
 
             const mappedRows = tr.rows.map((row, i) => {
               const cleanRow: Record<string, any> = {};
@@ -230,7 +261,7 @@ export function useFileUpload({
               return cleanRow;
             });
 
-            s[proj.activeSheetIndex] = {
+            s[destIdx] = {
               ...target,
               headers: fixedHeaders,
               rows: [...target.rows, ...mappedRows],
@@ -252,6 +283,7 @@ export function useFileUpload({
           proj.originalFileType = file.type;
           proj.originalFileSize = file.size;
           proj.sheets = s;
+          proj.activeSheetIndex = destIdx; // 병합된 시트로 화면 즉시 전환
           next[activeProjectIndex] = proj;
 
         // [모드 B] 현재 프로젝트 내 새 시트로 생성 (new_sheet)
@@ -276,15 +308,17 @@ export function useFileUpload({
             })),
           }));
 
+          recordedRowCount = incomingSheets.reduce((sum, s) => sum + s.rows.length, 0);
+          recordedSheetName = incomingSheets[0]?.name || '새 시트';
+
           proj.sheets = [...proj.sheets, ...incomingSheets];
           proj.activeSheetIndex = proj.sheets.length - 1;
           proj.originalFiles = [...(proj.originalFiles || []), docItem];
           next[activeProjectIndex] = proj;
 
-        // [모드 C] 새 독립 프로젝트로 생성 (new_document)
+        // [모드 C] 새 프로젝트로 생성 (new_document)
         } else {
-          const maxSheets = getPlanLimits(plan).maxSheetsPerProject;
-          const createdSheets = parsedSheets.slice(0, maxSheets).map((sh) => ({
+          const enrichedSheets = parsedSheets.map((sh) => ({
             ...sh,
             originalFiles: [docItem],
             rows: truncateRowsToLimit(plan, 0, sh.rows).rows.map((r) => ({
@@ -295,28 +329,41 @@ export function useFileUpload({
             })),
           }));
 
-          next.push({
-            id: null,
+          recordedRowCount = enrichedSheets.reduce((sum, s) => sum + s.rows.length, 0);
+          recordedSheetName = enrichedSheets[0]?.name || 'Sheet1';
+
+          const newProj: ProjectWorkspace = {
+            id: fileId ? String(fileId) : Date.now().toString(),
             name: resolvedFileName.replace(/\.[^/.]+$/, ''),
             category,
-            sheets: createdSheets,
+            sheets: enrichedSheets,
             activeSheetIndex: 0,
-            activeSubTab: 'table',
             originalFileUrl: fileBlobUrl,
             originalFileType: file.type,
             originalFileSize: file.size,
             originalFiles: [docItem],
             uploadedAt: nowKst,
-          });
+          };
 
+          next.push(newProj);
           setActiveProjectIndex(next.length - 1);
         }
 
         return next;
       });
+
+      // 6. 업로드 직후 실행 취소(Undo) 토스트 활성화
+      setLastUploadAction({
+        fileUid,
+        fileName: resolvedFileName,
+        rowCount: recordedRowCount,
+        sheetName: recordedSheetName,
+        mode,
+        snapshot: snapshotBeforeUpload,
+      });
+
     } catch (err: any) {
-      console.error('파일 처리 실패:', err);
-      alert(`파일 처리 중 오류가 발생했습니다: ${err?.message || '알 수 없는 오류'}`);
+      alert(`파일 처리 실패: ${err?.message || '알 수 없는 오류'}`);
     } finally {
       setIsProcessing(false);
       setProcessStatus('');
@@ -324,14 +371,24 @@ export function useFileUpload({
     }
   };
 
-  /**
-   * 중복 파일 경고 모달에서 사용자가 "그래도 새로 적재"를 승인했을 때 실행
-   */
+  // 1-Click 실행 취소 (Undo)
+  const undoLastUpload = () => {
+    if (!lastUploadAction) return;
+    setProjects(lastUploadAction.snapshot);
+    const fname = lastUploadAction.fileName;
+    setLastUploadAction(null);
+    alert(`방금 업로드된 '${fname}' 파일 데이터가 성공적으로 실행 취소(롤백)되었습니다.`);
+  };
+
+  const dismissUndoToast = () => {
+    setLastUploadAction(null);
+  };
+
   const confirmProceedDuplicate = () => {
     if (!duplicateWarning) return;
-    const { newFile, mode, prompt } = duplicateWarning;
+    const { newFile, mode, prompt, targetSheetIndex } = duplicateWarning;
     setDuplicateWarning(null);
-    processFile(newFile, mode, prompt, true);
+    processFile(newFile, mode, prompt, true, targetSheetIndex);
   };
 
   const handleFileDropOrSelect = (file: File) => {
@@ -360,5 +417,8 @@ export function useFileUpload({
     duplicateWarning,
     setDuplicateWarning,
     confirmProceedDuplicate,
+    lastUploadAction,
+    undoLastUpload,
+    dismissUndoToast,
   };
 }
