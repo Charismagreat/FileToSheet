@@ -36,7 +36,7 @@ export function ProjectBar({
       <div className="flex items-center gap-1.5 overflow-x-auto">
         <div className="flex items-center gap-1.5 text-xs text-slate-500 mr-2 shrink-0 font-bold">
           <FolderOpen className="w-4 h-4 text-blue-600" />
-          <span>📁 프로젝트:</span>
+          <span>프로젝트:</span>
         </div>
         {projects.map((proj, idx) => {
           const isActive = activeProjectIndex === idx;

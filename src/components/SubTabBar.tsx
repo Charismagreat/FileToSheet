@@ -60,7 +60,7 @@ export function SubTabBar({
           }`}
         >
           <TableIcon className="w-3.5 h-3.5" />
-          <span>📊 표 데이터 ({rowsCount}행)</span>
+          <span>표 데이터 ({rowsCount}행)</span>
           {isFiltered && totalRowsCount !== undefined && (
             <span className="text-[10px] font-bold text-blue-600 bg-blue-100/80 px-1.5 py-0.2 rounded ml-0.5">
               전체 {totalRowsCount}행 중
@@ -75,7 +75,7 @@ export function SubTabBar({
           }`}
         >
           <Eye className="w-3.5 h-3.5" />
-          <span>👁️ 원본 증빙 대조 {originalFilesCount > 0 ? `(${originalFilesCount}개)` : hasOriginalFile ? '✓' : ''}</span>
+          <span>원본 증빙 대조 {originalFilesCount > 0 ? `(${originalFilesCount}개)` : hasOriginalFile ? '✓' : ''}</span>
         </button>
 
         <button
@@ -85,7 +85,7 @@ export function SubTabBar({
           }`}
         >
           <BarChart3 className="w-3.5 h-3.5" />
-          <span>📈 요약 및 통계</span>
+          <span>요약 및 통계</span>
         </button>
       </div>
 

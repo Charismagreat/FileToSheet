@@ -41,7 +41,7 @@ export function SheetBar({
       <div className="flex items-center gap-1.5 overflow-x-auto">
         <div className="flex items-center gap-1 text-xs text-slate-500 mr-1.5 shrink-0 font-bold">
           <TableIcon className="w-4 h-4 text-blue-600" />
-          <span>📑 시트:</span>
+          <span>시트:</span>
         </div>
         {sheets.map((sheet, idx) => {
           const isCurrent = activeSheetIndex === idx;
@@ -126,12 +126,6 @@ export function SheetBar({
           <span className="text-[10px] text-slate-400 font-mono">({sheets.length}/{maxSheets})</span>
         </button>
       </div>
-
-      {category && (
-        <span className="text-xs bg-indigo-50 border border-indigo-200 text-indigo-700 px-2.5 py-1 rounded-md font-semibold">
-          {category}
-        </span>
-      )}
     </div>
   );
 }
