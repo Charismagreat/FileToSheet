@@ -66,6 +66,7 @@ export default function FileToSheetApp() {
         currentUser={auth.currentUser}
         onOpenLoginModal={() => auth.setShowPhoneAuthModal(true)}
         onLogout={auth.handleLogout}
+        onUploadFile={upload.handleFileDropOrSelect}
         onDownloadXlsx={fileExport.handleDownloadXlsx}
         onDownloadSqlite={fileExport.handleDownloadSqlite}
         onOpenPlanModal={() => setLimitNotice({
@@ -80,8 +81,8 @@ export default function FileToSheetApp() {
         exportLoading={fileExport.exportLoading}
       />
 
-
       <main className="flex-1 w-full px-4 sm:px-6 lg:px-8 py-3 flex flex-col gap-3">
+
         {ws.projects.length === 0 ? (
           <WelcomeDropzone
             isProcessing={upload.isProcessing}
@@ -178,8 +179,15 @@ export default function FileToSheetApp() {
         onSendCode={auth.handleSendAuthCode} onVerifyCode={auth.handleVerifyAuthCode}
       />
 
+      <UploadOptionModal
 
-      <UploadOptionModal pendingFile={upload.pendingUploadFile} onClose={() => upload.setPendingUploadFile(null)} onSelectOption={upload.processFile} />
+        pendingFile={upload.pendingUploadFile}
+        onClose={() => upload.setPendingUploadFile(null)}
+        onSelectOption={upload.processFile}
+        hasExistingProject={ws.projects.length > 0}
+        initialPrompt={upload.initialPrompt}
+      />
+
       <OriginalFileModal show={showOriginalModal} onClose={() => setShowOriginalModal(false)} project={currentProject} />
       <AddColumnModal show={ws.isAddingColumn} onClose={() => ws.setIsAddingColumn(false)} newColumnName={ws.newColumnName} setNewColumnName={ws.setNewColumnName} onAddColumn={ws.handleAddColumn} />
       <ExportOptionModal isOpen={fileExport.isExportOptionModalOpen} onClose={() => fileExport.setIsExportOptionModalOpen(false)} onSelectOption={(mode) => fileExport.executeExportGoogleSheets(mode)} spreadsheetUrl={currentProject?.googleSpreadsheetUrl} loading={fileExport.exportLoading} />

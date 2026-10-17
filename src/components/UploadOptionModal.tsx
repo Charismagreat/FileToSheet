@@ -7,6 +7,8 @@ interface UploadOptionModalProps {
   pendingFile: File | null;
   onClose: () => void;
   onSelectOption: (file: File, mode: 'new_document' | 'new_sheet' | 'append_rows', customPrompt?: string) => void;
+  hasExistingProject?: boolean;
+  initialPrompt?: string;
 }
 
 const QUICK_PROMPTS = [
@@ -20,14 +22,22 @@ export function UploadOptionModal({
   pendingFile,
   onClose,
   onSelectOption,
+  hasExistingProject = true,
+  initialPrompt = '',
 }: UploadOptionModalProps) {
-  const [customPrompt, setCustomPrompt] = useState<string>('');
+  const [customPrompt, setCustomPrompt] = useState<string>(initialPrompt);
+
+  // initialPrompt가 변경되면 반영
+  React.useEffect(() => {
+    if (initialPrompt) setCustomPrompt(initialPrompt);
+  }, [initialPrompt]);
 
   if (!pendingFile) return null;
 
   const handleAppendPrompt = (text: string) => {
     setCustomPrompt((prev) => (prev ? `${prev.trim()}, ${text}` : text));
   };
+
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
@@ -81,46 +91,53 @@ export function UploadOptionModal({
 
         {/* 업로드 대상 선택 버튼들 */}
         <div className="flex flex-col gap-2">
-          <button
-            onClick={() => onSelectOption(pendingFile, 'new_document', customPrompt)}
-            className="flex items-start gap-3 p-3 rounded-xl border border-blue-200 bg-blue-50/50 hover:bg-blue-50 text-left transition"
-          >
-            <FolderOpen className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
-            <div>
-              <div className="text-xs font-bold text-blue-900">새로운 프로젝트로 열기</div>
-              <div className="text-[11px] text-blue-700/80 mt-0.5">
-                기존 작업과 별개로 상단에 독립된 프로젝트를 생성하여 보존합니다.
-              </div>
-            </div>
-          </button>
+          {!hasExistingProject ? (
+            <button
+              onClick={() => onSelectOption(pendingFile, 'new_document', customPrompt)}
+              className="flex items-center justify-center gap-2 p-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md transition active:scale-98"
+            >
+              <FolderOpen className="w-4 h-4 text-white" />
+              <span>AI 파싱 및 새 프로젝트 시작하기</span>
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={() => onSelectOption(pendingFile, 'new_sheet', customPrompt)}
+                className="flex items-start gap-3 p-3 rounded-xl border border-blue-200 bg-blue-50/50 hover:bg-blue-50 text-left transition"
+              >
+                <TableIcon className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
+                <div>
+                  <div className="text-xs font-bold text-blue-900">현재 프로젝트에 새 시트로 추가 (권장)</div>
+                  <div className="text-[11px] text-blue-700/80 mt-0.5">현재 프로젝트 내부에 새로운 서브 시트(Sheet)로 추가합니다.</div>
+                </div>
+              </button>
 
-          <button
-            onClick={() => onSelectOption(pendingFile, 'new_sheet', customPrompt)}
-            className="flex items-start gap-3 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 text-left transition"
-          >
-            <TableIcon className="w-4 h-4 text-slate-600 mt-0.5 shrink-0" />
-            <div>
-              <div className="text-xs font-bold text-slate-800">현재 프로젝트에 새 시트로 추가 (권장)</div>
-              <div className="text-[11px] text-slate-500 mt-0.5">
-                현재 프로젝트 내부에 새로운 서브 시트(Sheet)로 추가합니다.
-              </div>
-            </div>
-          </button>
+              <button
+                onClick={() => onSelectOption(pendingFile, 'append_rows', customPrompt)}
+                className="flex items-start gap-3 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 text-left transition"
+              >
+                <Plus className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
+                <div>
+                  <div className="text-xs font-bold text-slate-800">현재 시트에 데이터 추가 (행 병합)</div>
+                  <div className="text-[11px] text-slate-500 mt-0.5">현재 보고 있는 시트의 아래에 새 데이터 행들을 이어 붙입니다.</div>
+                </div>
+              </button>
 
-          <button
-            onClick={() => onSelectOption(pendingFile, 'append_rows', customPrompt)}
-            className="flex items-start gap-3 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 text-left transition"
-          >
-            <Plus className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
-            <div>
-              <div className="text-xs font-bold text-slate-800">현재 시트에 데이터 추가 (행 병합)</div>
-              <div className="text-[11px] text-slate-500 mt-0.5">
-                현재 보고 있는 시트의 아래에 새 데이터 행들을 그대로 이어 붙입니다.
-              </div>
-            </div>
-          </button>
+              <button
+                onClick={() => onSelectOption(pendingFile, 'new_document', customPrompt)}
+                className="flex items-start gap-3 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 text-left transition"
+              >
+                <FolderOpen className="w-4 h-4 text-slate-600 mt-0.5 shrink-0" />
+                <div>
+                  <div className="text-xs font-bold text-slate-800">새로운 독립 프로젝트로 열기</div>
+                  <div className="text-[11px] text-slate-500 mt-0.5">기존 작업과 별개로 상단에 독립된 프로젝트를 생성합니다.</div>
+                </div>
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>
   );
 }
+

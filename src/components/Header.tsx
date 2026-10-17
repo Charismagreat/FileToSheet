@@ -12,6 +12,7 @@ import {
   User,
   Database,
   Crown,
+  UploadCloud,
 } from 'lucide-react';
 import { UserSession } from '@/types/workspace';
 
@@ -25,22 +26,27 @@ interface HeaderProps {
   onExportGoogleSheets: () => void;
   onOpenOriginalModal: () => void;
   onOpenShareModal: () => void;
+  onUploadFile?: (file: File) => void;
   hasOriginalFile: boolean;
   hasSheetData: boolean;
   exportLoading: boolean;
 }
-
 
 export function Header({
   currentUser,
   onOpenLoginModal,
   onLogout,
   onDownloadXlsx,
+  onDownloadSqlite,
+  onOpenPlanModal,
   onExportGoogleSheets,
   onOpenShareModal,
+  onUploadFile,
   hasSheetData,
   exportLoading,
 }: HeaderProps) {
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
   return (
     <header className="border-b border-slate-200/80 bg-white/95 backdrop-blur sticky top-0 z-30 px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-4 shadow-xs">
       <div className="flex items-center gap-3">
@@ -54,6 +60,20 @@ export function Header({
       </div>
 
       <div className="flex items-center gap-2.5">
+
+        {/* 숨김 파일 인풋 */}
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={(e) => {
+            if (e.target.files && e.target.files[0] && onUploadFile) {
+              onUploadFile(e.target.files[0]);
+              e.target.value = '';
+            }
+          }}
+          accept=".xlsx,.xls,.csv,.pdf,image/*"
+          className="hidden"
+        />
 
         {/* 회원 로그인 상태 뱃지 또는 가입 버튼 */}
         {currentUser ? (
@@ -83,9 +103,23 @@ export function Header({
             className="flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition active:scale-98"
           >
             <Smartphone className="w-3.5 h-3.5" />
-            휴대폰 간편 로그인
+            로그인
           </button>
         )}
+
+        {/* 새 파일 추가 버튼 (항상 자연어 지시사항 모달 연동) */}
+        {onUploadFile && (
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 shadow-2xs transition active:scale-98"
+            title="새 파일 업로드 및 AI 자연어 추출 요청"
+          >
+            <UploadCloud className="w-3.5 h-3.5 text-blue-600" />
+            <span>파일 추가</span>
+          </button>
+        )}
+
+
 
         {/* 엑셀 다운로드 */}
         <button

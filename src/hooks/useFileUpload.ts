@@ -32,20 +32,22 @@ export function useFileUpload({
   const [processStatus, setProcessStatus] = useState<string>('');
   const [storageProgress, setStorageProgress] = useState<number>(0);
   const [pendingUploadFile, setPendingUploadFile] = useState<File | null>(null);
+  const [initialPrompt, setInitialPrompt] = useState<string>('');
 
   const currentProject = projects[activeProjectIndex] || null;
   const currentSheet = currentProject ? currentProject.sheets[currentProject.activeSheetIndex] : null;
 
-  const handleFileDropOrSelect = (file: File) => {
+  const handleFileDropOrSelect = (file: File, prompt?: string) => {
     if (!file) return;
-    if (projects.length > 0 && currentSheet) setPendingUploadFile(file);
-    else processFile(file, 'new_document');
+    if (prompt !== undefined) setInitialPrompt(prompt);
+    setPendingUploadFile(file);
   };
 
   const handleDropDirectlyToTable = (file: File) => {
     if (!file) return;
     processFile(file, 'append_rows');
   };
+
 
   const processFile = async (
     file: File,
@@ -177,13 +179,10 @@ export function useFileUpload({
   };
 
   return {
-    isProcessing,
-    processStatus,
-    storageProgress,
-    pendingUploadFile,
-    setPendingUploadFile,
-    handleFileDropOrSelect,
-    handleDropDirectlyToTable,
-    processFile,
+    isProcessing, processStatus, storageProgress,
+    pendingUploadFile, setPendingUploadFile,
+    initialPrompt, setInitialPrompt,
+    handleFileDropOrSelect, handleDropDirectlyToTable, processFile,
   };
 }
+
