@@ -31,11 +31,14 @@ export function PlanLimitModal({ isOpen, onClose, title = '이용 한도 도달 
         <h3 className="font-bold text-slate-800 text-sm mb-1">{title}</h3>
         <p className="text-xs text-slate-600 mb-4 leading-relaxed">{reason}</p>
 
-        {/* PRO 플랜 비교 안내 박스 */}
+        {/* PRO 플랜 비교 안내 박스 (방안 A: 하이브리드 종량제) */}
         <div className="p-3.5 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50/60 border border-blue-100 mb-5">
-          <div className="flex items-center gap-1.5 text-xs font-bold text-blue-900 mb-2">
-            <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-            <span>⭐ PRO 플랜 혜택</span>
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-blue-900">
+              <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+              <span>⭐ PRO 플랜 혜택</span>
+            </div>
+            <span className="text-[11px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">월 9,900원</span>
           </div>
           <ul className="text-xs text-slate-700 space-y-1.5">
             <li className="flex items-center gap-1.5">
@@ -48,7 +51,11 @@ export function PlanLimitModal({ isOpen, onClose, title = '이용 한도 도달 
             </li>
             <li className="flex items-center gap-1.5">
               <Check className="w-3 h-3 text-blue-600 shrink-0" />
-              <span>AI 파일 파싱 <strong>무제한 지원</strong> (Free: 월 30건)</span>
+              <span>월 <strong>300장 기본 파싱</strong> + 초과 시 <strong>장당 20원</strong></span>
+            </li>
+            <li className="flex items-center gap-1.5">
+              <Check className="w-3 h-3 text-blue-600 shrink-0" />
+              <span>Google Sheets 원클릭 연동 & 비밀번호 보호 공유</span>
             </li>
           </ul>
         </div>

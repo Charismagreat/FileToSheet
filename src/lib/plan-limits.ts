@@ -1,32 +1,41 @@
 /**
- * FileToSheet 회원 등급별(Free vs Pro) 이용 한도 정책
+ * FileToSheet 회원 등급별(Free vs Pro) 이용 한도 및 요금 정책 (방안 A: 하이브리드 종량제)
  */
 
 export interface PlanPolicy {
   name: string;
   badge: string;
+  monthlyPrice: number;        // 월 구독료 (원)
+  annualMonthlyPrice: number;  // 연간 결제 시 월 환산 요금 (원)
   maxSheetsPerProject: number; // 프로젝트당 최대 시트 수
   maxRowsPerSheet: number;     // 시트당 최대 데이터 행 수
   maxTotalRowsPerProject: number; // 프로젝트당 총 데이터 행 수
-  maxMonthlyParsing: number;   // 월간 AI 파일 파싱 한도
+  includedMonthlyDocs: number; // 월간 기본 포함 AI 파싱 건수
+  overagePricePerDoc: number;  // 기본 제공량 초과 시 장당 종량제 요금 (원)
 }
 
 export const PLAN_LIMITS: Record<string, PlanPolicy> = {
   free: {
     name: '기본 회원',
     badge: 'Free',
+    monthlyPrice: 0,
+    annualMonthlyPrice: 0,
     maxSheetsPerProject: 5,
     maxRowsPerSheet: 500,
     maxTotalRowsPerProject: 2500,
-    maxMonthlyParsing: 30,
+    includedMonthlyDocs: 30,
+    overagePricePerDoc: 0,
   },
   pro: {
     name: '프로 회원',
     badge: 'PRO',
+    monthlyPrice: 9900,
+    annualMonthlyPrice: 7900,
     maxSheetsPerProject: 30,
     maxRowsPerSheet: 10000,
     maxTotalRowsPerProject: 100000,
-    maxMonthlyParsing: Infinity,
+    includedMonthlyDocs: 300,
+    overagePricePerDoc: 20,
   },
 };
 
