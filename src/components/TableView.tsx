@@ -30,6 +30,9 @@ interface TableViewProps {
   onDeleteColumn: (col: string) => void;
   onReorderColumns: (fromIdx: number, toIdx: number) => void;
   onDeleteRow: (rowIdx: number) => void;
+  sortCol?: string | null;
+  sortDir?: 'asc' | 'desc' | null;
+  onToggleColSort?: (header: string) => void;
 }
 
 export function TableView({
@@ -37,6 +40,7 @@ export function TableView({
   isProcessing, processStatus, storageProgress = 0, editingCell, setEditingCell, editValue, setEditValue,
   onSaveCellEdit, editingHeaderIdx, setEditingHeaderIdx, editingHeaderValue, setEditingHeaderValue,
   onSaveHeaderEdit, onDeleteColumn, onReorderColumns, onDeleteRow,
+  sortCol, sortDir, onToggleColSort,
 }: TableViewProps) {
   const [hoveredFileKey, setHoveredFileKey] = useState<string | number | null>(null);
 
@@ -95,6 +99,7 @@ export function TableView({
             headers={sheet.headers} editingHeaderIdx={editingHeaderIdx} setEditingHeaderIdx={setEditingHeaderIdx}
             editingHeaderValue={editingHeaderValue} setEditingHeaderValue={setEditingHeaderValue}
             onSaveHeaderEdit={onSaveHeaderEdit} onDeleteColumn={onDeleteColumn} onReorderColumns={onReorderColumns}
+            sortCol={sortCol} sortDir={sortDir} onToggleColSort={onToggleColSort}
           />
 
           <tbody className="divide-y divide-slate-100 font-sans">

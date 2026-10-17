@@ -17,6 +17,7 @@ interface SubTabBarProps {
   onOpenAddColumn: () => void;
   sortOrder?: 'desc' | 'asc';
   onToggleSort?: () => void;
+  activeSortLabel?: string;
   headers?: string[];
   filterState?: FilterState;
   onFilterChange?: (newState: FilterState) => void;
@@ -101,15 +102,19 @@ export function SubTabBar({
             />
           )}
 
-          {/* 최신순 / 등록순 정렬 토글 */}
+          {/* 최신순 / 등록순 / 컬럼별 정렬 토글 */}
           {onToggleSort && (
             <button
               onClick={onToggleSort}
-              className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg transition"
-              title={sortOrder === 'desc' ? '현재 최신 데이터 우선 정렬 (클릭 시 과거 등록순)' : '현재 과거 등록순 정렬 (클릭 시 최신순)'}
+              className={`flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg border transition ${
+                activeSortLabel
+                  ? 'bg-blue-50 text-blue-700 border-blue-300'
+                  : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200'
+              }`}
+              title="정렬 기준 토글 (컬럼 헤더를 클릭하여 해당 열 기준으로 정렬할 수도 있습니다)"
             >
               <ArrowUpDown className="w-3.5 h-3.5 text-blue-600" />
-              <span>{sortOrder === 'desc' ? '⬇️ 최신순' : '⬆️ 과거순'}</span>
+              <span>{activeSortLabel || (sortOrder === 'desc' ? '⬇️ 최신순' : '⬆️ 과거순')}</span>
             </button>
           )}
 

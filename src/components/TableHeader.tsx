@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, ChevronLeft, ChevronRight, GripVertical } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, GripVertical, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 
 interface TableHeaderProps {
   headers: string[];
@@ -12,6 +12,9 @@ interface TableHeaderProps {
   onSaveHeaderEdit: () => void;
   onDeleteColumn: (header: string) => void;
   onReorderColumns: (fromIdx: number, toIdx: number) => void;
+  sortCol?: string | null;
+  sortDir?: 'asc' | 'desc' | null;
+  onToggleColSort?: (header: string) => void;
 }
 
 function getColumnLetter(colIndex: number): string {
@@ -33,6 +36,9 @@ export function TableHeader({
   onSaveHeaderEdit,
   onDeleteColumn,
   onReorderColumns,
+  sortCol,
+  sortDir,
+  onToggleColSort,
 }: TableHeaderProps) {
   const [draggedColIdx, setDraggedColIdx] = useState<number | null>(null);
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
@@ -70,7 +76,7 @@ export function TableHeader({
         <th className="w-12 py-1 bg-slate-100/90"></th>
       </tr>
 
-      {/* 2행: 실제 데이터 열 이름 행 (드래그 앤 드롭 및 좌우 이동 버튼) */}
+      {/* 2행: 실제 데이터 열 이름 행 (드래그 앤 드롭, 정렬 토글, 좌우 이동) */}
       <tr className="bg-slate-50 border-b border-slate-200 text-xs">
         <th className="w-10 px-3 py-2 text-center text-slate-400 font-mono text-[11px] border-r border-slate-200">
           #
@@ -80,6 +86,7 @@ export function TableHeader({
           const isDefaultCol = header === '일련번호' || header === '등록일시';
           const isBeingDragged = draggedColIdx === colIdx;
           const isTarget = dragOverIdx === colIdx;
+          const isSorted = sortCol === header;
 
           return (
             <th
@@ -92,7 +99,9 @@ export function TableHeader({
               onDragEnd={() => { setDraggedColIdx(null); setDragOverIdx(null); }}
               className={`px-2.5 py-2 font-bold text-slate-700 border-r border-slate-200 group/col relative transition-all ${
                 isBeingDragged ? 'opacity-40 bg-slate-200' : 'bg-slate-50'
-              } ${isTarget ? 'border-l-4 border-l-blue-600 bg-blue-50/60' : ''}`}
+              } ${isTarget ? 'border-l-4 border-l-blue-600 bg-blue-50/60' : ''} ${
+                isSorted ? 'bg-blue-50/50 text-blue-900' : ''
+              }`}
             >
               <div className="flex items-center justify-between gap-1.5 min-w-[100px]">
                 {/* 드래그 핸들 (호버 시 표시) */}
@@ -117,12 +126,14 @@ export function TableHeader({
                   />
                 ) : (
                   <div
-                    onDoubleClick={() => {
+                    onClick={() => onToggleColSort && onToggleColSort(header)}
+                    onDoubleClick={(e) => {
+                      e.stopPropagation();
                       setEditingHeaderIdx(colIdx);
                       setEditingHeaderValue(header);
                     }}
-                    className="flex items-center gap-1.5 cursor-pointer hover:text-blue-700 flex-1 truncate"
-                    title="더블클릭하여 편집 / 드래그하여 순서 변경"
+                    className="flex items-center gap-1.5 cursor-pointer hover:text-blue-700 flex-1 truncate py-0.5"
+                    title="클릭: 오름차순/내림차순 정렬 / 더블클릭: 열 이름 수정"
                   >
                     <span className="truncate">{header}</span>
                     {isDefaultCol && (
@@ -130,16 +141,29 @@ export function TableHeader({
                         기본열
                       </span>
                     )}
+
+                    {/* 정렬 표시 아이콘 */}
+                    <div className="shrink-0 flex items-center">
+                      {isSorted ? (
+                        sortDir === 'asc' ? (
+                          <ArrowUp className="w-3.5 h-3.5 text-blue-600 font-bold" />
+                        ) : (
+                          <ArrowDown className="w-3.5 h-3.5 text-blue-600 font-bold" />
+                        )
+                      ) : (
+                        <ArrowUpDown className="w-3 h-3 text-slate-300 opacity-0 group-hover/col:opacity-100 transition-opacity" />
+                      )}
+                    </div>
                   </div>
                 )}
 
-                {/* 좌/우 이동 화살표 버튼 (호버 시 노출) */}
+                {/* 좌/우 이동 화살표 및 삭제 버튼 (호버 시 노출) */}
                 {!isEditing && (
                   <div className="opacity-0 group-hover/col:opacity-100 flex items-center gap-0.5 shrink-0 transition">
                     <button
                       type="button"
                       disabled={colIdx === 0}
-                      onClick={() => onReorderColumns(colIdx, colIdx - 1)}
+                      onClick={(e) => { e.stopPropagation(); onReorderColumns(colIdx, colIdx - 1); }}
                       className="p-0.5 hover:bg-slate-200 rounded text-slate-400 hover:text-slate-700 disabled:opacity-20"
                       title="왼쪽으로 이동"
                     >
@@ -148,7 +172,7 @@ export function TableHeader({
                     <button
                       type="button"
                       disabled={colIdx === headers.length - 1}
-                      onClick={() => onReorderColumns(colIdx, colIdx + 1)}
+                      onClick={(e) => { e.stopPropagation(); onReorderColumns(colIdx, colIdx + 1); }}
                       className="p-0.5 hover:bg-slate-200 rounded text-slate-400 hover:text-slate-700 disabled:opacity-20"
                       title="오른쪽으로 이동"
                     >
@@ -156,7 +180,7 @@ export function TableHeader({
                     </button>
                     <button
                       type="button"
-                      onClick={() => onDeleteColumn(header)}
+                      onClick={(e) => { e.stopPropagation(); onDeleteColumn(header); }}
                       className="p-0.5 hover:bg-red-50 hover:text-red-500 rounded text-slate-400 transition"
                       title={`'${header}' 열 삭제`}
                     >

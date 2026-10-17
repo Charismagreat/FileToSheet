@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Calendar, Filter, RotateCcw, Check, X, ChevronDown } from 'lucide-react';
+import { Calendar, Filter, RotateCcw, Check, X, ChevronDown, Plus, Trash2 } from 'lucide-react';
 
 export interface DateFilterConfig {
   column: string;
@@ -10,9 +10,19 @@ export interface DateFilterConfig {
   preset?: 'all' | 'today' | '7days' | 'thisMonth' | '30days' | 'custom';
 }
 
+export type FilterOperator = 'contains' | 'equals' | 'not_equals' | 'greater_than' | 'less_than';
+
+export interface FilterRule {
+  id: string;
+  column: string;
+  operator: FilterOperator;
+  value: string;
+}
+
 export interface FilterState {
   dateConfig: DateFilterConfig;
   limit: number; // 0 = 전체
+  rules: FilterRule[];
 }
 
 interface DataFilterPopoverProps {
@@ -99,6 +109,38 @@ export function DataFilterPopover({
     });
   };
 
+  // 새 조건 규칙 추가
+  const handleAddRule = () => {
+    const newRule: FilterRule = {
+      id: Math.random().toString(36).substring(2, 9),
+      column: headers[0] || '',
+      operator: 'contains',
+      value: '',
+    };
+    onFilterChange({
+      ...filterState,
+      rules: [...(filterState.rules || []), newRule],
+    });
+  };
+
+  // 조건 규칙 업데이트
+  const handleUpdateRule = (id: string, updates: Partial<FilterRule>) => {
+    onFilterChange({
+      ...filterState,
+      rules: (filterState.rules || []).map((r) => (r.id === id ? { ...r, ...updates } : r)),
+    });
+  };
+
+  // 조건 규칙 삭제
+  const handleRemoveRule = (id: string) => {
+    onFilterChange({
+      ...filterState,
+      rules: (filterState.rules || []).filter((r) => r.id !== id),
+    });
+  };
+
+  const rules = filterState.rules || [];
+
   return (
     <div className="relative inline-block" ref={popoverRef}>
       {/* 트리거 버튼 */}
@@ -109,10 +151,10 @@ export function DataFilterPopover({
             ? 'bg-blue-600 text-white border-blue-600 shadow-2xs hover:bg-blue-700'
             : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200'
         }`}
-        title="기간 및 건수 필터링 설정"
+        title="기간, 건수 및 다중 조건 필터 설정"
       >
-        <Calendar className="w-3.5 h-3.5" />
-        <span>기간·건수 필터</span>
+        <Filter className="w-3.5 h-3.5" />
+        <span>상세 필터</span>
         {isFilterActive && (
           <span className="bg-white text-blue-700 text-[10px] font-extrabold px-1.5 py-0.2 rounded-full ml-0.5">
             {activeFilterCount}
@@ -123,11 +165,11 @@ export function DataFilterPopover({
 
       {/* 팝오버 패널 */}
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 p-4 animate-in fade-in zoom-in-95 duration-150">
+        <div className="absolute right-0 top-full mt-2 w-80 sm:w-[440px] bg-white border border-slate-200 rounded-2xl shadow-xl z-50 p-4 animate-in fade-in zoom-in-95 duration-150 max-h-[85vh] overflow-y-auto">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100">
             <div className="flex items-center gap-1.5 text-slate-800 font-bold text-xs">
               <Filter className="w-3.5 h-3.5 text-blue-600" />
-              <span>데이터 조회 필터 설정</span>
+              <span>데이터 상세 멀티 필터 설정</span>
             </div>
             <div className="flex items-center gap-2">
               {isFilterActive && (
@@ -154,7 +196,8 @@ export function DataFilterPopover({
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="text-[11px] font-extrabold text-slate-700 flex items-center gap-1">
-                  📅 기간 필터 기준 열
+                  <Calendar className="w-3 h-3 text-blue-600" />
+                  <span>기간 필터 기준 열</span>
                 </label>
                 {headers.length > 0 && (
                   <select
@@ -165,11 +208,11 @@ export function DataFilterPopover({
                         dateConfig: { ...filterState.dateConfig, column: e.target.value },
                       })
                     }
-                    className="text-[11px] font-semibold border border-slate-200 rounded px-1.5 py-0.5 bg-slate-50 text-slate-700 focus:outline-none focus:border-blue-500"
+                    className="text-[11px] font-semibold border border-slate-200 rounded px-1.5 py-0.5 bg-slate-50 text-slate-700 focus:outline-none focus:border-blue-500 max-w-[160px] truncate"
                   >
                     {headers.map((h) => (
                       <option key={h} value={h}>
-                        {h} {dateCandidates.includes(h) ? '(날짜 감지)' : ''}
+                        {h} {dateCandidates.includes(h) ? '(날짜)' : ''}
                       </option>
                     ))}
                   </select>
@@ -239,7 +282,86 @@ export function DataFilterPopover({
               </div>
             </div>
 
-            {/* 2. 건수 제한 필터 */}
+            {/* 2. 다중 조건 멀티 필터 (열별 AND 필터) */}
+            <div className="pt-2 border-t border-slate-100">
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-[11px] font-extrabold text-slate-700">
+                  🎯 다중 열 조건 필터 (AND 결합)
+                </label>
+                <button
+                  type="button"
+                  onClick={handleAddRule}
+                  className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-2 py-0.5 rounded transition"
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>조건 추가</span>
+                </button>
+              </div>
+
+              {rules.length === 0 ? (
+                <div className="text-center py-2.5 bg-slate-50 border border-dashed border-slate-200 rounded-xl text-slate-400 text-xs">
+                  등록된 상세 조건이 없습니다. [+ 조건 추가]를 눌러보세요.
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {rules.map((rule) => (
+                    <div
+                      key={rule.id}
+                      className="flex items-center gap-1.5 bg-slate-50/80 p-2 rounded-xl border border-slate-200"
+                    >
+                      {/* 대상 열 선택 */}
+                      <select
+                        value={rule.column}
+                        onChange={(e) => handleUpdateRule(rule.id, { column: e.target.value })}
+                        className="text-xs font-semibold border border-slate-200 rounded px-1.5 py-1 bg-white text-slate-700 focus:outline-none focus:border-blue-500 w-28 shrink-0 truncate"
+                      >
+                        {headers.map((h) => (
+                          <option key={h} value={h}>
+                            {h}
+                          </option>
+                        ))}
+                      </select>
+
+                      {/* 연산자 선택 */}
+                      <select
+                        value={rule.operator}
+                        onChange={(e) =>
+                          handleUpdateRule(rule.id, { operator: e.target.value as FilterOperator })
+                        }
+                        className="text-xs font-semibold border border-slate-200 rounded px-1 py-1 bg-white text-slate-700 focus:outline-none focus:border-blue-500 w-20 shrink-0"
+                      >
+                        <option value="contains">포함</option>
+                        <option value="equals">일치(=)</option>
+                        <option value="not_equals">제외(!=)</option>
+                        <option value="greater_than">이상(&gt;=)</option>
+                        <option value="less_than">이하(&lt;=)</option>
+                      </select>
+
+                      {/* 비교값 입력 */}
+                      <input
+                        type="text"
+                        placeholder="값 입력..."
+                        value={rule.value}
+                        onChange={(e) => handleUpdateRule(rule.id, { value: e.target.value })}
+                        className="flex-1 min-w-[70px] text-xs border border-slate-200 rounded px-2 py-1 bg-white text-slate-700 focus:outline-none focus:border-blue-500"
+                      />
+
+                      {/* 규칙 삭제 */}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveRule(rule.id)}
+                        className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition shrink-0"
+                        title="조건 삭제"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* 3. 건수 제한 필터 */}
             <div className="pt-2 border-t border-slate-100">
               <label className="text-[11px] font-extrabold text-slate-700 mb-1.5 block">
                 🔢 상위 건수 제한

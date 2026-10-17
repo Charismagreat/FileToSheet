@@ -56,11 +56,15 @@ export default function FileToSheetApp() {
   const [showOriginalModal, setShowOriginalModal] = useState<boolean>(false);
   const [showShareModal, setShowShareModal] = useState<boolean>(false);
 
-  // 조회 필터 상태 (기간/날짜 및 건수 제한)
+  // 조회 필터 상태 (기간/날짜, 건수 제한, 다중 조건 규칙)
   const [filterState, setFilterState] = useState<FilterState>({
     dateConfig: { column: '', startDate: '', endDate: '', preset: 'all' },
     limit: 0,
+    rules: [],
   });
+
+  // 열 헤더 클릭 정렬 상태 (null이면 기본 등록순)
+  const [columnSort, setColumnSort] = useState<{ column: string; direction: 'asc' | 'desc' } | null>(null);
 
   // 내보내기 범위 선택 모달 상태
   const [showExportScopeModal, setShowExportScopeModal] = useState<boolean>(false);
@@ -79,11 +83,8 @@ export default function FileToSheetApp() {
     !searchQuery.trim() || Object.values(row).some((val) => String(val ?? '').toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  // 3. 최신순 / 과거순 정렬
-  const sortedRows = sortOrder === 'desc' ? [...searchedRows].reverse() : searchedRows;
-
-  // 4. 날짜/기간 필터
-  const dateFilteredRows = sortedRows.filter((row) => {
+  // 3. 날짜/기간 필터
+  const dateFilteredRows = searchedRows.filter((row) => {
     const { column, startDate, endDate } = filterState.dateConfig;
     if (!startDate && !endDate) return true;
     const colKey = column || (currentSheet?.headers[0] ?? '');
@@ -96,23 +97,88 @@ export default function FileToSheetApp() {
     return true;
   });
 
-  // 5. 건수 제한 필터
-  const filteredRows = filterState.limit > 0 ? dateFilteredRows.slice(0, filterState.limit) : dateFilteredRows;
+  // 4. 다중 열 조건 멀티 필터 (AND 결합)
+  const ruleFilteredRows = dateFilteredRows.filter((row) => {
+    const rules = filterState.rules || [];
+    if (rules.length === 0) return true;
+    return rules.every((rule) => {
+      if (!rule.value.trim()) return true;
+      const cellVal = String(row[rule.column] ?? '');
+      const searchVal = rule.value.trim();
+      const numCell = Number(cellVal.replace(/,/g, '').trim());
+      const numSearch = Number(searchVal.replace(/,/g, '').trim());
+      const isBothNumeric = !isNaN(numCell) && !isNaN(numSearch) && cellVal.trim() !== '' && searchVal !== '';
+
+      switch (rule.operator) {
+        case 'contains':
+          return cellVal.toLowerCase().includes(searchVal.toLowerCase());
+        case 'equals':
+          return isBothNumeric ? numCell === numSearch : cellVal.toLowerCase() === searchVal.toLowerCase();
+        case 'not_equals':
+          return isBothNumeric ? numCell !== numSearch : cellVal.toLowerCase() !== searchVal.toLowerCase();
+        case 'greater_than':
+          return isBothNumeric ? numCell >= numSearch : cellVal >= searchVal;
+        case 'less_than':
+          return isBothNumeric ? numCell <= numSearch : cellVal <= searchVal;
+        default:
+          return true;
+      }
+    });
+  });
+
+  // 5. 정렬 처리 (컬럼 클릭 정렬 우선, 없을 시 최신순/과거순)
+  const sortedRows = [...ruleFilteredRows].sort((a, b) => {
+    if (columnSort) {
+      const valA = a[columnSort.column] ?? '';
+      const valB = b[columnSort.column] ?? '';
+      const numA = Number(String(valA).replace(/,/g, '').trim());
+      const numB = Number(String(valB).replace(/,/g, '').trim());
+      if (!isNaN(numA) && !isNaN(numB) && String(valA).trim() !== '' && String(valB).trim() !== '') {
+        return columnSort.direction === 'asc' ? numA - numB : numB - numA;
+      }
+      const strA = String(valA).toLowerCase();
+      const strB = String(valB).toLowerCase();
+      const comp = strA.localeCompare(strB, 'ko', { numeric: true });
+      return columnSort.direction === 'asc' ? comp : -comp;
+    }
+    // 기본 등록순/최신순
+    return sortOrder === 'desc' ? (b._originIdx ?? 0) - (a._originIdx ?? 0) : (a._originIdx ?? 0) - (b._originIdx ?? 0);
+  });
+
+  // 6. 건수 제한 필터
+  const filteredRows = filterState.limit > 0 ? sortedRows.slice(0, filterState.limit) : sortedRows;
 
   // 필터 활성화 여부 계산
+  const activeRulesCount = (filterState.rules || []).filter((r) => r.value.trim()).length;
   const isFilterActive = Boolean(
     filterState.dateConfig.startDate ||
     filterState.dateConfig.endDate ||
-    filterState.limit > 0
+    filterState.limit > 0 ||
+    activeRulesCount > 0
   );
   const activeFilterCount =
     (filterState.dateConfig.startDate || filterState.dateConfig.endDate ? 1 : 0) +
-    (filterState.limit > 0 ? 1 : 0);
+    (filterState.limit > 0 ? 1 : 0) +
+    activeRulesCount;
 
   const handleResetFilter = () => {
     setFilterState({
       dateConfig: { column: '', startDate: '', endDate: '', preset: 'all' },
       limit: 0,
+      rules: [],
+    });
+    setColumnSort(null);
+  };
+
+  const handleToggleColSort = (colName: string) => {
+    setColumnSort((prev) => {
+      if (!prev || prev.column !== colName) {
+        return { column: colName, direction: 'asc' };
+      }
+      if (prev.direction === 'asc') {
+        return { column: colName, direction: 'desc' };
+      }
+      return null;
     });
   };
 
@@ -258,7 +324,18 @@ export default function FileToSheetApp() {
                   onAddRow={ws.handleAddRow}
                   onOpenAddColumn={() => ws.setIsAddingColumn(true)}
                   sortOrder={sortOrder}
-                  onToggleSort={() => setSortOrder((prev) => prev === 'desc' ? 'asc' : 'desc')}
+                  activeSortLabel={columnSort ? `${columnSort.column} ${columnSort.direction === 'asc' ? '▲' : '▼'}` : undefined}
+                  onToggleSort={() => {
+                    if (columnSort) {
+                      if (columnSort.direction === 'asc') {
+                        setColumnSort({ column: columnSort.column, direction: 'desc' });
+                      } else {
+                        setColumnSort(null);
+                      }
+                    } else {
+                      setSortOrder((prev) => (prev === 'desc' ? 'asc' : 'desc'));
+                    }
+                  }}
                   headers={currentSheet.headers}
                   filterState={filterState}
                   onFilterChange={setFilterState}
@@ -291,6 +368,9 @@ export default function FileToSheetApp() {
                     onDeleteColumn={ws.handleDeleteColumn}
                     onReorderColumns={ws.handleReorderColumns}
                     onDeleteRow={ws.handleDeleteRow}
+                    sortCol={columnSort?.column || null}
+                    sortDir={columnSort?.direction || null}
+                    onToggleColSort={handleToggleColSort}
                   />
                 )}
 
