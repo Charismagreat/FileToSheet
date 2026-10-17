@@ -18,6 +18,7 @@ interface HeaderProps {
   onDownloadSqlite?: () => void;
   onOpenPlanModal?: () => void;
   onOpenPricingModal?: () => void;
+  onOpenTransferModal?: () => void;
   onExportGoogleSheets: () => void;
   onOpenOriginalModal: () => void;
   onOpenShareModal: () => void;
@@ -36,6 +37,7 @@ export function Header({
   onDownloadSqlite,
   onOpenPlanModal,
   onOpenPricingModal,
+  onOpenTransferModal,
   onExportGoogleSheets,
   onOpenShareModal,
   onUploadFile,
@@ -132,6 +134,7 @@ export function Header({
               currentProject={currentProject}
               onOpenPlanModal={onOpenPlanModal || (() => {})}
               onOpenPricingModal={onOpenPricingModal}
+              onOpenTransferModal={onOpenTransferModal}
             />
           </div>
         )}

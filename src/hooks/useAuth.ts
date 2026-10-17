@@ -118,8 +118,19 @@ export function useAuth() {
     }
   };
 
+  // 사용자 세션 수동 갱신 (담당자 인수인계 등)
+  const handleUpdateUser = (newUser: UserSession | null) => {
+    setCurrentUser(newUser);
+    if (newUser) {
+      localStorage.setItem('filetosheet_user', JSON.stringify(newUser));
+    } else {
+      localStorage.removeItem('filetosheet_user');
+    }
+  };
+
   return {
     currentUser,
+    setCurrentUser: handleUpdateUser,
     showPhoneAuthModal,
     setShowPhoneAuthModal,
     authPhoneNumber,

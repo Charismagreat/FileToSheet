@@ -8,4 +8,5 @@ export { PlanLimitModal } from '../PlanLimitModal';
 export { PricingModal } from '../PricingModal';
 export { EnterpriseInquiryModal } from '../EnterpriseInquiryModal';
 export { DuplicateFileModal } from '../DuplicateFileModal';
+export { AccountTransferModal } from '../AccountTransferModal';
 

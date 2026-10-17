@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Sparkles, Check, Database, Zap, ArrowRight, ShieldCheck, X } from 'lucide-react';
+import { Sparkles, Check, Database, Zap, ArrowRight, ShieldCheck, X, Smartphone } from 'lucide-react';
 import { UserSession, ProjectWorkspace } from '@/types/workspace';
 import { getPlanLimits } from '@/lib/plan-limits';
 
@@ -12,6 +12,7 @@ interface UserUsagePopoverProps {
   currentProject: ProjectWorkspace | null;
   onOpenPlanModal: () => void;
   onOpenPricingModal?: () => void;
+  onOpenTransferModal?: () => void;
 }
 
 export function UserUsagePopover({
@@ -21,6 +22,7 @@ export function UserUsagePopover({
   currentProject,
   onOpenPlanModal,
   onOpenPricingModal,
+  onOpenTransferModal,
 }: UserUsagePopoverProps) {
 
   if (!isOpen) return null;
@@ -188,6 +190,24 @@ export function UserUsagePopover({
             className="text-[11px] font-semibold text-blue-600 hover:text-blue-700 hover:underline"
           >
             전체 요금제 및 기능 상세 비교 ➔
+          </button>
+        </div>
+      )}
+
+      {onOpenTransferModal && currentUser && (
+        <div className="mt-2.5 pt-2 border-t border-slate-100">
+          <button
+            onClick={() => {
+              onClose();
+              onOpenTransferModal();
+            }}
+            className="w-full py-2 px-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 font-semibold text-xs flex items-center justify-between border border-slate-200 transition active:scale-98"
+          >
+            <div className="flex items-center gap-2">
+              <Smartphone className="w-3.5 h-3.5 text-blue-600" />
+              <span>담당자 인수인계 (휴대폰 승계)</span>
+            </div>
+            <span className="text-[10px] text-slate-400">데이터 이전 ➔</span>
           </button>
         </div>
       )}

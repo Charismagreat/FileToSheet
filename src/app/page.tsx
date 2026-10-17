@@ -12,6 +12,7 @@ import { SummaryView } from '@/components/SummaryView';
 import {
   PhoneAuthModal, UploadOptionModal, OriginalFileModal, AddColumnModal,
   ExportOptionModal, ShareModal, PlanLimitModal, PricingModal, EnterpriseInquiryModal, DuplicateFileModal,
+  AccountTransferModal,
 } from '@/components/modals';
 import { useAuth } from '@/hooks/useAuth';
 import { useWorkspace } from '@/hooks/useWorkspace';
@@ -24,6 +25,7 @@ export default function FileToSheetApp() {
   const [limitNotice, setLimitNotice] = useState<{ title: string; reason: string } | null>(null);
   const [showPricingModal, setShowPricingModal] = useState<boolean>(false);
   const [showEnterpriseModal, setShowEnterpriseModal] = useState<boolean>(false);
+  const [showTransferModal, setShowTransferModal] = useState<boolean>(false);
   const handlePlanLimit = (title: string, reason: string) => setLimitNotice({ title, reason });
 
   const ws = useWorkspace({
@@ -68,6 +70,7 @@ export default function FileToSheetApp() {
         onDownloadXlsx={fileExport.handleDownloadXlsx}
         onDownloadSqlite={fileExport.handleDownloadSqlite}
         onOpenPricingModal={() => setShowPricingModal(true)}
+        onOpenTransferModal={() => setShowTransferModal(true)}
         onOpenPlanModal={() => setLimitNotice({
           title: 'PRO 전용 기능',
           reason: 'SQLite DB 직접 다운로드 및 데이터 행 수 무제한 처리는 PRO 플랜 회원 혜택입니다.'
@@ -267,6 +270,17 @@ export default function FileToSheetApp() {
         existingFile={upload.duplicateWarning?.existingFile || null}
         newFile={upload.duplicateWarning?.newFile || null}
         onProceed={upload.confirmProceedDuplicate}
+      />
+
+      {/* 11. 담당자 인수인계 및 휴대폰 번호 데이터 승계 모달 */}
+      <AccountTransferModal
+        isOpen={showTransferModal}
+        onClose={() => setShowTransferModal(false)}
+        currentUser={auth.currentUser}
+        onTransferSuccess={(newUser) => {
+          auth.setCurrentUser(newUser);
+          alert(`새로운 담당자(${newUser.phoneNumber})로 성공적으로 승계되었습니다!`);
+        }}
       />
     </div>
   );
