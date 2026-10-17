@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { ProjectWorkspace } from '@/types/workspace';
+import { ProjectWorkspace, OriginalDocFile } from '@/types/workspace';
 import { deleteUploadedFile } from '@/lib/egdesk-db';
 import { fetchUserProjectsFromDb, saveUserProjectToDb, deleteUserProjectFromDb } from '@/lib/project-db';
 import { useTableEditor } from './useTableEditor';
@@ -132,22 +132,22 @@ export function useWorkspace({ phoneNumber }: UseWorkspaceOptions = {}) {
     setProjects((prev) => prev.map((p, i) => i === activeProjectIndex ? { ...p, activeSheetIndex: idx } : p));
   };
 
-  const handleDeleteOriginalFile = async (fileIdx: number, deleteDataRows: boolean) => {
+  const handleDeleteOriginalFile = async (fileIdx: number, deleteDataRows: boolean, targetDoc?: OriginalDocFile) => {
     if (!currentProject) return;
     const files = currentProject.originalFiles || (currentProject.originalFileUrl ? [{ name: currentProject.name, url: currentProject.originalFileUrl, id: currentProject.id || undefined }] : []);
-    const target = files[fileIdx];
+    const target = targetDoc || files[fileIdx];
     if (!target) return;
 
     setProjects((prev) => prev.map((proj, pIdx) => {
       if (pIdx !== activeProjectIndex) return proj;
-      let sheets = proj.sheets;
-      if (deleteDataRows) {
-        sheets = sheets.map((s) => ({
-          ...s,
-          rows: s.rows.filter((r) => r._fileName ? r._fileName !== target.name : (target.id && r._fileId ? r._fileId !== target.id : files.length > 1)).map((r, i) => ({ ...r, 일련번호: i + 1 })),
-        }));
-      }
-      const nextFiles = files.filter((_, idx) => idx !== fileIdx);
+      const sheets = proj.sheets.map((s) => ({
+        ...s,
+        originalFiles: s.originalFiles?.filter((f) => f.name !== target.name && (!target.id || f.id !== target.id)),
+        rows: deleteDataRows
+          ? s.rows.filter((r) => r._fileName ? r._fileName !== target.name : (target.id && r._fileId ? r._fileId !== target.id : files.length > 1)).map((r, i) => ({ ...r, 일련번호: i + 1 }))
+          : s.rows,
+      }));
+      const nextFiles = files.filter((f) => f.name !== target.name && (!target.id || f.id !== target.id));
       return { ...proj, sheets, originalFiles: nextFiles, originalFileUrl: nextFiles[0]?.url, originalFileType: nextFiles[0]?.type, originalFileSize: nextFiles[0]?.size };
     }));
     if (target.id) deleteUploadedFile(target.id).catch((e) => console.warn('스토리지 파일 삭제 무시:', e));

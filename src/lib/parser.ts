@@ -1,10 +1,12 @@
 import * as XLSX from 'xlsx';
+import type { OriginalDocFile } from '@/types/workspace';
 
 export interface ParsedSheet {
   name: string;
   headers: string[];
   rows: Array<Record<string, any>>;
   rawRows: any[][];
+  originalFiles?: OriginalDocFile[];
 }
 
 export interface ParseResult {

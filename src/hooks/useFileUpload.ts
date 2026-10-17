@@ -94,6 +94,7 @@ export function useFileUpload({
               ...target,
               headers: parsedSheets[0]?.headers || target.headers,
               rows: (parsedSheets[0]?.rows || []).map((r) => ({ ...r, _fileId: fileId, _fileName: file.name })),
+              originalFiles: [...(target.originalFiles || []), docItem],
             };
           } else {
             const incoming = parsedSheets.flatMap((sh) => sh.rows);
@@ -103,6 +104,7 @@ export function useFileUpload({
               ...target,
               headers: mergedH,
               rows: [...target.rows, ...incoming.map((r, i) => ({ ...r, 일련번호: target.rows.length + i + 1, 등록일시: r.등록일시 || nowKst, _fileId: fileId, _fileName: file.name }))],
+              originalFiles: [...(target.originalFiles || []), docItem],
             };
           }
           const prevDocs = proj.originalFiles || (proj.originalFileUrl ? [{
@@ -120,7 +122,7 @@ export function useFileUpload({
           next[activeProjectIndex] = proj;
         } else if (mode === 'new_sheet' && next[activeProjectIndex]) {
           const proj = { ...next[activeProjectIndex] };
-          proj.sheets = [...proj.sheets, ...parsedSheets.map((sh) => ({ ...sh, rows: sh.rows.map((r) => ({ ...r, _fileId: fileId, _fileName: file.name })) }))];
+          proj.sheets = [...proj.sheets, ...parsedSheets.map((sh) => ({ ...sh, originalFiles: [docItem], rows: sh.rows.map((r) => ({ ...r, _fileId: fileId, _fileName: file.name })) }))];
           proj.activeSheetIndex = proj.sheets.length - 1;
           const prevDocs = proj.originalFiles || [];
           proj.originalFiles = [...prevDocs, docItem];
@@ -130,7 +132,7 @@ export function useFileUpload({
             id: null,
             name: file.name.replace(/\.[^/.]+$/, ''),
             category,
-            sheets: parsedSheets.map((sh) => ({ ...sh, rows: sh.rows.map((r) => ({ ...r, _fileId: fileId, _fileName: file.name })) })),
+            sheets: parsedSheets.map((sh) => ({ ...sh, originalFiles: [docItem], rows: sh.rows.map((r) => ({ ...r, _fileId: fileId, _fileName: file.name })) })),
             activeSheetIndex: 0,
             activeSubTab: 'table',
             originalFileUrl: fileBlobUrl,

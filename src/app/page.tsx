@@ -19,6 +19,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import { useFileExport } from '@/hooks/useFileExport';
+import { getSheetOriginalFiles } from '@/lib/sheet-helpers';
 
 export default function FileToSheetApp() {
   const auth = useAuth();
@@ -43,6 +44,7 @@ export default function FileToSheetApp() {
 
   const currentProject = ws.currentProject;
   const currentSheet = ws.currentSheet;
+  const sheetOriginalFiles = getSheetOriginalFiles(currentProject, currentSheet);
 
   const filteredRows = currentSheet
     ? currentSheet.rows.filter((row) =>
@@ -108,8 +110,8 @@ export default function FileToSheetApp() {
                   activeSubTab={activeSubTab}
                   setActiveSubTab={setActiveSubTab}
                   rowsCount={filteredRows.length}
-                  hasOriginalFile={Boolean(currentProject.originalFileUrl || (currentProject.originalFiles && currentProject.originalFiles.length > 0))}
-                  originalFilesCount={currentProject.originalFiles?.length || (currentProject.originalFileUrl ? 1 : 0)}
+                  hasOriginalFile={sheetOriginalFiles.length > 0}
+                  originalFilesCount={sheetOriginalFiles.length}
                   searchQuery={searchQuery}
                   setSearchQuery={setSearchQuery}
                   onAddRow={ws.handleAddRow}

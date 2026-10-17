@@ -55,6 +55,7 @@ function SharedProjectContent() {
 
   const currentSheet = shareConfig.sheets?.[activeSheetIdx] || shareConfig.sheets?.[0];
   const allowedTabs: string[] = shareConfig.allowedTabs || ['table', 'original', 'summary'];
+  const sheetFiles = currentSheet?.originalFiles?.length > 0 ? currentSheet.originalFiles : (shareConfig.sheets?.length === 1 ? shareConfig.originalFiles : []);
 
   const handleDownload = () => {
     if (!shareConfig.sheets) return;
@@ -118,7 +119,7 @@ function SharedProjectContent() {
               {allowedTabs.includes('original') && (
                 <button onClick={() => setActiveTab('original')} className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition ${activeTab === 'original' ? 'bg-white text-blue-700 shadow-xs border border-slate-200' : 'text-slate-500 hover:bg-slate-200/50'}`}>
                   <FileText className="w-3.5 h-3.5" />
-                  <span>원본 증빙 ({shareConfig.originalFiles?.length || 0})</span>
+                  <span>원본 증빙 ({sheetFiles?.length || 0})</span>
                 </button>
               )}
               {allowedTabs.includes('summary') && (
@@ -161,9 +162,9 @@ function SharedProjectContent() {
 
             {activeTab === 'original' && (
               <div className="p-6 text-center text-xs text-slate-500">
-                {shareConfig.originalFiles?.length > 0 ? (
+                {sheetFiles?.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {shareConfig.originalFiles.map((file: any, fIdx: number) => (
+                    {sheetFiles.map((file: any, fIdx: number) => (
                       <div key={fIdx} className="p-4 border border-slate-200 rounded-xl bg-slate-50 flex items-center justify-between">
                         <span className="font-mono font-medium text-slate-700">{file.name}</span>
                         {file.url && (
@@ -173,7 +174,7 @@ function SharedProjectContent() {
                     ))}
                   </div>
                 ) : (
-                  <span>공유 설정에서 원본 증빙 파일이 제외되었거나 등록된 파일이 없습니다.</span>
+                  <span>현재 시트에 연결된 원본 증빙 파일이 없거나 공유에서 제외되었습니다.</span>
                 )}
               </div>
             )}

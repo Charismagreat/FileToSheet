@@ -3,29 +3,24 @@
 import React, { useState, useEffect } from 'react';
 import { FileText, ExternalLink, Download, AlertCircle, FileSpreadsheet, Layers, Maximize2, Minimize2, Trash2, Table } from 'lucide-react';
 import { ProjectWorkspace, OriginalDocFile } from '@/types/workspace';
+import { getSheetOriginalFiles } from '@/lib/sheet-helpers';
 import { DeleteProofModal } from './DeleteProofModal';
 import { ProofDataModal } from './ProofDataModal';
 
 interface OriginalDocViewProps {
   project: ProjectWorkspace;
-  onDeleteFile?: (fileIdx: number, deleteDataRows: boolean) => void;
+  onDeleteFile?: (fileIdx: number, deleteDataRows: boolean, targetDoc?: OriginalDocFile) => void;
   onGoToTableTab?: () => void;
 }
 
 export function OriginalDocView({ project, onDeleteFile, onGoToTableTab }: OriginalDocViewProps) {
-  const files: OriginalDocFile[] =
-    project.originalFiles && project.originalFiles.length > 0
-      ? project.originalFiles
-      : project.originalFileUrl
-      ? [{ name: project.name || '원본 문서', url: project.originalFileUrl, type: project.originalFileType, size: project.originalFileSize, uploadedAt: project.uploadedAt }]
-      : [];
+  const currentSheet = project.sheets[project.activeSheetIndex] || null;
+  const files: OriginalDocFile[] = getSheetOriginalFiles(project, currentSheet);
 
   const [selectedIdx, setSelectedIdx] = useState<number>(0);
   const [isZoomFit, setIsZoomFit] = useState<boolean>(true);
   const [deletingIdx, setDeletingIdx] = useState<number | null>(null);
   const [showDataModal, setShowDataModal] = useState<boolean>(false);
-
-  const currentSheet = project.sheets[project.activeSheetIndex] || null;
 
   useEffect(() => {
     if (files.length > 0 && selectedIdx >= files.length) {
@@ -46,7 +41,9 @@ export function OriginalDocView({ project, onDeleteFile, onGoToTableTab }: Origi
   }) || [];
 
   const handleDeleteConfirm = (deleteDataRows: boolean) => {
-    if (deletingIdx !== null && onDeleteFile) onDeleteFile(deletingIdx, deleteDataRows);
+    if (deletingIdx !== null && onDeleteFile) {
+      onDeleteFile(deletingIdx, deleteDataRows, files[deletingIdx]);
+    }
     setDeletingIdx(null);
   };
 
@@ -65,11 +62,11 @@ export function OriginalDocView({ project, onDeleteFile, onGoToTableTab }: Origi
       {/* 1. 좌측 사이드바: 세로 파일 목록 및 각 파일별 적재 행수 뱃지 */}
       <aside className="w-full md:w-64 border-b md:border-b-0 md:border-r border-slate-200 bg-white flex flex-col shrink-0">
         <div className="p-3 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 shrink-0">
-          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
-            <Layers className="w-4 h-4 text-blue-600" />
-            <span>증빙 목록</span>
+          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 truncate mr-2">
+            <Layers className="w-4 h-4 text-blue-600 shrink-0" />
+            <span className="truncate">{currentSheet?.name ? `증빙 (${currentSheet.name})` : '증빙 목록'}</span>
           </div>
-          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-mono">{files.length}개</span>
+          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-mono shrink-0">{files.length}개</span>
         </div>
         <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
           {files.map((file, idx) => {
