@@ -16,4 +16,5 @@ export { ShareManagementModal } from '../ShareManagementModal';
 export { ExportScopeModal } from '../ExportScopeModal';
 export { SheetRuleModal } from '../SheetRuleModal';
 export { ScheduleModal } from '../ScheduleModal';
+export { MobileIngestModal } from '../MobileIngestModal';
 

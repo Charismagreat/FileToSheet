@@ -13,13 +13,12 @@ import {
   PhoneAuthModal, UploadOptionModal, OriginalFileModal, AddColumnModal,
   ExportOptionModal, ShareModal, PlanLimitModal, PricingModal, EnterpriseInquiryModal, DuplicateFileModal,
   AccountTransferModal, ShareToManagerModal, ConsolidatedStatsModal, EmergencyRecoveryModal,
-  ShareManagementModal, ExportScopeModal, SheetRuleModal,
+  ShareManagementModal, ExportScopeModal, SheetRuleModal, ScheduleModal, MobileIngestModal,
 } from '@/components/modals';
 import { UploadUndoToast } from '@/components/UploadUndoToast';
 import { AiChatDrawer, ChatScope } from '@/components/AiChatDrawer';
 import { BillingHistoryModal } from '@/components/BillingHistoryModal';
 import { RemoteDbModal } from '@/components/RemoteDbModal';
-import { ScheduleModal } from '@/components/ScheduleModal';
 import { BatchUploadMonitor } from '@/components/BatchUploadMonitor';
 import { Sparkles, Upload } from 'lucide-react';
 import { ExportTargetType } from '@/components/ExportScopeModal';
@@ -133,6 +132,7 @@ export default function FileToSheetApp() {
   const [showOriginalModal, setShowOriginalModal] = useState<boolean>(false);
   const [showShareModal, setShowShareModal] = useState<boolean>(false);
   const [showScheduleModal, setShowScheduleModal] = useState<boolean>(false);
+  const [showMobileIngestModal, setShowMobileIngestModal] = useState<boolean>(false);
 
   // 조회 필터 상태 (기간/날짜, 건수 제한, 다중 조건 규칙)
   const [filterState, setFilterState] = useState<FilterState>({
@@ -456,6 +456,7 @@ export default function FileToSheetApp() {
         onOpenBillingHistory={() => setShowBillingHistoryModal(true)}
         onOpenRemoteDbModal={() => setShowRemoteDbModal(true)}
         onOpenScheduleModal={() => setShowScheduleModal(true)}
+        onOpenMobileIngestModal={() => setShowMobileIngestModal(true)}
         onOpenTransferModal={() => setShowTransferModal(true)}
         onOpenShareToManagerModal={() => setShowShareToManagerModal(true)}
         onOpenConsolidatedModal={() => setShowConsolidatedModal(true)}
@@ -896,6 +897,14 @@ export default function FileToSheetApp() {
         isOpen={showScheduleModal}
         onClose={() => setShowScheduleModal(false)}
         project={currentProject}
+      />
+
+      {/* 24. 시트봇 모바일앱 직결 연동 (QR코드 & 토큰) 모달 */}
+      <MobileIngestModal
+        isOpen={showMobileIngestModal}
+        onClose={() => setShowMobileIngestModal(false)}
+        project={currentProject}
+        activeSheetName={currentSheet?.name || '기본 시트'}
       />
     </div>
   );

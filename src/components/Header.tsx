@@ -25,6 +25,7 @@ interface HeaderProps {
   onOpenBillingHistory?: () => void;
   onOpenRemoteDbModal?: () => void;
   onOpenScheduleModal?: () => void;
+  onOpenMobileIngestModal?: () => void;
   onOpenShareToManagerModal?: () => void;
   onOpenConsolidatedModal?: () => void;
   onOpenShareManagementModal?: () => void;
@@ -51,6 +52,7 @@ export function Header({
   onOpenBillingHistory,
   onOpenRemoteDbModal,
   onOpenScheduleModal,
+  onOpenMobileIngestModal,
   onOpenShareToManagerModal,
   onOpenConsolidatedModal,
   onOpenShareManagementModal,
@@ -149,6 +151,20 @@ export function Header({
           >
             <Clock className="w-3.5 h-3.5 text-amber-600" />
             <span>스케줄</span>
+          </button>
+        )}
+
+        {onOpenMobileIngestModal && (
+          <button
+            onClick={onOpenMobileIngestModal}
+            className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 hover:border-indigo-300 text-indigo-700 hover:text-indigo-900 transition active:scale-95 shadow-2xs"
+            title="시트봇 모바일앱 QR코드 및 수신 토큰 페어링"
+          >
+            <Smartphone className="w-3.5 h-3.5 text-indigo-600" />
+            <span>모바일 연동</span>
+            <span className="text-[9px] font-bold bg-indigo-600 text-white px-1 py-0.2 rounded-full leading-none hidden xl:inline-block">
+              App
+            </span>
           </button>
         )}
 
