@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { callAiCaller } from '@/egdesk-helpers';
+import { callAiCaller, insertRows } from '@/egdesk-helpers';
 
 const FALLBACK_MODELS = [
   'gemini-3.8-flash',
@@ -11,6 +11,7 @@ const FALLBACK_MODELS = [
 ];
 
 export async function POST(request: NextRequest) {
+  const startTime = Date.now();
   try {
     const { filename, fileBase64, customPrompt, targetHeaders, existingSheets, sampleRows } = await request.json();
 
@@ -208,6 +209,23 @@ ${sheetsDesc}
       });
     }
 
+    // AI 호출 감사 로그 물리 DB에 비동기 저장
+    const latencyMs = Date.now() - startTime;
+    insertRows('ai_call_logs', [
+      {
+        phone_number: null,
+        call_type: 'doc_parse',
+        model_name: successfulModel || 'gemini-3.8-flash',
+        prompt_tokens: 0,
+        completion_tokens: 0,
+        total_tokens: 0,
+        latency_ms: latencyMs,
+        status: 'success',
+        error_message: null,
+        created_at: new Date().toISOString(),
+      },
+    ]).catch((err) => console.warn('ai_call_logs 로깅 실패:', err));
+
     return NextResponse.json({
       success: true,
       matched: isMatched,
@@ -223,6 +241,22 @@ ${sheetsDesc}
 
   } catch (error: any) {
     console.error('범용 문서 AI 파싱 최종 오류:', error);
+
+    insertRows('ai_call_logs', [
+      {
+        phone_number: null,
+        call_type: 'doc_parse',
+        model_name: 'unknown',
+        prompt_tokens: 0,
+        completion_tokens: 0,
+        total_tokens: 0,
+        latency_ms: Date.now() - startTime,
+        status: 'failed',
+        error_message: error.message || '문서 분석에 실패했습니다.',
+        created_at: new Date().toISOString(),
+      },
+    ]).catch(() => {});
+
     return NextResponse.json(
       { success: false, error: error.message || '문서 분석에 실패했습니다.' },
       { status: 500 }

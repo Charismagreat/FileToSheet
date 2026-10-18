@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { callAiCaller } from '@/egdesk-helpers';
+import { callAiCaller, insertRows } from '@/egdesk-helpers';
 
 const FALLBACK_MODELS = [
   'gemini-3.8-flash',
@@ -11,6 +11,7 @@ const FALLBACK_MODELS = [
 ];
 
 export async function POST(req: NextRequest) {
+  const startTime = Date.now();
   try {
     const body = await req.json();
     const { message, scope = 'current_sheet', contextData, chatHistory = [] } = body;
@@ -100,6 +101,51 @@ ${isRemoteDb ? '현재 원격지 컴퓨터의 이지데스크 터널링 서버 �
     const totalTokens = promptTokens + completionTokens;
     // Gemini 3.8 Flash: 입력 1,000토큰당 1원, 출력 1,000토큰당 5원
     const estimatedCostKrw = Number(((promptTokens * 0.001) + (completionTokens * 0.005)).toFixed(2));
+    const nowIso = new Date().toISOString();
+    const latencyMs = Date.now() - startTime;
+
+    // 1. AI 호출 감사 로그 (ai_call_logs) 비동기 기록
+    insertRows('ai_call_logs', [
+      {
+        phone_number: body.phoneNumber || null,
+        call_type: 'ai_chat',
+        model_name: successfulModel || 'gemini-3.8-flash',
+        prompt_tokens: promptTokens,
+        completion_tokens: completionTokens,
+        total_tokens: totalTokens,
+        latency_ms: latencyMs,
+        status: 'success',
+        error_message: null,
+        created_at: nowIso,
+      },
+    ]).catch((e) => console.warn('ai_call_logs 로깅 실패:', e));
+
+    // 2. AI 비서 대화 이력 (ai_chat_messages) 사용자 질문 + AI 답변 비동기 기록
+    const currentSheetName = contextData?.sheetName || null;
+    const currentProjId = body.projectId ? Number(body.projectId) : null;
+
+    insertRows('ai_chat_messages', [
+      {
+        project_id: currentProjId,
+        phone_number: body.phoneNumber || null,
+        sheet_name: currentSheetName,
+        scope,
+        role: 'user',
+        message,
+        meta_info: null,
+        created_at: nowIso,
+      },
+      {
+        project_id: currentProjId,
+        phone_number: body.phoneNumber || null,
+        sheet_name: currentSheetName,
+        scope,
+        role: 'assistant',
+        message: answerText,
+        meta_info: JSON.stringify({ promptTokens, completionTokens, totalTokens, estimatedCostKrw }),
+        created_at: new Date().toISOString(),
+      },
+    ]).catch((e) => console.warn('ai_chat_messages 대화 이력 저장 실패:', e));
 
     return NextResponse.json({
       success: true,
@@ -113,9 +159,55 @@ ${isRemoteDb ? '현재 원격지 컴퓨터의 이지데스크 터널링 서버 �
     });
   } catch (error: any) {
     console.error('[AI Chat API 오류]:', error);
+
+    insertRows('ai_call_logs', [
+      {
+        phone_number: null,
+        call_type: 'ai_chat',
+        model_name: 'unknown',
+        prompt_tokens: 0,
+        completion_tokens: 0,
+        total_tokens: 0,
+        latency_ms: Date.now() - startTime,
+        status: 'failed',
+        error_message: error.message || 'AI 대화 실패',
+        created_at: new Date().toISOString(),
+      },
+    ]).catch(() => {});
+
     return NextResponse.json(
       { error: error?.message || 'AI 대화 처리 중 오류가 발생했습니다.' },
       { status: 500 }
     );
+  }
+}
+
+/**
+ * GET /api/ai-chat: 과거 대화 이력 조회 (프로젝트별 또는 시트별)
+ */
+export async function GET(req: NextRequest) {
+  try {
+    const { queryTable } = await import('@/egdesk-helpers');
+    const { searchParams } = new URL(req.url);
+    const projectId = searchParams.get('projectId');
+    const phoneNumber = searchParams.get('phoneNumber');
+
+    const filters: Record<string, any> = {};
+    if (projectId) filters.project_id = Number(projectId);
+    if (phoneNumber) filters.phone_number = phoneNumber;
+
+    const res = await queryTable('ai_chat_messages', {
+      filters,
+      orderBy: 'id',
+      orderDirection: 'ASC',
+      limit: 50,
+    });
+
+    return NextResponse.json({
+      success: true,
+      messages: res?.rows || [],
+    });
+  } catch (e: any) {
+    return NextResponse.json({ success: false, error: e.message || '대화 이력 조회 실패' }, { status: 500 });
   }
 }

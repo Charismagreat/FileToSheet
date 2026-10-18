@@ -170,6 +170,42 @@ export const TABLES = {
     columnCount: 14,
     rowCount: 0,
   },
+  ai_call_logs: {
+    name: 'ai_call_logs',
+    displayName: 'AI 호출 및 사용량 감사 로그',
+    description: 'AI 문서 파싱 및 질의응답 시 호출된 모델명, 토큰 소모량, 응답시간, 성공여부 감사 로그 테이블',
+    columns: [
+      'phone_number',
+      'call_type',
+      'model_name',
+      'prompt_tokens',
+      'completion_tokens',
+      'total_tokens',
+      'latency_ms',
+      'status',
+      'error_message',
+      'created_at',
+    ],
+    columnCount: 10,
+    rowCount: 0,
+  },
+  ai_chat_messages: {
+    name: 'ai_chat_messages',
+    displayName: 'AI 비서 대화 이력 목록',
+    description: 'AI 비서 대화창에서 사용자와 AI가 나눈 질의응답 대화 이력 영구 보관 테이블',
+    columns: [
+      'project_id',
+      'phone_number',
+      'sheet_name',
+      'scope',
+      'role',
+      'message',
+      'meta_info',
+      'created_at',
+    ],
+    columnCount: 8,
+    rowCount: 0,
+  },
 } as const;
 
 export type TableName = keyof typeof TABLES;
