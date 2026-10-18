@@ -127,6 +127,18 @@ export function Header({
           </span>
         </Link>
 
+        {/* 🏢 회사소개 바로가기 메뉴 */}
+        <Link
+          href="/about"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1.5 text-xs font-extrabold px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-800 border border-slate-200 transition transform hover:scale-105 active:scale-95 shadow-2xs cursor-pointer"
+          title="파일투시트 비전, 3대 독자 기술, 보안 헌장 및 공식 회사정보 (새 창)"
+        >
+          <Building2 className="w-3.5 h-3.5 text-indigo-600" />
+          <span>회사소개</span>
+        </Link>
+
         {/* 👑 관리자 콘솔 바로가기 */}
         <Link
           href="/admin"
@@ -371,18 +383,6 @@ export function Header({
             </div>
           )}
         </div>
-
-        {/* 🌟 그룹 D: AI 데이터 비서 버튼 */}
-        {onOpenAiChat && (
-          <button
-            onClick={onOpenAiChat}
-            className="flex items-center gap-1.5 text-xs font-extrabold px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-xs transition active:scale-95"
-            title="자연어로 모든 시트와 프로젝트를 분석하고 질문하는 AI 데이터 비서"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-spin" style={{ animationDuration: '6s' }} />
-            <span>AI 비서</span>
-          </button>
-        )}
 
         <div className="h-4 w-px bg-slate-200 mx-0.5" />
 
