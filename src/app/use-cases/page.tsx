@@ -35,6 +35,8 @@ import {
   QrCode,
   Camera,
   Send,
+  MessageSquare,
+  Bell,
 } from 'lucide-react';
 
 export default function UseCasesPage() {
@@ -1075,6 +1077,169 @@ export default function UseCasesPage() {
         </div>
       </section>
 
+      {/* 4-G. 신규: 자율 알림 문자 & 실시간 경영 속보 (Autonomous SMS Dispatch & Smart Business Alerts) */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8 border-b border-slate-200 bg-slate-50/50 w-full">
+        <div className="max-w-5xl mx-auto w-full">
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-600 text-white text-xs font-black tracking-wide uppercase mb-3 shadow-xs">
+              <MessageSquare className="w-3.5 h-3.5 text-rose-200" />
+              <span>Autonomous SMS Dispatch & Smart Business Alerts</span>
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 break-keep mb-3">
+              화면을 보지 않아도 내 폰으로 띵동 — <br className="hidden sm:inline" />
+              <span className="text-rose-600 underline decoration-rose-300 decoration-wavy underline-offset-4">자율 알림 문자와 실시간 경영 속보</span>
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-600 max-w-2xl mx-auto break-keep leading-relaxed">
+              복잡한 코딩 없이 &quot;50만 원 이상 영수증은 팀장님께&quot;, &quot;재고 부족 시 담당 MD에게&quot;처럼 일상 한국어로 적어두면, 파일투시트가 이상 징후와 마감 결과를 감지하여 담당자 휴대폰으로 즉시 리포트 문자를 쏩니다.
+            </p>
+          </div>
+
+          {/* 4대 핵심 알림 문자 실무 시나리오 카드 그리드 (2x2) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 w-full mb-8">
+            {/* 1. 심야 무인 배치 & 이상 지출 경보 */}
+            <div className="p-6 rounded-2xl bg-white border border-rose-200 shadow-2xs hover:shadow-md hover:border-rose-400 transition flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-rose-100 text-rose-800 flex items-center justify-center font-bold">
+                      <Receipt className="w-4 h-4" />
+                    </div>
+                    <span className="text-xs font-black text-rose-800 bg-rose-100/70 px-2 py-0.5 rounded-md">
+                      심야 자정 (00:00)
+                    </span>
+                  </div>
+                  <span className="text-[11px] text-slate-400 font-medium">경리·회계 책임자용</span>
+                </div>
+                <h3 className="text-base font-extrabold text-slate-900 mb-2">
+                  [회계·경리] 심야 무인 배치 완료 & 이상 지출(고액) 즉시 경보
+                </h3>
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-700 font-mono mb-3 leading-relaxed">
+                  📱 &quot;[파일투시트] 10/18 영수증 34건 장부 적재 완료 (총 428만 원). ⚠️ 고액 지출 감지: [10/18 스타벅스 120만 원-확인요망]&quot;
+                </div>
+                <p className="text-xs text-slate-600 leading-relaxed break-keep">
+                  출근 후 수작업으로 영수증을 뒤적일 필요 없이, 아침 출근길 지하철에서 문자 한 통으로 어젯밤 결산 총액과 이상 지출을 1초 만에 파악하고 결재를 준비합니다.
+                </p>
+              </div>
+              <div className="pt-4 border-t border-slate-100 mt-4 text-[11px] text-rose-700 font-bold flex items-center justify-between">
+                <span>이상 지출 인지 딜레이 0초</span>
+                <span className="font-mono">Overnight Fraud Alert</span>
+              </div>
+            </div>
+
+            {/* 2. 결품/재고 부족 긴급 알림 */}
+            <div className="p-6 rounded-2xl bg-white border border-rose-200 shadow-2xs hover:shadow-md hover:border-rose-400 transition flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-800 flex items-center justify-center font-bold">
+                      <ShoppingCart className="w-4 h-4" />
+                    </div>
+                    <span className="text-xs font-black text-blue-800 bg-blue-100/70 px-2 py-0.5 rounded-md">
+                      택배 마감 (10:00/16:00)
+                    </span>
+                  </div>
+                  <span className="text-[11px] text-slate-400 font-medium">창고장 / 상품 MD용</span>
+                </div>
+                <h3 className="text-base font-extrabold text-slate-900 mb-2">
+                  [물류·이커머스] 발주서 취합 마감 리포트 & 결품 긴급 알림
+                </h3>
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-700 font-mono mb-3 leading-relaxed">
+                  📱 &quot;[파일투시트] 16시 출고 큐 생성 완료 (185건). 🚨 재고 부족(결품): [슬림 텀블러 블랙] 2개 부족으로 주문 5건 보류 중.&quot;
+                </div>
+                <p className="text-xs text-slate-600 leading-relaxed break-keep">
+                  송장 출력 도중 뒤늦게 품절을 발견해 택배 출고가 지연되거나 고객 클레임이 터지는 사고를 사전에 100% 방지하고 즉시 공장 긴급 발주를 넣습니다.
+                </p>
+              </div>
+              <div className="pt-4 border-t border-slate-100 mt-4 text-[11px] text-blue-700 font-bold flex items-center justify-between">
+                <span>출고 지연 및 배송 클레임 0건</span>
+                <span className="font-mono">Out-of-Stock Alert</span>
+              </div>
+            </div>
+
+            {/* 3. 주간 미수금 발생 알림 */}
+            <div className="p-6 rounded-2xl bg-white border border-rose-200 shadow-2xs hover:shadow-md hover:border-rose-400 transition flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
+                      <Calendar className="w-4 h-4" />
+                    </div>
+                    <span className="text-xs font-black text-emerald-800 bg-emerald-100/70 px-2 py-0.5 rounded-md">
+                      매주 월요일 (08:00)
+                    </span>
+                  </div>
+                  <span className="text-[11px] text-slate-400 font-medium">대표이사 / 자금팀장용</span>
+                </div>
+                <h3 className="text-base font-extrabold text-slate-900 mb-2">
+                  [금융·자금] 주간 통장 입출금 대조 & 미수금(미입금) 거래처 독촉 알림
+                </h3>
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-700 font-mono mb-3 leading-relaxed">
+                  📱 &quot;[파일투시트] 주간 입금 대조: 42개사 수납 완료. ⚠️ 미입금 거래처 3곳(총 1,840만 원): (주)대명상사(820만 원), 제일물류(650만 원)...&quot;
+                </div>
+                <p className="text-xs text-slate-600 leading-relaxed break-keep">
+                  매주 엑셀 VLOOKUP을 돌려 반나절씩 미수금을 찾던 수작업을 0초로 끝내고, 대표자와 자금팀장이 수금 전화를 제때 걸어 부실채권 발생을 원천 차단합니다.
+                </p>
+              </div>
+              <div className="pt-4 border-t border-slate-100 mt-4 text-[11px] text-emerald-700 font-bold flex items-center justify-between">
+                <span>미수금 회수 기간 35% 단축</span>
+                <span className="font-mono">Unpaid Reconcile Alert</span>
+              </div>
+            </div>
+
+            {/* 4. 전국 매장 마감 & 일일 매출 속보 */}
+            <div className="p-6 rounded-2xl bg-white border border-rose-200 shadow-2xs hover:shadow-md hover:border-rose-400 transition flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-purple-100 text-purple-800 flex items-center justify-center font-bold">
+                      <Briefcase className="w-4 h-4" />
+                    </div>
+                    <span className="text-xs font-black text-purple-800 bg-purple-100/70 px-2 py-0.5 rounded-md">
+                      매일 밤 23:00 / 23:30
+                    </span>
+                  </div>
+                  <span className="text-[11px] text-slate-400 font-medium">가맹점주 & 본사 임원용</span>
+                </div>
+                <h3 className="text-base font-extrabold text-slate-900 mb-2">
+                  [프랜차이즈] 전국 매장 마감 영수증 독촉 & 본사 총괄 매출 속보
+                </h3>
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-700 font-mono mb-3 leading-relaxed">
+                  📱 &quot;[파일투시트] 📊 전국 50개 매장 마감 속보: 총매출 9,450만 원 (전일대비 +8.4%). 마감 1위: 홍대점 (482만 원), 전 매장 마감 완료.&quot;
+                </div>
+                <p className="text-xs text-slate-600 leading-relaxed break-keep">
+                  마감 영수증을 올리지 않은 점주에게는 자동 리마인드 문자를 발송하고, 본사 대표님에게는 자정 전에 전국 매장 실시간 매출 속보를 전송하여 일일 결산을 당일 종결합니다.
+                </p>
+              </div>
+              <div className="pt-4 border-t border-slate-100 mt-4 text-[11px] text-purple-700 font-bold flex items-center justify-between">
+                <span>지점별 마감 누락률 0% 달성</span>
+                <span className="font-mono">Daily Executive Flash</span>
+              </div>
+            </div>
+          </div>
+
+          {/* 자연어 설정 안내 배너 */}
+          <div className="p-5 rounded-2xl bg-gradient-to-r from-rose-900 via-slate-900 to-rose-950 text-white flex flex-col sm:flex-row items-center justify-between gap-4 shadow-md w-full">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-rose-500/20 border border-rose-400/30 flex items-center justify-center shrink-0">
+                <Bell className="w-5 h-5 text-rose-300" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-white mb-0.5">자연어로 원하는 알림 규칙을 지정하세요</h4>
+                <p className="text-xs text-rose-200 break-keep">
+                  &quot;50만 원 초과 지출은 내 번호로 즉시 문자 줘&quot;라고 일상 언어로 입력하면 AI가 실시간 감시 파이프라인을 자동 구축합니다.
+                </p>
+              </div>
+            </div>
+            <Link
+              href="/"
+              className="shrink-0 px-4 py-2 rounded-xl bg-rose-500 hover:bg-rose-400 text-white font-black text-xs transition shadow-sm cursor-pointer"
+            >
+              알림 문자 체험하기 →
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* 5. FileToSheet만의 4대 차별화 핵심 기술 (Why Us? - max-w-5xl w-full 완전 통일) */}
       <section className="py-16 px-4 sm:px-6 lg:px-8 border-b border-slate-200 bg-slate-50/40 w-full">
         <div className="max-w-5xl mx-auto w-full">
@@ -1187,6 +1352,16 @@ export default function UseCasesPage() {
               </h4>
               <p className="text-xs sm:text-sm text-slate-600 leading-relaxed break-keep">
                 네, 100% 가능합니다! 구글 드라이브나 복잡한 클라우드 권한을 연결할 필요가 전혀 없습니다. 파일투시트 화면 상단 <span className="bg-indigo-100 text-indigo-800 px-1.5 py-0.5 rounded font-bold">[📱 모바일 연동]</span> 버튼을 누르고 화면에 뜬 QR코드를 스마트폰 시트봇 앱으로 비추기만 하면 1초 만에 페어링됩니다. 이후 외근지나 현장에서 카메라로 영수증이나 발주서를 촬영하면, 해당 파일투시트 시트에 <strong className="text-indigo-700 font-bold">새 행(Row)으로 1초 만에 실시간 스트리밍 적재</strong>됩니다.
+              </p>
+            </div>
+
+            <div className="p-5 sm:p-6 rounded-2xl bg-slate-50/70 border border-slate-200 shadow-2xs">
+              <h4 className="text-sm font-bold text-slate-900 mb-2 flex items-center gap-2">
+                <span className="text-rose-600 font-black">Q.</span>
+                <span>알림 문자 발송 조건을 자연어(일상 언어)로 설정할 수 있나요?</span>
+              </h4>
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed break-keep">
+                네, 완벽하게 지원합니다! 복잡한 프로그래밍이나 조건문(if/else) 설정 없이, <strong className="text-rose-700 font-bold">&quot;50만 원 이상 영수증이 들어오면 내 번호(010-7216-5884)로 즉시 문자 보내줘&quot;</strong> 또는 &quot;재고 부족이나 미수금 발생 시 담당자에게 요약 전송해줘&quot;처럼 일상 한국어로 입력해 두시면, 파일투시트 AI가 조건(금액, 키워드, 마감 시각)과 수신 번호, 메시지 양식을 스스로 해석하여 실시간 알림 파이프라인으로 자동 가동합니다.
               </p>
             </div>
 
