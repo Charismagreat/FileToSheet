@@ -31,6 +31,7 @@ function getColumnLetter(colIndex: number): string {
 
 export function TableHeader({
   headers,
+  relations = [],
   editingHeaderIdx,
   setEditingHeaderIdx,
   editingHeaderValue,
