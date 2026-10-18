@@ -853,6 +853,8 @@ export default function FileToSheetApp() {
           sheetIndex={ruleModalSheetIdx}
           sheetName={currentProject.sheets[ruleModalSheetIdx].name}
           sheetHeaders={currentProject.sheets[ruleModalSheetIdx].headers || []}
+          sheetRowCount={(currentProject.sheets[ruleModalSheetIdx].rows || []).length}
+          sampleRows={currentProject.sheets[ruleModalSheetIdx].rows || []}
           initialRule={currentProject.sheets[ruleModalSheetIdx].customPrompt || ''}
           onSaveRule={handleSaveSheetRule}
         />

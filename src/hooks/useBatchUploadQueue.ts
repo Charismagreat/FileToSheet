@@ -95,13 +95,27 @@ export function useBatchUploadQueue({
 
         updateItem(id, { status: 'analyzing', progress: 40 });
 
-        // 2. 현재 프로젝트의 모든 시트 정보 수집 (시트별 자연어 규칙 포함)
-        const existingSheetsPayload = (project?.sheets || []).map((sh, idx) => ({
-          sheetIndex: idx,
-          name: sh.name,
-          headers: sh.headers,
-          customPrompt: sh.customPrompt,
-        }));
+        // 2. 현재 프로젝트의 모든 시트 정보 수집 (시트별 자연어 규칙 및 누적 데이터 Few-Shot 예시 포함)
+        const existingSheetsPayload = (project?.sheets || []).map((sh, idx) => {
+          // 시스템 내부 컬럼(_로 시작) 및 기본 컬럼 제외하고 의미 있는 비즈니스 값만 샘플링
+          const cleanSamples = (sh.rows || []).slice(-3).map((row) => {
+            const clean: Record<string, any> = {};
+            for (const [k, v] of Object.entries(row)) {
+              if (!k.startsWith('_') && k !== '일련번호' && k !== '등록일시' && v !== '' && v !== null && v !== undefined) {
+                clean[k] = v;
+              }
+            }
+            return clean;
+          }).filter((r) => Object.keys(r).length > 0);
+
+          return {
+            sheetIndex: idx,
+            name: sh.name,
+            headers: sh.headers,
+            customPrompt: sh.customPrompt,
+            sampleRows: cleanSamples,
+          };
+        });
 
         // 3. 백엔드 AI 스마트 시트 라우터 호출
         const res = await fetch('/api/parse-document', {

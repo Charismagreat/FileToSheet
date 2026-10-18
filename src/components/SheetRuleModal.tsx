@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Sparkles, X, Check, Trash2, HelpCircle, Layers, Lightbulb } from 'lucide-react';
+import { Sparkles, X, Check, Trash2, HelpCircle, Layers, Lightbulb, Brain, Wand2 } from 'lucide-react';
 
 interface SheetRuleModalProps {
   isOpen: boolean;
@@ -9,6 +9,8 @@ interface SheetRuleModalProps {
   sheetIndex: number;
   sheetName: string;
   sheetHeaders: string[];
+  sheetRowCount?: number;
+  sampleRows?: Record<string, any>[];
   initialRule?: string;
   onSaveRule: (sheetIndex: number, rule: string) => void;
 }
@@ -46,6 +48,8 @@ export function SheetRuleModal({
   sheetIndex,
   sheetName,
   sheetHeaders = [],
+  sheetRowCount = 0,
+  sampleRows = [],
   initialRule = '',
   onSaveRule,
 }: SheetRuleModalProps) {
@@ -64,6 +68,53 @@ export function SheetRuleModal({
       setRuleText(presetPrompt);
     } else {
       setRuleText((prev) => prev.trim() + '\n' + presetPrompt);
+    }
+  };
+
+  /**
+   * 시트 내 누적 데이터에서 대표 패턴을 스스로 감지하여 자연어 규칙으로 변환
+   */
+  const handleMineRulesFromData = () => {
+    if (!sampleRows || sampleRows.length === 0) return;
+
+    const detectedRules: string[] = [];
+
+    // 1. 비고 태그 패턴 감지 (예: [식대], [소액경비], [승인대기] 등)
+    const tags = new Set<string>();
+    for (const r of sampleRows) {
+      const remark = String(r['비고'] || '');
+      const matches = remark.match(/\[([가-힣a-zA-Z0-9_\s]+)\]/g);
+      if (matches) {
+        matches.forEach((t) => tags.add(t));
+      }
+    }
+    if (tags.size > 0) {
+      const tagList = Array.from(tags).slice(0, 4).join(', ');
+      detectedRules.push(`기존 데이터에 사용된 계정/상태 태그(${tagList}) 양식을 계승하여 적절히 분류해줘.`);
+    }
+
+    // 2. 날짜 컬럼 형식 감지
+    const dateCol = sheetHeaders.find((h) => h.includes('일자') || h.includes('일시') || h.includes('날짜'));
+    if (dateCol) {
+      detectedRules.push(`'${dateCol}' 컬럼은 기존 적재 데이터와 동일하게 표준 날짜 규격(YYYY-MM-DD)으로 맞춰줘.`);
+    }
+
+    // 3. 금액/부가세 관련 컬럼 감지
+    const hasVat = sheetHeaders.some((h) => h.includes('세액') || h.includes('부가세'));
+    const hasSupply = sheetHeaders.some((h) => h.includes('공급가') || h.includes('금액'));
+    if (hasVat && hasSupply) {
+      detectedRules.push(`공급가액과 세액은 기존 데이터와 같이 10:1 분리 계산 규칙을 일관되게 유지해줘.`);
+    }
+
+    if (detectedRules.length === 0) {
+      detectedRules.push(`기존에 적재된 ${sheetRowCount}건의 데이터 양식과 동일한 표기 스타일을 유지해줘.`);
+    }
+
+    const autoPrompt = detectedRules.map((r, i) => `${i + 1}. ${r}`).join('\n');
+    if (!ruleText.trim()) {
+      setRuleText(autoPrompt);
+    } else {
+      setRuleText((prev) => prev.trim() + '\n' + autoPrompt);
     }
   };
 
@@ -119,6 +170,45 @@ export function SheetRuleModal({
               금액 계산, 가맹점별 계정 태깅, 포맷 통일 등 원하는 지침을 자유롭게 작성해 보세요.
             </div>
           </div>
+
+          {/* 🧠 누적 데이터 In-Context 학습 상태 배너 */}
+          {sheetRowCount > 0 ? (
+            <div className="p-4 bg-gradient-to-r from-purple-50 via-indigo-50/60 to-blue-50/40 rounded-2xl border border-purple-200/90 shadow-2xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-start gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-purple-600 text-white flex items-center justify-center shrink-0 shadow-xs mt-0.5">
+                    <Brain className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-black text-purple-900">누적 데이터 In-Context 학습 활성화</span>
+                      <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-purple-200 text-purple-800">
+                        {sheetRowCount}건의 패턴 참조 중
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-purple-700 leading-tight mt-1">
+                      다음 파일 업로드 시, 기존에 적재된 날짜 포맷, 계정 분류 태그, 비고 스타일을 AI가 모범 예시(Few-Shot)로 자동 학습하여 완벽한 일관성으로 처리합니다.
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleMineRulesFromData}
+                  className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-purple-100/70 border border-purple-300 text-purple-800 font-extrabold text-xs transition shadow-2xs cursor-pointer"
+                  title="기존에 적재된 데이터의 날짜, 태그, 컬럼 패턴을 분석하여 규칙 문구를 자동으로 채워넣습니다."
+                >
+                  <Wand2 className="w-3.5 h-3.5 text-purple-600" />
+                  <span>누적 패턴 규칙 자동 완성</span>
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 text-xs text-slate-500 flex items-center gap-2">
+              <Brain className="w-4 h-4 text-slate-400 shrink-0" />
+              <span>현재 시트에 데이터가 아직 없습니다. 첫 파일이 적재되면 <strong>자동 누적 학습(In-Context Learning)</strong>이 즉시 활성화됩니다.</span>
+            </div>
+          )}
 
           {/* 현재 시트 컬럼 안내 */}
           {sheetHeaders.length > 0 && (

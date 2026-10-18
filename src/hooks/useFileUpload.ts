@@ -159,12 +159,26 @@ export function useFileUpload({
         customPrompt?.trim(),
       ].filter(Boolean).join('\n\n');
 
+      const sampleRows =
+        mode === 'append_rows' && effectiveDestSheet?.rows?.length
+          ? (effectiveDestSheet.rows || []).slice(-3).map((row) => {
+              const clean: Record<string, any> = {};
+              for (const [k, v] of Object.entries(row)) {
+                if (!k.startsWith('_') && k !== '일련번호' && k !== '등록일시' && v !== '' && v !== null && v !== undefined) {
+                  clean[k] = v;
+                }
+              }
+              return clean;
+            }).filter((r) => Object.keys(r).length > 0)
+          : undefined;
+
       // 2. 클라이언트 사이드 파일 파싱 (엑셀은 자체 파싱, PDF/이미지는 AI OCR)
       const { sheets: parsedSheets, category } = await parseFileOnClient(
         file,
         setProcessStatus,
         combinedPrompt || undefined,
-        targetHeaders
+        targetHeaders,
+        sampleRows
       );
 
       // 3. 이지데스크 영구 스토리지 및 DB 연동

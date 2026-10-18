@@ -12,7 +12,7 @@ const FALLBACK_MODELS = [
 
 export async function POST(request: NextRequest) {
   try {
-    const { filename, fileBase64, customPrompt, targetHeaders, existingSheets } = await request.json();
+    const { filename, fileBase64, customPrompt, targetHeaders, existingSheets, sampleRows } = await request.json();
 
     if (!fileBase64) {
       return NextResponse.json(
@@ -64,6 +64,10 @@ export async function POST(request: NextRequest) {
         if (s.customPrompt?.trim()) {
           desc += `\n   └ ⚙️ [시트 전용 AI 분석/적재 규칙]: "${s.customPrompt.trim()}"`;
         }
+        if (Array.isArray(s.sampleRows) && s.sampleRows.length > 0) {
+          const sampleStr = JSON.stringify(s.sampleRows.slice(0, 2));
+          desc += `\n   └ 💡 [누적 데이터 학습 패턴 (기존 적재 모범 예시)]: ${sampleStr}`;
+        }
         return desc;
       }).join('\n');
 
@@ -71,7 +75,7 @@ export async function POST(request: NextRequest) {
 현재 통합 문서에는 다음과 같은 기존 시트들이 존재합니다:
 ${sheetsDesc}
 
-★ 분류, 스키마 검증 및 시트별 규칙 적용 지침:
+★ 분류, 스키마 검증 및 누적 데이터 학습(In-Context Few-Shot) 적용 지침:
 1. 업로드된 문서의 성격과 데이터가 위 기존 시트들 중 어느 시트의 비즈니스 목적 및 컬럼 구조와 70% 이상 부합하는지 철저히 대조 판정하세요.
 2. 부합하는 시트가 있다면:
    - "matched": true
@@ -79,16 +83,21 @@ ${sheetsDesc}
    - "matchedSheetName": 해당 시트의 이름
    - "headers": 해당 시트의 컬럼 목록을 100% 동일하게 유지
    - "rows": 해당 시트의 컬럼 규격에 맞추어 매핑한 데이터 행.
-   ★ [핵심] 매칭된 해당 시트에 "⚙️ [시트 전용 AI 분석/적재 규칙]"이 정의되어 있다면, 그 규칙(가맹점별 비고 태깅, 부가세 자동 분리 계산, 날짜/사업자번호 포맷 통일, 검산 주의 표시 등)을 100% 최우선으로 반드시 준수하여 데이터를 가공/추출하세요!
+   ★ [규칙 준수] 매칭된 해당 시트에 "⚙️ [시트 전용 AI 분석/적재 규칙]"이 정의되어 있다면, 그 규칙(가맹점별 비고 태깅, 부가세 자동 분리 계산, 날짜/사업자번호 포맷 통일, 검산 주의 표시 등)을 100% 최우선으로 반드시 준수하여 데이터를 가공/추출하세요!
+   ★ [누적 데이터 학습 효과] 매칭된 해당 시트에 "💡 [누적 데이터 학습 패턴 (기존 적재 모범 예시)]"가 제공되어 있다면, 기존에 성공적으로 적재된 데이터의 표기 스타일(날짜 형태, 부가세 계산 기준, 비고란의 계정과목 태그 등)을 완벽하게 학습하여 동일한 일관성으로 새 문서를 가공하세요!
 3. 만약 위 기존 시트 어디에도 성격이나 양식이 부합하지 않는 이질적 문서(예: 영수증/계산서 시트만 있는데 계약서, 이력서, 정관 등이 업로드된 경우)라면:
    - 억지로 기존 시트에 끼워맞추지 말고 반드시 "matched": false 로 설정하세요!
    - "mismatchReason": 기존 시트들의 양식과 왜 일치하지 않는지 친절한 설명 (예: "기존 시트(카드영수증, 세금계산서)와 서식이 다른 부동산 계약서 문서입니다.")
    - "headers" 및 "rows": 이 문서 자체의 성격에 맞는 독립적인 최적의 표 형태로 추출하세요 (사용자가 '새 시트로 생성'할 때 사용됩니다).`;
     }
 
-    const targetHeaderConstraint = targetHeadersList.length > 0 && !hasExistingSheets
-      ? `\n\n[★ 기존 시트 컬럼 100% 유지 지침 - 최우선 필수]\n현재 시트의 컬럼 목록: [ ${targetHeadersList.join(', ')} ]\n- 새 컬럼을 추가하지 마시고, headers는 위 컬럼 목록을 정확히 유지하세요.\n- 추출하는 데이터의 모든 필드는 위 컬럼 중 가장 부합하는 컬럼에 매핑하세요.\n- 컬럼에 없는 기타 정보는 '비고' 컬럼에 모아서 적재하세요.`
-      : '';
+    let targetHeaderConstraint = '';
+    if (targetHeadersList.length > 0 && !hasExistingSheets) {
+      targetHeaderConstraint = `\n\n[★ 기존 시트 컬럼 100% 유지 지침 - 최우선 필수]\n현재 시트의 컬럼 목록: [ ${targetHeadersList.join(', ')} ]\n- 새 컬럼을 추가하지 마시고, headers는 위 컬럼 목록을 정확히 유지하세요.\n- 추출하는 데이터의 모든 필드는 위 컬럼 중 가장 부합하는 컬럼에 매핑하세요.\n- 컬럼에 없는 기타 정보는 '비고' 컬럼에 모아서 적재하세요.`;
+      if (Array.isArray(sampleRows) && sampleRows.length > 0) {
+        targetHeaderConstraint += `\n\n[★ 누적 데이터 학습 패턴 (기존 적재 모범 예시)]\n현재 시트에 이미 적재된 데이터 양식입니다:\n${JSON.stringify(sampleRows.slice(0, 2))}\n위 기존 행들의 날짜 포맷, 계정 분류, 비고 스타일을 그대로 학습하여 새 파일의 데이터도 완벽한 일관성으로 추출하세요.`;
+      }
+    }
 
     const userPrompt = `파일명: ${filename}\n이 문서의 종류를 파악하여 본문 데이터를 상세한 독립 컬럼들로 분리해 추출하고, 독립 컬럼에 담기지 않는 상하단 거래처 상세, 주소, 대표자, 승인/문서번호, 계좌, 메모 등 부가 정보는 반드시 '비고' 컬럼에 모아서 적재해 주세요.` +
       routingConstraint +

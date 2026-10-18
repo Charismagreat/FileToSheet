@@ -10,7 +10,8 @@ export async function parseFileOnClient(
   file: File,
   onStatusChange?: (status: string) => void,
   customPrompt?: string,
-  targetHeaders?: string[]
+  targetHeaders?: string[],
+  sampleRows?: Record<string, any>[]
 ): Promise<ParseClientResult> {
   const ext = file.name.split('.').pop()?.toLowerCase() || '';
   const hasTargetHeaders = Array.isArray(targetHeaders) && targetHeaders.length > 0;
@@ -78,6 +79,7 @@ export async function parseFileOnClient(
       mimeType: file.type,
       customPrompt,
       targetHeaders: hasTargetHeaders ? targetHeaders : undefined,
+      sampleRows: Array.isArray(sampleRows) && sampleRows.length > 0 ? sampleRows : undefined,
     }),
   });
   const json = await res.json();

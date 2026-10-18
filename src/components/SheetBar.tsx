@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Table as TableIcon, Plus, Edit2, X, Sparkles, Sliders } from 'lucide-react';
+import { Table as TableIcon, Plus, Edit2, X, Sparkles, Sliders, Brain } from 'lucide-react';
 import { ParsedSheet } from '@/lib/parser';
 
 interface SheetBarProps {
@@ -183,6 +183,17 @@ export function SheetBar({
             </span>
           ) : (
             <span className="text-[10px] text-slate-400 font-mono">미설정</span>
+          )}
+
+          {/* 누적 데이터 In-Context 학습 상태 뱃지 */}
+          {sheets[activeSheetIndex].rows && sheets[activeSheetIndex].rows.length > 0 && (
+            <span
+              className="text-[10px] bg-purple-100 text-purple-700 font-extrabold px-1.5 py-0.5 rounded-md border border-purple-200 flex items-center gap-1"
+              title={`이 시트에 누적된 ${sheets[activeSheetIndex].rows.length}건의 데이터 패턴을 AI가 자동으로 학습·계승합니다.`}
+            >
+              <Brain className="w-2.5 h-2.5" />
+              <span>{sheets[activeSheetIndex].rows.length}건 학습중</span>
+            </span>
           )}
         </button>
       )}
