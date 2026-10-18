@@ -15,6 +15,11 @@ import {
   Briefcase,
   Plus,
   RefreshCw,
+  Copy,
+  Check,
+  ExternalLink,
+  HelpCircle,
+  Info,
 } from 'lucide-react';
 import { ProjectWorkspace } from '@/types/workspace';
 
@@ -53,6 +58,20 @@ export function ScheduleModal({ isOpen, onClose, project }: ScheduleModalProps) 
   const [sourceType, setSourceType] = useState<string>('google_drive');
   const [sourcePath, setSourcePath] = useState<string>('Receipts_Inbox');
   const [targetSheet, setTargetSheet] = useState<string>('자동 라우팅');
+  const [copiedEmail, setCopiedEmail] = useState<boolean>(false);
+  const [showDriveGuide, setShowDriveGuide] = useState<boolean>(true);
+
+  const ROBOT_SERVICE_EMAIL = 'egdesk-mcp@egdesk-mcp-xq8mxs.iam.gserviceaccount.com';
+
+  const handleCopyRobotEmail = async () => {
+    try {
+      await navigator.clipboard.writeText(ROBOT_SERVICE_EMAIL);
+      setCopiedEmail(true);
+      setTimeout(() => setCopiedEmail(false), 2500);
+    } catch (e) {
+      console.error('Failed to copy robot email:', e);
+    }
+  };
 
   const projectId = project?.id ? String(project.id) : 'default';
 
@@ -251,21 +270,42 @@ export function ScheduleModal({ isOpen, onClose, project }: ScheduleModalProps) 
               ) : tasks.length === 0 ? (
                 <div className="py-12 text-center">
                   <Clock className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-                  <p className="text-xs font-bold text-slate-700">등록된 정기 스케줄이 없습니다.</p>
                   <p className="text-[11px] text-slate-400 mt-0.5">
                     [새 스케줄 등록] 버튼을 눌러 심야 영수증 파싱이나 마감 발주서 취합을 예약해 보세요.
                   </p>
                 </div>
               ) : (
-                tasks.map((task) => (
-                  <div
-                    key={task.id}
-                    className={`p-4 rounded-xl border transition ${
-                      task.is_active === 1
-                        ? 'bg-slate-50/80 border-slate-200'
-                        : 'bg-slate-100/50 border-slate-200 opacity-60'
-                    }`}
-                  >
+                <>
+                  {/* 상단 간편 연결 팁 바 */}
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 flex items-center justify-between gap-2 text-[11px] text-slate-600">
+                    <div className="flex items-center gap-1.5 truncate">
+                      <FolderOpen className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                      <span className="font-semibold text-slate-700">Google Drive 연동 로봇:</span>
+                      <code className="text-[10px] font-mono bg-white border border-slate-200 px-1 py-0.5 rounded truncate max-w-[170px]">
+                        {ROBOT_SERVICE_EMAIL}
+                      </code>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleCopyRobotEmail}
+                      className={`shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold transition ${
+                        copiedEmail ? 'bg-emerald-600 text-white' : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
+                      }`}
+                    >
+                      {copiedEmail ? <Check className="w-2.5 h-2.5" /> : <Copy className="w-2.5 h-2.5" />}
+                      <span>{copiedEmail ? '복사됨' : '복사'}</span>
+                    </button>
+                  </div>
+
+                  {tasks.map((task) => (
+                    <div
+                      key={task.id}
+                      className={`p-4 rounded-xl border transition ${
+                        task.is_active === 1
+                          ? 'bg-slate-50/80 border-slate-200'
+                          : 'bg-slate-100/50 border-slate-200 opacity-60'
+                      }`}
+                    >
                     <div className="flex items-start justify-between gap-3 mb-2">
                       <div>
                         <div className="flex items-center gap-1.5">
@@ -324,10 +364,11 @@ export function ScheduleModal({ isOpen, onClose, project }: ScheduleModalProps) 
                       </span>
                     </div>
                   </div>
-                ))
-              )}
-            </div>
-          ) : (
+                ))}
+              </>
+            )}
+          </div>
+        ) : (
             <form onSubmit={handleCreateTask} className="space-y-3.5 text-xs">
               {/* 1. 프리셋 선택 버튼 그룹 */}
               <div>
@@ -438,11 +479,11 @@ export function ScheduleModal({ isOpen, onClose, project }: ScheduleModalProps) 
                   <select
                     value={sourceType}
                     onChange={(e) => setSourceType(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-amber-500"
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-amber-500 font-semibold"
                   >
-                    <option value="google_drive">Google Drive 지정 폴더</option>
-                    <option value="local_folder">로컬/서버 공유 폴더</option>
-                    <option value="share_inbox">지점 수신함 (share_links)</option>
+                    <option value="google_drive">📁 Google Drive 지정 폴더</option>
+                    <option value="local_folder">💻 로컬/서버 공유 폴더</option>
+                    <option value="share_inbox">📬 지점 수신함 (share_links)</option>
                   </select>
                 </div>
 
@@ -452,11 +493,83 @@ export function ScheduleModal({ isOpen, onClose, project }: ScheduleModalProps) 
                     type="text"
                     value={sourcePath}
                     onChange={(e) => setSourcePath(e.target.value)}
-                    placeholder="Inbox"
+                    placeholder="예: Receipts_Inbox"
                     className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 font-mono focus:outline-none focus:border-amber-500"
                   />
                 </div>
               </div>
+
+              {/* Google Drive 30초 원클릭 연결 가이드 카드 (불특정 다수 일반 사용자용) */}
+              {sourceType === 'google_drive' && (
+                <div className="rounded-xl border border-blue-200 bg-blue-50/60 p-3.5 space-y-2.5 transition-all text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="font-extrabold text-blue-900 flex items-center gap-1.5">
+                      <FolderOpen className="w-4 h-4 text-blue-600" />
+                      내 Google Drive 폴더 30초 원클릭 연결 가이드
+                    </span>
+                    <a
+                      href="https://drive.google.com"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-700 hover:text-blue-900 hover:underline bg-white px-2 py-0.5 rounded-md border border-blue-200 shadow-2xs"
+                    >
+                      <span>Google Drive 바로가기</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+
+                  <p className="text-[11px] text-blue-800 leading-relaxed">
+                    불특정 다수 사용자 누구든, 본인의 구글 드라이브 폴더 1개를 파일투시트 자동화 로봇에게 공유만 해주시면 비밀번호나 복잡한 권한 없이 즉시 연동됩니다.
+                  </p>
+
+                  <div className="space-y-1.5 bg-white/90 p-2.5 rounded-lg border border-blue-100 text-[11px]">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5 font-medium text-slate-700 truncate">
+                        <span className="w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px] font-bold shrink-0">1</span>
+                        <span>자동화 로봇 이메일 복사:</span>
+                        <code className="bg-slate-100 px-1.5 py-0.5 rounded font-mono text-[10.5px] text-slate-800 truncate max-w-[200px]">
+                          {ROBOT_SERVICE_EMAIL}
+                        </code>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleCopyRobotEmail}
+                        className={`shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded text-[10.5px] font-bold transition ${
+                          copiedEmail
+                            ? 'bg-emerald-500 text-white'
+                            : 'bg-blue-600 hover:bg-blue-700 text-white shadow-2xs'
+                        }`}
+                      >
+                        {copiedEmail ? (
+                          <>
+                            <Check className="w-3 h-3" />
+                            <span>복사완료!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3 h-3" />
+                            <span>이메일 복사</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                    <div className="flex items-start gap-1.5 text-slate-600 pt-1 border-t border-slate-100">
+                      <span className="w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">2</span>
+                      <span>
+                        내 구글 드라이브에서 연동할 폴더를 마우스 우클릭 ➔ <strong>[공유]</strong> ➔ 위 복사한 로봇 이메일을 <strong>[편집자]</strong>로 추가합니다.
+                      </span>
+                    </div>
+
+                    <div className="flex items-start gap-1.5 text-slate-600">
+                      <span className="w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">3</span>
+                      <span>
+                        위 <strong>[감시 폴더명/경로]</strong> 칸에 방금 공유한 폴더명(예: <code className="bg-blue-100 text-blue-900 px-1 rounded font-bold">Receipts_Inbox</code>)을 입력하고 등록하면 끝!
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* 5. 적재 타깃 시트 */}
               <div>
