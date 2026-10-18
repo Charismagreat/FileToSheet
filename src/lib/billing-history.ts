@@ -93,7 +93,50 @@ export function getBillingHistory(): BillingRecord[] {
 }
 
 /**
- * 신규 결제 / 충전 거래 내역 추가
+ * 원격 물리 DB(billing_history)로부터 결제 내역 동기화
+ */
+export async function fetchBillingHistoryFromDb(): Promise<BillingRecord[]> {
+  if (typeof window === 'undefined') return [];
+  try {
+    let phone = '';
+    const userRaw = localStorage.getItem('filetosheet_user');
+    if (userRaw) {
+      const u = JSON.parse(userRaw);
+      phone = u.phone || '';
+    }
+
+    const res = await fetch(`/api/billing?phone=${encodeURIComponent(phone)}`);
+    const data = await res.json();
+    if (data.success && Array.isArray(data.records) && data.records.length > 0) {
+      const mapped: BillingRecord[] = data.records.map((r: any) => ({
+        id: r.order_id,
+        date: r.created_at || new Date().toISOString(),
+        type: r.transaction_type || 'charge',
+        title: r.title,
+        originalAmount: Number(r.original_amount) || 0,
+        finalAmount: Number(r.final_amount) || 0,
+        paymentMethod: r.payment_method,
+        couponCode: r.coupon_code || undefined,
+        benefitsDesc: r.benefits_desc,
+        benefits: {},
+        status: r.status || 'completed',
+        taxInvoiceStatus: r.tax_invoice_status || 'none',
+        taxInvoiceInfo: r.tax_invoice_info ? (typeof r.tax_invoice_info === 'string' ? JSON.parse(r.tax_invoice_info) : r.tax_invoice_info) : undefined,
+      }));
+
+      // 로컬 캐시 업데이트
+      localStorage.setItem(BILLING_STORAGE_KEY, JSON.stringify(mapped));
+      window.dispatchEvent(new Event('filetosheet_billing_updated'));
+      return mapped;
+    }
+  } catch (err) {
+    console.warn('Failed to fetch billing from DB:', err);
+  }
+  return getBillingHistory();
+}
+
+/**
+ * 신규 결제 / 충전 거래 내역 추가 (물리 DB billing_history 및 로컬 캐시 동시 동기화)
  */
 export function addBillingRecord(data: {
   type: 'charge' | 'coupon' | 'subscription' | 'pro_trial';
@@ -124,12 +167,39 @@ export function addBillingRecord(data: {
   if (typeof window !== 'undefined') {
     localStorage.setItem(BILLING_STORAGE_KEY, JSON.stringify(updated));
     window.dispatchEvent(new Event('filetosheet_billing_updated'));
+
+    // 물리 DB (billing_history) 영구 적재 API 비동기 호출
+    let phone = 'anonymous';
+    try {
+      const userRaw = localStorage.getItem('filetosheet_user');
+      if (userRaw) {
+        phone = JSON.parse(userRaw).phone || phone;
+      }
+    } catch {}
+
+    fetch('/api/billing', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        phone,
+        orderId: newRecord.id,
+        type: newRecord.type,
+        title: newRecord.title,
+        originalAmount: newRecord.originalAmount,
+        finalAmount: newRecord.finalAmount,
+        paymentMethod: newRecord.paymentMethod,
+        couponCode: newRecord.couponCode,
+        benefitsDesc: newRecord.benefitsDesc,
+        status: newRecord.status,
+        taxInvoiceStatus: newRecord.taxInvoiceStatus,
+      }),
+    }).catch((err) => console.error('Failed to sync billing record to DB:', err));
   }
   return newRecord;
 }
 
 /**
- * 세금계산서 발행 요청 정보 등록
+ * 세금계산서 발행 요청 정보 등록 (물리 DB billing_history 및 로컬 캐시 동시 동기화)
  */
 export function requestTaxInvoice(recordId: string, info: Omit<TaxInvoiceInfo, 'requestedAt'>): boolean {
   if (typeof window === 'undefined') return false;
@@ -146,6 +216,18 @@ export function requestTaxInvoice(recordId: string, info: Omit<TaxInvoiceInfo, '
 
     localStorage.setItem(BILLING_STORAGE_KEY, JSON.stringify(list));
     window.dispatchEvent(new Event('filetosheet_billing_updated'));
+
+    // 물리 DB (billing_history) 세금계산서 정보 업데이트 API 비동기 호출
+    fetch('/api/billing', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        orderId: recordId,
+        taxInvoiceStatus: 'requested',
+        taxInvoiceInfo: list[idx].taxInvoiceInfo,
+      }),
+    }).catch((err) => console.error('Failed to sync tax invoice request to DB:', err));
+
     return true;
   } catch {
     return false;
