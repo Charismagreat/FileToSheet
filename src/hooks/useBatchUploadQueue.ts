@@ -95,11 +95,12 @@ export function useBatchUploadQueue({
 
         updateItem(id, { status: 'analyzing', progress: 40 });
 
-        // 2. 현재 프로젝트의 모든 시트 정보 수집
+        // 2. 현재 프로젝트의 모든 시트 정보 수집 (시트별 자연어 규칙 포함)
         const existingSheetsPayload = (project?.sheets || []).map((sh, idx) => ({
           sheetIndex: idx,
           name: sh.name,
           headers: sh.headers,
+          customPrompt: sh.customPrompt,
         }));
 
         // 3. 백엔드 AI 스마트 시트 라우터 호출

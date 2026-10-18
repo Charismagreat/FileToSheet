@@ -153,11 +153,17 @@ export function useFileUpload({
           ? effectiveDestSheet.headers
           : undefined;
 
+      // 2. 대상 시트 전용 AI 규칙과 사용자 임시 프롬프트 결합
+      const combinedPrompt = [
+        effectiveDestSheet?.customPrompt?.trim(),
+        customPrompt?.trim(),
+      ].filter(Boolean).join('\n\n');
+
       // 2. 클라이언트 사이드 파일 파싱 (엑셀은 자체 파싱, PDF/이미지는 AI OCR)
       const { sheets: parsedSheets, category } = await parseFileOnClient(
         file,
         setProcessStatus,
-        customPrompt,
+        combinedPrompt || undefined,
         targetHeaders
       );
 

@@ -7,6 +7,7 @@ export interface ParsedSheet {
   rows: Array<Record<string, any>>;
   rawRows: any[][];
   originalFiles?: OriginalDocFile[];
+  customPrompt?: string; // 🌟 시트별 전용 자연어 분석/적재 규칙
 }
 
 export interface ParseResult {

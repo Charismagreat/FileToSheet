@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Table as TableIcon, Plus, Edit2, X } from 'lucide-react';
+import { Table as TableIcon, Plus, Edit2, X, Sparkles, Sliders } from 'lucide-react';
 import { ParsedSheet } from '@/lib/parser';
 
 interface SheetBarProps {
@@ -16,6 +16,7 @@ interface SheetBarProps {
   onSaveSheetName: () => void;
   onAddNewSheet: () => void;
   onDeleteSheet: (idx: number, e: React.MouseEvent) => void;
+  onOpenSheetRule?: (idx: number) => void;
   plan?: string;
 }
 
@@ -31,6 +32,7 @@ export function SheetBar({
   onSaveSheetName,
   onAddNewSheet,
   onDeleteSheet,
+  onOpenSheetRule,
   plan,
 }: SheetBarProps) {
   const maxSheets = plan === 'pro' ? 30 : 5;
@@ -46,6 +48,7 @@ export function SheetBar({
         {sheets.map((sheet, idx) => {
           const isCurrent = activeSheetIndex === idx;
           const isRenaming = editingSheetIdx === idx;
+          const hasRule = Boolean(sheet.customPrompt?.trim());
 
           return (
             <div
@@ -56,7 +59,17 @@ export function SheetBar({
                   ? 'bg-blue-600 text-white shadow-xs border-blue-600'
                   : 'bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-100 border-slate-200'
               }`}
+              title={hasRule ? `[AI 규칙 적용 중]\n${sheet.customPrompt}` : undefined}
             >
+              {/* AI 규칙 적용 시 스파클 아이콘 */}
+              {hasRule && (
+                <Sparkles
+                  className={`w-3 h-3 shrink-0 ${
+                    isCurrent ? 'text-amber-300 fill-amber-300' : 'text-blue-600 fill-blue-600'
+                  }`}
+                />
+              )}
+
               {isRenaming ? (
                 <input
                   autoFocus
@@ -101,6 +114,24 @@ export function SheetBar({
                 </button>
               )}
 
+              {/* 시트 전용 AI 규칙 열기 버튼 */}
+              {onOpenSheetRule && !isRenaming && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOpenSheetRule(idx);
+                  }}
+                  className={`p-0.5 transition ${
+                    hasRule
+                      ? isCurrent ? 'text-amber-300 hover:text-white' : 'text-blue-600 hover:text-blue-800'
+                      : 'opacity-0 group-hover:opacity-100 hover:text-blue-200'
+                  }`}
+                  title="이 시트의 AI 분석·적재 규칙 설정"
+                >
+                  <Sliders className="w-2.5 h-2.5" />
+                </button>
+              )}
+
               {sheets.length > 1 && (
                 <button
                   onClick={(e) => onDeleteSheet(idx, e)}
@@ -126,6 +157,35 @@ export function SheetBar({
           <span className="text-[10px] text-slate-400 font-mono">({sheets.length}/{maxSheets})</span>
         </button>
       </div>
+
+      {/* 우측: 현재 활성 시트 AI 적재 규칙 원클릭 제어 버튼 */}
+      {onOpenSheetRule && sheets[activeSheetIndex] && (
+        <button
+          onClick={() => onOpenSheetRule(activeSheetIndex)}
+          className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl border transition font-bold shadow-2xs shrink-0 cursor-pointer ${
+            sheets[activeSheetIndex].customPrompt?.trim()
+              ? 'bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 shadow-xs'
+              : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200'
+          }`}
+          title="현재 활성 시트에 파일이 추가되거나 다중 파일 분류 시 적용할 자연어 규칙을 설정합니다."
+        >
+          <Sparkles
+            className={`w-3.5 h-3.5 ${
+              sheets[activeSheetIndex].customPrompt?.trim()
+                ? 'text-amber-500 fill-amber-500'
+                : 'text-blue-600'
+            }`}
+          />
+          <span>시트 AI 적재 규칙</span>
+          {sheets[activeSheetIndex].customPrompt?.trim() ? (
+            <span className="text-[10px] bg-blue-600 text-white font-mono px-1.5 py-0.2 rounded-full leading-none">
+              ON
+            </span>
+          ) : (
+            <span className="text-[10px] text-slate-400 font-mono">미설정</span>
+          )}
+        </button>
+      )}
     </div>
   );
 }

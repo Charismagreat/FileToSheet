@@ -60,21 +60,26 @@ export async function POST(request: NextRequest) {
     let routingConstraint = '';
     if (hasExistingSheets) {
       const sheetsDesc = existingSheets.map((s: any, idx: number) => {
-        return `[시트 #${idx}] 이름: "${s.name}", 컬럼 목록: [ ${s.headers.join(', ')} ]`;
+        let desc = `[시트 #${idx}] 이름: "${s.name}", 컬럼 목록: [ ${s.headers.join(', ')} ]`;
+        if (s.customPrompt?.trim()) {
+          desc += `\n   └ ⚙️ [시트 전용 AI 분석/적재 규칙]: "${s.customPrompt.trim()}"`;
+        }
+        return desc;
       }).join('\n');
 
-      routingConstraint = `\n\n[★ 지능형 기존 시트 자동 분류(라우팅) 및 적합성 검증 지침 - 최우선 필수]
+      routingConstraint = `\n\n[★ 지능형 기존 시트 자동 분류(라우팅) 및 맞춤형 적재 규칙 준수 지침 - 최우선 필수]
 현재 통합 문서에는 다음과 같은 기존 시트들이 존재합니다:
 ${sheetsDesc}
 
-★ 분류 및 스키마 검증 규칙:
+★ 분류, 스키마 검증 및 시트별 규칙 적용 지침:
 1. 업로드된 문서의 성격과 데이터가 위 기존 시트들 중 어느 시트의 비즈니스 목적 및 컬럼 구조와 70% 이상 부합하는지 철저히 대조 판정하세요.
 2. 부합하는 시트가 있다면:
    - "matched": true
    - "matchedSheetIndex": 해당 시트의 인덱스 번호 (0, 1, ...)
    - "matchedSheetName": 해당 시트의 이름
    - "headers": 해당 시트의 컬럼 목록을 100% 동일하게 유지
-   - "rows": 해당 시트의 컬럼 규격에 맞추어 매핑한 데이터 행
+   - "rows": 해당 시트의 컬럼 규격에 맞추어 매핑한 데이터 행.
+   ★ [핵심] 매칭된 해당 시트에 "⚙️ [시트 전용 AI 분석/적재 규칙]"이 정의되어 있다면, 그 규칙(가맹점별 비고 태깅, 부가세 자동 분리 계산, 날짜/사업자번호 포맷 통일, 검산 주의 표시 등)을 100% 최우선으로 반드시 준수하여 데이터를 가공/추출하세요!
 3. 만약 위 기존 시트 어디에도 성격이나 양식이 부합하지 않는 이질적 문서(예: 영수증/계산서 시트만 있는데 계약서, 이력서, 정관 등이 업로드된 경우)라면:
    - 억지로 기존 시트에 끼워맞추지 말고 반드시 "matched": false 로 설정하세요!
    - "mismatchReason": 기존 시트들의 양식과 왜 일치하지 않는지 친절한 설명 (예: "기존 시트(카드영수증, 세금계산서)와 서식이 다른 부동산 계약서 문서입니다.")

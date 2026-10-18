@@ -13,7 +13,7 @@ import {
   PhoneAuthModal, UploadOptionModal, OriginalFileModal, AddColumnModal,
   ExportOptionModal, ShareModal, PlanLimitModal, PricingModal, EnterpriseInquiryModal, DuplicateFileModal,
   AccountTransferModal, ShareToManagerModal, ConsolidatedStatsModal, EmergencyRecoveryModal,
-  ShareManagementModal, ExportScopeModal,
+  ShareManagementModal, ExportScopeModal, SheetRuleModal,
 } from '@/components/modals';
 import { UploadUndoToast } from '@/components/UploadUndoToast';
 import { AiChatDrawer, ChatScope } from '@/components/AiChatDrawer';
@@ -45,6 +45,7 @@ export default function FileToSheetApp() {
   const [showShareManagementModal, setShowShareManagementModal] = useState<boolean>(false);
   const [showAiChatDrawer, setShowAiChatDrawer] = useState<boolean>(false);
   const [aiChatInitialScope, setAiChatInitialScope] = useState<ChatScope>('current_sheet');
+  const [ruleModalSheetIdx, setRuleModalSheetIdx] = useState<number | null>(null);
   const fabFileInputRef = useRef<HTMLInputElement>(null);
   const handlePlanLimit = (title: string, reason: string) => setLimitNotice({ title, reason });
 
@@ -402,6 +403,20 @@ export default function FileToSheetApp() {
     setActiveSubTab('table');
   };
 
+  // 🌟 시트별 AI 분석·적재 자연어 규칙 저장
+  const handleSaveSheetRule = (sheetIndex: number, rule: string) => {
+    ws.setProjects((prev) =>
+      prev.map((proj, pIdx) => {
+        if (pIdx !== ws.activeProjectIndex) return proj;
+        const nextSheets = proj.sheets.map((sh, sIdx) => {
+          if (sIdx !== sheetIndex) return sh;
+          return { ...sh, customPrompt: rule || undefined };
+        });
+        return { ...proj, sheets: nextSheets };
+      })
+    );
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-slate-50 text-slate-800 font-sans selection:bg-blue-100 selection:text-blue-900">
       <Header
@@ -469,6 +484,7 @@ export default function FileToSheetApp() {
                   onSaveSheetName={ws.saveSheetName}
                   onAddNewSheet={ws.handleAddNewSheet}
                   onDeleteSheet={ws.handleDeleteSheet}
+                  onOpenSheetRule={(idx) => setRuleModalSheetIdx(idx)}
                   plan={auth.currentUser?.plan}
                 />
 
@@ -828,6 +844,19 @@ export default function FileToSheetApp() {
           setShowAiChatDrawer(true);
         }}
       />
+
+      {/* 22. 시트별 AI 분석·적재 자연어 규칙 설정 모달 */}
+      {ruleModalSheetIdx !== null && currentProject?.sheets[ruleModalSheetIdx] && (
+        <SheetRuleModal
+          isOpen={true}
+          onClose={() => setRuleModalSheetIdx(null)}
+          sheetIndex={ruleModalSheetIdx}
+          sheetName={currentProject.sheets[ruleModalSheetIdx].name}
+          sheetHeaders={currentProject.sheets[ruleModalSheetIdx].headers || []}
+          initialRule={currentProject.sheets[ruleModalSheetIdx].customPrompt || ''}
+          onSaveRule={handleSaveSheetRule}
+        />
+      )}
     </div>
   );
 }
