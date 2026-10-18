@@ -5,7 +5,7 @@ import Link from 'next/link';
 import {
   FileSpreadsheet, Download, Share2, RefreshCw, Smartphone, LogOut,
   User, Database, Crown, UploadCloud, Zap, ChevronDown, Building2, BarChart3,
-  Send, Inbox, Globe, Sparkles, Link as LinkIcon, ShieldCheck, Lightbulb
+  Send, Inbox, Globe, Sparkles, Link as LinkIcon, ShieldCheck, Lightbulb, Clock
 } from 'lucide-react';
 import { UserSession, ProjectWorkspace } from '@/types/workspace';
 import { UserUsagePopover } from './UserUsagePopover';
@@ -24,6 +24,7 @@ interface HeaderProps {
   onOpenTransferModal?: () => void;
   onOpenBillingHistory?: () => void;
   onOpenRemoteDbModal?: () => void;
+  onOpenScheduleModal?: () => void;
   onOpenShareToManagerModal?: () => void;
   onOpenConsolidatedModal?: () => void;
   onOpenShareManagementModal?: () => void;
@@ -49,6 +50,7 @@ export function Header({
   onOpenTransferModal,
   onOpenBillingHistory,
   onOpenRemoteDbModal,
+  onOpenScheduleModal,
   onOpenShareToManagerModal,
   onOpenConsolidatedModal,
   onOpenShareManagementModal,
@@ -126,7 +128,7 @@ export function Header({
 
       {/* 2. 우측 정돈된 액션 바 (그룹화) */}
       <div className="flex items-center gap-2">
-        {/* 🌟 그룹 A: 원격 My DB 연동 */}
+        {/* 🌟 그룹 A: 원격 My DB 연동 및 정기 스케줄 */}
         {onOpenRemoteDbModal && (
           <button
             onClick={onOpenRemoteDbModal}
@@ -136,6 +138,17 @@ export function Header({
             <Globe className="w-3.5 h-3.5 text-indigo-600" />
             <span>원격 My DB</span>
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          </button>
+        )}
+
+        {onOpenScheduleModal && (
+          <button
+            onClick={onOpenScheduleModal}
+            className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-amber-50 border border-slate-200 hover:border-amber-300 text-slate-700 hover:text-amber-800 transition active:scale-95"
+            title="정기 스케줄 무인 자동화 파이프라인 설정 및 관리"
+          >
+            <Clock className="w-3.5 h-3.5 text-amber-600" />
+            <span>스케줄</span>
           </button>
         )}
 

@@ -224,6 +224,27 @@ export const TABLES = {
     columnCount: 9,
     rowCount: 0,
   },
+  scheduled_tasks: {
+    name: 'scheduled_tasks',
+    displayName: '정기 스케줄 작업 목록',
+    description: '정기 스케줄 및 무인 배치 파이프라인 관리 테이블',
+    columns: [
+      'project_id',
+      'title',
+      'cron_expression',
+      'preset_name',
+      'source_type',
+      'source_path',
+      'target_sheet',
+      'is_active',
+      'last_run_at',
+      'last_run_status',
+      'last_run_result',
+      'created_at',
+    ],
+    columnCount: 12,
+    rowCount: 0,
+  },
 } as const;
 
 export type TableName = keyof typeof TABLES;

@@ -19,6 +19,7 @@ import { UploadUndoToast } from '@/components/UploadUndoToast';
 import { AiChatDrawer, ChatScope } from '@/components/AiChatDrawer';
 import { BillingHistoryModal } from '@/components/BillingHistoryModal';
 import { RemoteDbModal } from '@/components/RemoteDbModal';
+import { ScheduleModal } from '@/components/ScheduleModal';
 import { BatchUploadMonitor } from '@/components/BatchUploadMonitor';
 import { Sparkles, Upload } from 'lucide-react';
 import { ExportTargetType } from '@/components/ExportScopeModal';
@@ -131,6 +132,7 @@ export default function FileToSheetApp() {
   const [isTableDragging, setIsTableDragging] = useState<boolean>(false);
   const [showOriginalModal, setShowOriginalModal] = useState<boolean>(false);
   const [showShareModal, setShowShareModal] = useState<boolean>(false);
+  const [showScheduleModal, setShowScheduleModal] = useState<boolean>(false);
 
   // 조회 필터 상태 (기간/날짜, 건수 제한, 다중 조건 규칙)
   const [filterState, setFilterState] = useState<FilterState>({
@@ -453,6 +455,7 @@ export default function FileToSheetApp() {
         onOpenPricingModal={() => setShowPricingModal(true)}
         onOpenBillingHistory={() => setShowBillingHistoryModal(true)}
         onOpenRemoteDbModal={() => setShowRemoteDbModal(true)}
+        onOpenScheduleModal={() => setShowScheduleModal(true)}
         onOpenTransferModal={() => setShowTransferModal(true)}
         onOpenShareToManagerModal={() => setShowShareToManagerModal(true)}
         onOpenConsolidatedModal={() => setShowConsolidatedModal(true)}
@@ -887,6 +890,13 @@ export default function FileToSheetApp() {
           onSaveRule={handleSaveSheetRule}
         />
       )}
+
+      {/* 23. 정기 스케줄 & 무인 파이프라인 관리 모달 */}
+      <ScheduleModal
+        isOpen={showScheduleModal}
+        onClose={() => setShowScheduleModal(false)}
+        project={currentProject}
+      />
     </div>
   );
 }
