@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { ProjectWorkspace } from '@/types/workspace';
 import { getPlanLimits } from '@/lib/plan-limits';
+import { insertRows } from '@/egdesk-helpers';
 
 interface UseTableEditorOptions {
   projects: ProjectWorkspace[];
@@ -110,10 +111,26 @@ export function useTableEditor({ projects, setProjects, activeProjectIndex, plan
       else newRow[h] = '';
     });
     updateActiveSheet((sheet) => ({ ...sheet, rows: [...sheet.rows, newRow] }));
+
+    // 감사 로그 (row_insert) 기록
+    insertRows('data_change_logs', [
+      {
+        project_id: currentProject?.id ? Number(currentProject.id) : null,
+        sheet_name: currentSheet.name,
+        change_type: 'row_insert',
+        target_row: String(currentSheet.rows.length + 1),
+        column_name: null,
+        before_value: null,
+        after_value: JSON.stringify(newRow),
+        operator: 'user',
+        created_at: new Date().toISOString(),
+      },
+    ]).catch((e) => console.warn('data_change_logs 기록 실패:', e));
   };
 
   const handleDeleteRow = (idx: number) => {
     if (!currentSheet) return;
+    const targetRow = currentSheet.rows[idx];
     updateActiveSheet((sheet) => {
       const updatedRows = sheet.rows.filter((_: any, i: number) => i !== idx);
       if (sheet.headers.includes('일련번호')) {
@@ -121,16 +138,53 @@ export function useTableEditor({ projects, setProjects, activeProjectIndex, plan
       }
       return { ...sheet, rows: updatedRows };
     });
+
+    // 감사 로그 (row_delete) 기록
+    if (targetRow) {
+      insertRows('data_change_logs', [
+        {
+          project_id: currentProject?.id ? Number(currentProject.id) : null,
+          sheet_name: currentSheet.name,
+          change_type: 'row_delete',
+          target_row: String(idx + 1),
+          column_name: null,
+          before_value: JSON.stringify(targetRow),
+          after_value: null,
+          operator: 'user',
+          created_at: new Date().toISOString(),
+        },
+      ]).catch((e) => console.warn('data_change_logs 기록 실패:', e));
+    }
   };
 
   const saveCellEdit = () => {
-    if (!editingCell || !currentProject) return;
+    if (!editingCell || !currentProject || !currentSheet) return;
     const { rowIdx, colKey } = editingCell;
-    updateActiveSheet((sheet) => {
-      const newRows = [...sheet.rows];
-      newRows[rowIdx] = { ...newRows[rowIdx], [colKey]: editValue };
-      return { ...sheet, rows: newRows };
-    });
+    const beforeVal = currentSheet.rows[rowIdx]?.[colKey];
+
+    if (String(beforeVal ?? '') !== String(editValue ?? '')) {
+      updateActiveSheet((sheet) => {
+        const newRows = [...sheet.rows];
+        newRows[rowIdx] = { ...newRows[rowIdx], [colKey]: editValue };
+        return { ...sheet, rows: newRows };
+      });
+
+      // 감사 로그 (cell_edit) 기록
+      insertRows('data_change_logs', [
+        {
+          project_id: currentProject?.id ? Number(currentProject.id) : null,
+          sheet_name: currentSheet.name,
+          change_type: 'cell_edit',
+          target_row: String(rowIdx + 1),
+          column_name: colKey,
+          before_value: String(beforeVal ?? ''),
+          after_value: String(editValue ?? ''),
+          operator: 'user',
+          created_at: new Date().toISOString(),
+        },
+      ]).catch((e) => console.warn('data_change_logs 기록 실패:', e));
+    }
+
     setEditingCell(null);
   };
 

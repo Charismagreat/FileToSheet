@@ -206,6 +206,24 @@ export const TABLES = {
     columnCount: 8,
     rowCount: 0,
   },
+  data_change_logs: {
+    name: 'data_change_logs',
+    displayName: '데이터 변경 및 삭제 감사 이력',
+    description: '시트 데이터 셀 수정, 행 추가, 행 삭제 등의 세부 감사 추적(Audit Trail) 및 변경 이력 관리 테이블',
+    columns: [
+      'project_id',
+      'sheet_name',
+      'change_type',
+      'target_row',
+      'column_name',
+      'before_value',
+      'after_value',
+      'operator',
+      'created_at',
+    ],
+    columnCount: 9,
+    rowCount: 0,
+  },
 } as const;
 
 export type TableName = keyof typeof TABLES;
