@@ -73,15 +73,35 @@ export async function POST(request: NextRequest) {
       created_at: new Date().toISOString(),
     };
 
+    let insertedId: any = null;
     try {
-      await insertRows('scheduled_tasks', [newTask]);
+      const insertRes = await insertRows('scheduled_tasks', [newTask]);
+      if (insertRes && insertRes.ids && insertRes.ids.length > 0) {
+        insertedId = insertRes.ids[0];
+      }
     } catch (insertErr) {
       console.error('Failed to insert into scheduled_tasks:', insertErr);
     }
 
+    // 만약 insertedId를 못 얻었다면 가장 최근에 추가된 행을 조회
+    let returnedTask: any = { ...newTask };
+    try {
+      const recent = await queryTable('scheduled_tasks', {
+        filter: { title },
+        limit: 1,
+      });
+      if (recent && Array.isArray(recent.rows) && recent.rows.length > 0) {
+        returnedTask = recent.rows[recent.rows.length - 1];
+      } else if (insertedId) {
+        returnedTask.id = insertedId;
+      }
+    } catch (qErr) {
+      if (insertedId) returnedTask.id = insertedId;
+    }
+
     return NextResponse.json({
       success: true,
-      task: newTask,
+      task: returnedTask,
     });
   } catch (error: any) {
     console.error('POST /api/scheduler failed:', error);
@@ -108,34 +128,35 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
+    const numId = Number(id);
+    const filterOptions = !isNaN(numId) ? { ids: [numId] } : { filters: { id: String(id) } };
+
     if (action === 'run_now') {
       const now = new Date().toISOString();
-      await updateRows(
-        'scheduled_tasks',
-        { id },
-        {
-          last_run_at: now,
-          last_run_status: 'success',
-          last_run_result: `즉시 실행 완료 (${now.slice(11, 19)} KST) • 신규 문서 파싱 및 시트 동기화 성공`,
-        }
-      );
+      const updates = {
+        last_run_at: now,
+        last_run_status: 'success',
+        last_run_result: `즉시 실행 완료 (${now.slice(11, 19)} KST) • 신규 문서 파싱 및 시트 동기화 성공`,
+      };
+      await updateRows('scheduled_tasks', updates, filterOptions);
+
       return NextResponse.json({
         success: true,
         message: '스케줄 작업이 즉시 실행되었습니다.',
+        task: { id, ...updates },
       });
     }
 
     if (isActive !== undefined) {
-      await updateRows(
-        'scheduled_tasks',
-        { id },
-        {
-          is_active: isActive ? 1 : 0,
-        }
-      );
+      const updates = {
+        is_active: isActive ? 1 : 0,
+      };
+      await updateRows('scheduled_tasks', updates, filterOptions);
+
       return NextResponse.json({
         success: true,
         message: `스케줄이 ${isActive ? '활성화' : '일시정지'}되었습니다.`,
+        task: { id, ...updates },
       });
     }
 
@@ -165,7 +186,9 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    await deleteRows('scheduled_tasks', { id: Number(id) || id });
+    const numId = Number(id);
+    const deleteOptions = !isNaN(numId) ? { ids: [numId] } : { filters: { id: String(id) } };
+    await deleteRows('scheduled_tasks', deleteOptions);
 
     return NextResponse.json({
       success: true,
