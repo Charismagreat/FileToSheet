@@ -42,6 +42,7 @@ export default function UseCasesPage() {
       solution: '영수증 묶음이나 세금계산서 PDF를 한 번에 드래그 앤 드롭하면, AI가 사업자번호, 결제일시, 공급가액, 부가세를 자동으로 분리해 정밀한 2차원 표로 정리합니다.',
       inputDocs: ['식대/교통비 종이영수증 촬영본', '카드사 매출전표 PDF', '홈택스 전자세금계산서'],
       extractedColumns: ['결제일자', '가맹점(공급자)', '사업자번호', '품목내역', '공급가액', '부가세', '합계금액', '승인번호/비고'],
+      customRulePrompt: '가맹점명에 맞춰 비고란에 [식대], [교통비], [소모품비] 계정과목 태그를 붙이고, 결제금액이 1만원 이하이면 [소액경비]로 분류해줘. 부가세는 결제금액의 10%로 자동 계산해줘.',
       roiText: '월평균 정산 소요 시간 8시간 ➔ 15분으로 97% 단축',
     },
     {
@@ -55,6 +56,7 @@ export default function UseCasesPage() {
       solution: '모든 형식의 발주서를 던지면 FileToSheet의 AI 스마트 시트 라우터가 발주내역 시트로 자동 감지해 품목, 규격, 수량, 단가를 단일 규격으로 통합 적재합니다.',
       inputDocs: ['도매상 수기 거래명세서 스캔본', '이커머스 플랫폼별 발주서', '물류센터 입고확인증'],
       extractedColumns: ['주문일자', '발주처', '품목코드/품목명', '규격/옵션', '수량', '입고단가', '배송지정보', '송장번호'],
+      customRulePrompt: '발주처별로 품목코드와 수량을 분리 추출하고, 배송지 주소가 제주 및 도서산간 지역인 경우 비고란에 [도서산간 할증] 태그를 붙여줘.',
       roiText: '일일 발주 취합 시간 2시간 ➔ 3분 완료, 오입력률 0%',
     },
     {
@@ -68,6 +70,7 @@ export default function UseCasesPage() {
       solution: '복잡한 다단 구조의 공사 견적서도 AI가 공종, 세부 품목, 수량, 단위, 재료비, 노무비, 경비로 완벽 분해하여 견적 비교 시트를 실시간 생성합니다.',
       inputDocs: ['공사 도급계약서 견적서', '건축자재 납품 거래명세표', '현장 장비 임대 및 일용직 노임대장'],
       extractedColumns: ['공종구분', '세부품목', '규격', '단위', '수량', '재료비단가', '노무비단가', '합계원가', '현장명'],
+      customRulePrompt: '공종명(철거/목공/전기/도배)을 식별해 독립 열로 분리하고, 건당 금액이 100만 원 초과 시 비고에 [현장소장 사전결재필]을 기재해줘.',
       roiText: '견적 검토 및 원가 대조 시간 3일 ➔ 10분으로 압축',
     },
     {
@@ -81,6 +84,7 @@ export default function UseCasesPage() {
       solution: '통장 PDF를 드롭하면 거래일시, 적요, 출금액, 입금액, 잔액을 깨끗한 디지털 표로 변환하고, SQLite DB 내보내기 및 필터 연동 통계로 이상 징후를 즉시 추출합니다.',
       inputDocs: ['은행 전계좌 입출금 거래내역 PDF', '부동산 임대차 계약서', '표준 근로계약서 및 서약서'],
       extractedColumns: ['거래일시', '구분(입/출)', '거래처/적요', '출금액', '입금액', '거래후잔액', '취급점', '비고'],
+      customRulePrompt: '적요란에 "이자", "배당"이 포함되면 [금융수익]으로 분류하고, 500만 원 이상 출금 거래는 비고에 [고액출금 대사필]을 자동으로 달아줘.',
       roiText: '감사 자료 추출 및 이상 거래 소명 준비 시간 90% 단축',
     },
     {
@@ -94,6 +98,7 @@ export default function UseCasesPage() {
       solution: '매일 스마트폰으로 마감 영수증과 납품서를 사진 찍어 업로드하면, 원본 증빙 탭에 파일이 안전 보존되면서 하나의 통합 정산 시트에 행이 착착 누적됩니다.',
       inputDocs: ['포스(POS) 일일 결제 마감표', '의약품/의료소모품 납품명세서', '학원 수강료 수납대장'],
       extractedColumns: ['수납일자', '환자/수강생명', '항목/과목', '카드결제액', '현금결제액', '미수금', '취소여부', '담당자'],
+      customRulePrompt: '수납방법(카드/현금영수증/미수)을 분리 기재하고, 수강생명 뒤에 보호자 연락처 뒷자리 4자리를 추출해 괄호로 병기해줘.',
       roiText: '세무사 사무실 자료 전달 준비 시간 0분 (공유 링크 1초 전송)',
     },
     {
@@ -107,6 +112,7 @@ export default function UseCasesPage() {
       solution: '영수증 사진 수십 장을 한 번에 던지면 AI가 날짜별, 항목별로 엑셀을 만들어주고 총합계와 월별 통계를 뽑아주어 세무 대리인에게 전달만 하면 끝납니다.',
       inputDocs: ['카페/식당 간이영수증', '사무용품/소모품 구매 영수증', '출장 숙박비 및 주유비 전표'],
       extractedColumns: ['일자', '지출처', '지출목적', '공급가액', '부가세', '결제금액', '결제수단', '비고'],
+      customRulePrompt: '지출처에 따라 국세청 필요경비 항목([여비교통비], [접대비], [복리후생비], [지급수수료])으로 자동 태깅하고, 날짜는 YYYY-MM-DD 형식으로 통일해줘.',
       roiText: '놓칠 뻔한 필요경비 전액 인정으로 소득세 절세 효과 극대화',
     },
   ];
@@ -378,6 +384,22 @@ export default function UseCasesPage() {
                       </div>
                     </div>
                   </div>
+
+                  {/* 시트 맞춤 자연어 AI 적재 규칙 안내 박스 */}
+                  {current.customRulePrompt && (
+                    <div className="mt-5 pt-4 border-t border-slate-200/80">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-purple-100 text-purple-700 text-xs font-black shadow-2xs">
+                          <Sparkles className="w-3.5 h-3.5 text-purple-600 animate-pulse" />
+                          이 시트에 사전 지정된 AI 맞춤 적재 규칙 (예시)
+                        </span>
+                        <span className="text-[11px] text-slate-500 font-medium">복잡한 엑셀 수식 없이 일상 문장으로 지정</span>
+                      </div>
+                      <div className="p-3.5 bg-gradient-to-r from-purple-50/70 via-indigo-50/40 to-blue-50/40 rounded-xl border border-purple-200/80 text-xs text-slate-800 font-mono leading-relaxed shadow-inner">
+                        💬 &quot;{current.customRulePrompt}&quot;
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* 하단 기대 효과 및 바로 체험 CTA */}
@@ -406,6 +428,120 @@ export default function UseCasesPage() {
         </div>
       </section>
 
+      {/* 4-B. 신규: 시트별 자연어 적재 규칙 (Prompt-Driven AI Rules) 하이라이트 섹션 (max-w-5xl w-full 완전 통일) */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8 border-b border-slate-200 bg-gradient-to-b from-purple-50/30 via-white to-slate-50/40 w-full">
+        <div className="max-w-5xl mx-auto w-full">
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-100 border border-purple-200 text-purple-700 text-xs font-black tracking-wide uppercase mb-3">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Prompt-Driven AI Schema & Rules</span>
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 break-keep mb-3">
+              복잡한 엑셀 수식 없이, 원하는 적재 규칙을 <span className="text-purple-600 underline decoration-purple-300 decoration-wavy underline-offset-4">일상 언어</span>로
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-600 max-w-2xl mx-auto break-keep leading-relaxed">
+              시트마다 &quot;식대는 [복리후생비]로 자동 분류&quot;, &quot;10만 원 이상은 [승인필요] 태그 추가&quot;처럼 원하는 규칙을 한국어로 한 줄만 적어두세요. File to Sheet의 AI 라우터가 파일 분석부터 표 데이터 적재까지 규칙을 100% 준수하여 자동 변환합니다.
+            </p>
+          </div>
+
+          {/* 4대 대표 실전 자연어 규칙 카드 그리드 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 w-full mb-8">
+            <div className="p-6 rounded-2xl bg-white border border-purple-200/90 shadow-sm hover:shadow-md hover:border-purple-400 transition flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-black text-purple-700 bg-purple-50 border border-purple-200 px-2.5 py-1 rounded-lg">
+                    경비 지출 / 회계
+                  </span>
+                  <span className="text-[11px] text-slate-400 font-medium">수기 계정 분류 0분화</span>
+                </div>
+                <h3 className="text-base font-extrabold text-slate-900 mb-2">계정과목 자동 분류 & 소액경비 태깅</h3>
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-700 font-mono mb-3 leading-relaxed">
+                  💬 &quot;스타벅스나 음식점 영수증은 [식대]로 계정 분류하고, 5만 원 초과는 [소액경비] 태그를 붙여줘&quot;
+                </div>
+                <p className="text-xs text-slate-600 leading-relaxed break-keep">
+                  AI가 상호명과 품목을 인지하여 회사 회계 기준에 맞는 계정과목을 스스로 채워 넣고 금액 구간별 승인 태그를 자동으로 생성합니다.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-6 rounded-2xl bg-white border border-blue-200/90 shadow-sm hover:shadow-md hover:border-blue-400 transition flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-black text-blue-700 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-lg">
+                    세금계산서 / 홈택스
+                  </span>
+                  <span className="text-[11px] text-slate-400 font-medium">ERP 호환 규격 통일</span>
+                </div>
+                <h3 className="text-base font-extrabold text-slate-900 mb-2">사업자번호 포맷 통일 & 부가세 10% 자동 분리</h3>
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-700 font-mono mb-3 leading-relaxed">
+                  💬 &quot;사업자등록번호는 000-00-00000 포맷으로 통일하고 공급가액의 10%를 부가세 컬럼에 자동 산출해줘&quot;
+                </div>
+                <p className="text-xs text-slate-600 leading-relaxed break-keep">
+                  띄어쓰기나 하이픈이 제각각인 사업자번호를 표준 규격으로 일괄 정제하고 누락된 부가세를 계산식에 맞춰 정확히 계산합니다.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-6 rounded-2xl bg-white border border-amber-200/90 shadow-sm hover:shadow-md hover:border-amber-400 transition flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-black text-amber-800 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-lg">
+                    공사 / 현장 발주
+                  </span>
+                  <span className="text-[11px] text-slate-400 font-medium">리스크 사전 감지</span>
+                </div>
+                <h3 className="text-base font-extrabold text-slate-900 mb-2">고액 품목 선별 & 임원 보고 대상 플래그</h3>
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-700 font-mono mb-3 leading-relaxed">
+                  💬 &quot;단가가 1,000만 원 초과이거나 미수금이 발생한 품목은 비고란에 [임원보고대상]으로 명시해줘&quot;
+                </div>
+                <p className="text-xs text-slate-600 leading-relaxed break-keep">
+                  수천 줄의 공사 자재 및 하도급 내역 중 주요 리스크와 고액 품목을 즉시 필터링할 수 있도록 사전 분류합니다.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-6 rounded-2xl bg-white border border-emerald-200/90 shadow-sm hover:shadow-md hover:border-emerald-400 transition flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-black text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg">
+                    인사 / 의료 / 법무
+                  </span>
+                  <span className="text-[11px] text-slate-400 font-medium">개인정보 안심 보호</span>
+                </div>
+                <h3 className="text-base font-extrabold text-slate-900 mb-2">개인정보 비식별화 & 날짜 표준 형식 고정</h3>
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-700 font-mono mb-3 leading-relaxed">
+                  💬 &quot;성명은 가운데 글자를 마스킹(예: 홍*동)하고 모든 진료/입사 일자는 YYYY-MM-DD 형식으로 고정해줘&quot;
+                </div>
+                <p className="text-xs text-slate-600 leading-relaxed break-keep">
+                  민감한 개인정보를 안전하게 마스킹 처리하고 서로 다른 시스템 간 통합이 가능하도록 날짜 표준 포맷을 강제합니다.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* 적용 방법 안내 배너 */}
+          <div className="p-5 rounded-2xl bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 text-white flex flex-col sm:flex-row items-center justify-between gap-4 shadow-md w-full">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-purple-500/20 border border-purple-400/30 flex items-center justify-center shrink-0">
+                <Sparkles className="w-5 h-5 text-purple-300" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-white mb-0.5">사용법은 정말 간단합니다</h4>
+                <p className="text-xs text-purple-200 break-keep">
+                  메인 화면 하단 시트 탭 바에서 <span className="text-yellow-300 font-bold">[✨ 시트 AI 적재 규칙]</span> 버튼을 누르고 원하는 문장을 입력하기만 하면 끝납니다.
+                </p>
+              </div>
+            </div>
+            <Link
+              href="/"
+              className="shrink-0 px-4 py-2 rounded-xl bg-white hover:bg-purple-50 text-purple-900 font-black text-xs transition shadow-sm cursor-pointer"
+            >
+              직접 규칙 지정해보기 →
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* 5. FileToSheet만의 4대 차별화 핵심 기술 (Why Us? - max-w-5xl w-full 완전 통일) */}
       <section className="py-16 px-4 sm:px-6 lg:px-8 border-b border-slate-200 bg-slate-50/40 w-full">
         <div className="max-w-5xl mx-auto w-full">
@@ -422,12 +558,12 @@ export default function UseCasesPage() {
                 <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-4">
                   <Layers className="w-5 h-5" />
                 </div>
-                <h4 className="text-base font-extrabold text-slate-900 mb-2">스마트 시트 자동 분류</h4>
+                <h4 className="text-base font-extrabold text-slate-900 mb-2">스마트 분류 & 맞춤 규칙</h4>
                 <p className="text-xs text-slate-600 leading-relaxed break-keep">
-                  여러 파일을 한꺼번에 던져도 AI가 성격(영수증, 계산서, 계약서)을 판별하여 적합한 시트를 찾아 알아서 분배 적재합니다.
+                  여러 파일을 한꺼번에 던져도 AI가 성격별로 자동 분배하며, 사용자가 시트에 한국어로 적어둔 자연어 규칙에 맞춰 완벽하게 가공·적재합니다.
                 </p>
               </div>
-              <span className="text-[11px] text-blue-600 font-bold mt-4 block">Auto-Router 탑재 →</span>
+              <span className="text-[11px] text-blue-600 font-bold mt-4 block">Auto-Router & Rules →</span>
             </div>
 
             <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-2xs hover:shadow-md hover:border-indigo-300 transition flex flex-col justify-between">
@@ -482,21 +618,40 @@ export default function UseCasesPage() {
 
           <div className="space-y-4 w-full">
             <div className="p-5 sm:p-6 rounded-2xl bg-slate-50/70 border border-slate-200 shadow-2xs">
-              <h4 className="text-sm font-bold text-slate-900 mb-2">Q. 어떤 형식의 파일을 올릴 수 있나요?</h4>
+              <h4 className="text-sm font-bold text-slate-900 mb-2 flex items-center gap-2">
+                <span className="text-purple-600 font-black">Q.</span>
+                <span>우리 회사만의 특별한 계정과목 분류나 부가세 계산 규칙이 있는데 적용할 수 있나요?</span>
+              </h4>
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed break-keep">
+                네, 완벽하게 지원합니다! File to Sheet는 시트별로 원하는 분석 및 적재 지침을 자연어로 직접 설정할 수 있는 <strong className="text-purple-700 font-bold">‘자연어 AI 적재 규칙’</strong> 기능을 기본 탑재하고 있습니다. 하단 시트 탭 바에서 <span className="bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded font-bold">[✨ 시트 AI 적재 규칙]</span> 버튼을 누르고 &quot;식대는 [복리후생비]로 분류&quot;, &quot;5만 원 이상은 [소액경비] 표기&quot;처럼 일상 언어로 입력해 두시면, 파일이 업로드될 때 AI가 해당 규칙을 스스로 인지하고 완벽하게 적용하여 표로 정리해 드립니다.
+              </p>
+            </div>
+
+            <div className="p-5 sm:p-6 rounded-2xl bg-slate-50/70 border border-slate-200 shadow-2xs">
+              <h4 className="text-sm font-bold text-slate-900 mb-2 flex items-center gap-2">
+                <span className="text-blue-600 font-black">Q.</span>
+                <span>어떤 형식의 파일을 올릴 수 있나요?</span>
+              </h4>
               <p className="text-xs sm:text-sm text-slate-600 leading-relaxed break-keep">
                 엑셀 파일(.xlsx, .xls), 텍스트/표 데이터(.csv), PDF 문서(.pdf), 그리고 스마트폰으로 촬영하거나 스캔한 모든 이미지 포맷(.png, .jpg, .jpeg, .webp 등)을 완벽하게 지원합니다.
               </p>
             </div>
 
             <div className="p-5 sm:p-6 rounded-2xl bg-slate-50/70 border border-slate-200 shadow-2xs">
-              <h4 className="text-sm font-bold text-slate-900 mb-2">Q. 여러 개의 영수증을 한 번에 올려도 되나요?</h4>
+              <h4 className="text-sm font-bold text-slate-900 mb-2 flex items-center gap-2">
+                <span className="text-blue-600 font-black">Q.</span>
+                <span>여러 개의 영수증을 한 번에 올려도 되나요?</span>
+              </h4>
               <p className="text-xs sm:text-sm text-slate-600 leading-relaxed break-keep">
                 네, 하단 중앙의 파일 업로드 버튼에서 여러 파일을 한 번에 선택하거나 테이블 영역으로 드래그 앤 드롭하시면, 우측 하단의 실시간 큐 모니터링 창이 작동하여 순차적으로 자동 파싱 및 분배 적재합니다.
               </p>
             </div>
 
             <div className="p-5 sm:p-6 rounded-2xl bg-slate-50/70 border border-slate-200 shadow-2xs">
-              <h4 className="text-sm font-bold text-slate-900 mb-2">Q. 회사 기밀이나 개인정보 유출 위험은 없나요?</h4>
+              <h4 className="text-sm font-bold text-slate-900 mb-2 flex items-center gap-2">
+                <span className="text-blue-600 font-black">Q.</span>
+                <span>회사 기밀이나 개인정보 유출 위험은 없나요?</span>
+              </h4>
               <p className="text-xs sm:text-sm text-slate-600 leading-relaxed break-keep">
                 File to Sheet는 엔터프라이즈 보안 가이드라인을 준수합니다. 업로드된 문서는 고객님의 승인 없이 외부에 공유되지 않으며, 인공지능 모델의 학습 데이터로 재활용되지 않습니다.
               </p>
