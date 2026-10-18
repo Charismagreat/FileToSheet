@@ -24,6 +24,10 @@ import {
   AlertCircle,
   Check,
   ChevronRight,
+  Brain,
+  History,
+  FileCheck2,
+  RotateCcw,
 } from 'lucide-react';
 
 export default function UseCasesPage() {
@@ -542,6 +546,102 @@ export default function UseCasesPage() {
         </div>
       </section>
 
+      {/* 4-C. 신규: 엔터프라이즈 전수 감사(Audit Trail) & 누적 학습 인프라 (max-w-5xl w-full 완전 통일) */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8 border-b border-slate-200 bg-white w-full">
+        <div className="max-w-5xl mx-auto w-full">
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900 text-white text-xs font-black tracking-wide uppercase mb-3 shadow-xs">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Enterprise Audit Trail & Cumulative Intelligence</span>
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 break-keep mb-3">
+              단순 표 변환을 넘어, <span className="text-blue-600 underline decoration-blue-300 decoration-wavy underline-offset-4">엔터프라이즈급 감사 추적</span>과 누적 학습 인프라
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-600 max-w-2xl mx-auto break-keep leading-relaxed">
+              어떤 파일이 언제 업로드되었는지, 누가 어떤 셀을 고쳤는지, 삭제된 행의 원본이 무엇이었는지 전수 기록하는 이지데스크 물리 데이터베이스 체계가 비즈니스 데이터의 100% 무결성을 보장합니다.
+            </p>
+          </div>
+
+          {/* 3대 핵심 엔터프라이즈 인프라 카드 그리드 (3열) */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 w-full mb-8">
+            {/* 1. 누적 데이터 맥락 학습 */}
+            <div className="p-6 rounded-2xl bg-slate-50/80 border border-slate-200 shadow-2xs hover:shadow-md hover:border-purple-300 transition flex flex-col justify-between">
+              <div>
+                <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center mb-4">
+                  <Brain className="w-5 h-5" />
+                </div>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-base font-extrabold text-slate-900">누적 맥락 학습</h3>
+                  <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-purple-100 text-purple-800">In-Context</span>
+                </div>
+                <p className="text-xs text-slate-600 leading-relaxed break-keep mb-4">
+                  데이터가 쌓일수록 AI가 기존 행들의 날짜 포맷, 계정과목 태그, 부가세 계산 방식을 모범 예시(Few-Shot)로 스스로 학습하여 새 파일도 완벽한 일관성으로 적재합니다.
+                </p>
+              </div>
+              <div className="pt-3 border-t border-slate-200/80 text-[11px] text-purple-700 font-bold flex items-center justify-between">
+                <span>기업 기밀 유출 0%</span>
+                <span className="font-mono">sheet_rules</span>
+              </div>
+            </div>
+
+            {/* 2. 전수 변경 및 삭제 감사 추적 */}
+            <div className="p-6 rounded-2xl bg-slate-50/80 border border-slate-200 shadow-2xs hover:shadow-md hover:border-blue-300 transition flex flex-col justify-between">
+              <div>
+                <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center mb-4">
+                  <History className="w-5 h-5" />
+                </div>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-base font-extrabold text-slate-900">셀 단위 변경·삭제 감사</h3>
+                  <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">Audit Trail</span>
+                </div>
+                <p className="text-xs text-slate-600 leading-relaxed break-keep mb-4">
+                  표에서 수정한 셀의 변경 전/후 원본 값을 실시간 보존하고, 삭제된 행의 전체 JSON 스냅샷을 영구 기록하여 실수로 삭제된 데이터도 완벽하게 추적·복원합니다.
+                </p>
+              </div>
+              <div className="pt-3 border-t border-slate-200/80 text-[11px] text-blue-700 font-bold flex items-center justify-between">
+                <span>회계 감사 전수 추적</span>
+                <span className="font-mono">data_change_logs</span>
+              </div>
+            </div>
+
+            {/* 3. AI 호출 및 대화 영구 보존 */}
+            <div className="p-6 rounded-2xl bg-slate-50/80 border border-slate-200 shadow-2xs hover:shadow-md hover:border-emerald-300 transition flex flex-col justify-between">
+              <div>
+                <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center mb-4">
+                  <FileCheck2 className="w-5 h-5" />
+                </div>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-base font-extrabold text-slate-900">AI 호출 & 대화 아카이빙</h3>
+                  <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">Logging</span>
+                </div>
+                <p className="text-xs text-slate-600 leading-relaxed break-keep mb-4">
+                  어떤 AI 모델이 몇 토큰을 소모했는지 실시간으로 투명하게 감사 로깅하며, AI 수석 비서와 나눈 분석 대화 이력을 기기 변경 시에도 영구 복원하여 제공합니다.
+                </p>
+              </div>
+              <div className="pt-3 border-t border-slate-200/80 text-[11px] text-emerald-700 font-bold flex items-center justify-between">
+                <span>토큰 감사 & 대화 복원</span>
+                <span className="font-mono">ai_call_logs</span>
+              </div>
+            </div>
+          </div>
+
+          {/* 인프라 요약 정보 바 */}
+          <div className="p-4 rounded-2xl bg-slate-900 text-white flex flex-wrap items-center justify-between gap-3 text-xs w-full">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span className="font-bold text-slate-200">이지데스크 My DB 물리 데이터베이스 체계 가동 중:</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5 font-mono text-[11px] text-slate-300">
+              <span className="bg-slate-800 px-2 py-0.5 rounded border border-slate-700">uploaded_files</span>
+              <span className="bg-slate-800 px-2 py-0.5 rounded border border-slate-700">sheet_rules</span>
+              <span className="bg-slate-800 px-2 py-0.5 rounded border border-slate-700">data_change_logs</span>
+              <span className="bg-slate-800 px-2 py-0.5 rounded border border-slate-700">billing_history</span>
+              <span className="bg-slate-800 px-2 py-0.5 rounded border border-slate-700">ai_chat_messages</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* 5. FileToSheet만의 4대 차별화 핵심 기술 (Why Us? - max-w-5xl w-full 완전 통일) */}
       <section className="py-16 px-4 sm:px-6 lg:px-8 border-b border-slate-200 bg-slate-50/40 w-full">
         <div className="max-w-5xl mx-auto w-full">
@@ -571,12 +671,12 @@ export default function UseCasesPage() {
                 <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-4">
                   <Eye className="w-5 h-5" />
                 </div>
-                <h4 className="text-base font-extrabold text-slate-900 mb-2">원본 증빙 1:1 대조 보존</h4>
+                <h4 className="text-base font-extrabold text-slate-900 mb-2">원본 증빙 1:1 대조 & 전수 감사</h4>
                 <p className="text-xs text-slate-600 leading-relaxed break-keep">
-                  변환된 데이터와 원본 PDF/영수증 파일을 한 화면에서 1:1로 영구 대조 보존하여 회계 감사 시 100% 무결성을 보장합니다.
+                  변환된 표와 원본 문서를 1:1로 대조함은 물론, 셀 단위 수정 전/후 값과 삭제된 행 스냅샷까지 영구 보존하여 회계 감사 100% 무결성을 보장합니다.
                 </p>
               </div>
-              <span className="text-[11px] text-indigo-600 font-bold mt-4 block">Audit Trail 보장 →</span>
+              <span className="text-[11px] text-indigo-600 font-bold mt-4 block">Audit Trail 완비 →</span>
             </div>
 
             <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-2xs hover:shadow-md hover:border-emerald-300 transition flex flex-col justify-between">
@@ -624,6 +724,26 @@ export default function UseCasesPage() {
               </h4>
               <p className="text-xs sm:text-sm text-slate-600 leading-relaxed break-keep">
                 네, 완벽하게 지원합니다! File to Sheet는 시트별로 원하는 분석 및 적재 지침을 자연어로 직접 설정할 수 있는 <strong className="text-purple-700 font-bold">‘자연어 AI 적재 규칙’</strong> 기능을 기본 탑재하고 있습니다. 하단 시트 탭 바에서 <span className="bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded font-bold">[✨ 시트 AI 적재 규칙]</span> 버튼을 누르고 &quot;식대는 [복리후생비]로 분류&quot;, &quot;5만 원 이상은 [소액경비] 표기&quot;처럼 일상 언어로 입력해 두시면, 파일이 업로드될 때 AI가 해당 규칙을 스스로 인지하고 완벽하게 적용하여 표로 정리해 드립니다.
+              </p>
+            </div>
+
+            <div className="p-5 sm:p-6 rounded-2xl bg-slate-50/70 border border-slate-200 shadow-2xs">
+              <h4 className="text-sm font-bold text-slate-900 mb-2 flex items-center gap-2">
+                <span className="text-blue-600 font-black">Q.</span>
+                <span>데이터가 누적되면 AI가 우리 회사의 양식을 스스로 학습하나요?</span>
+              </h4>
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed break-keep">
+                네, 맞습니다! 기존 시트에 데이터가 누적되면, 다음 파일을 분석할 때 AI가 해당 시트에 성공적으로 적재된 최근 데이터 행들을 <strong className="text-blue-700 font-bold">‘모범 예시(Few-Shot Sample)’</strong>로 자동 참조합니다. 따라서 날짜 표기법(슬래시 또는 하이픈), 가맹점별 계정과목 태그, 부가세 10:1 분리 계산 스타일 등을 스스로 학습하여 완벽한 일관성으로 채워 넣습니다. 기업 기밀은 외부 모델에 무단 저장되지 않는 안전한 In-Context Learning 방식입니다.
+              </p>
+            </div>
+
+            <div className="p-5 sm:p-6 rounded-2xl bg-slate-50/70 border border-slate-200 shadow-2xs">
+              <h4 className="text-sm font-bold text-slate-900 mb-2 flex items-center gap-2">
+                <span className="text-emerald-600 font-black">Q.</span>
+                <span>실수로 엑셀 데이터를 잘못 수정하거나 행을 삭제하면 복구할 수 있나요?</span>
+              </h4>
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed break-keep">
+                네, 안심하셔도 좋습니다! File to Sheet는 전용 감사 추적 엔진(<strong className="text-emerald-700 font-bold">data_change_logs</strong>)을 가동하고 있습니다. 표에서 셀 값을 수정할 때 변경 전/후 원본 값을 실시간 기록하며, 행을 삭제하더라도 해당 행의 모든 데이터 스냅샷을 영구 보존하므로 언제든 원본을 대조하고 안전하게 복구할 수 있습니다.
               </p>
             </div>
 
