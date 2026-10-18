@@ -28,6 +28,7 @@ import {
   History,
   FileCheck2,
   RotateCcw,
+  Link2,
 } from 'lucide-react';
 
 export default function UseCasesPage() {
@@ -642,6 +643,157 @@ export default function UseCasesPage() {
         </div>
       </section>
 
+      {/* 4-D. 신규: 외래키(FK) 적재 & 실시간 시트 조인 뷰 (Relational Sheets - max-w-5xl w-full 완전 통일) */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8 border-b border-slate-200 bg-indigo-50/20 w-full">
+        <div className="max-w-5xl mx-auto w-full">
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-600 text-white text-xs font-black tracking-wide uppercase mb-3 shadow-xs">
+              <Link2 className="w-3.5 h-3.5" />
+              <span>Relational Sheets & Live Join View</span>
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 break-keep mb-3">
+              외래키(FK) 적재와 실시간 시트 조인 — <br className="hidden sm:inline" />
+              <span className="text-indigo-600 underline decoration-indigo-300 decoration-wavy underline-offset-4">엑셀을 관계형 데이터베이스(RDB)처럼</span>
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-600 max-w-2xl mx-auto break-keep leading-relaxed">
+              수백 장의 영수증이나 발주서를 다른 마스터 시트와 1:1로 실시간 결합합니다. 복잡한 VLOOKUP 수식 없이도 거래처 대표자, 정산 계좌번호, 여신한도를 한 화면에서 즉시 대조할 수 있습니다.
+            </p>
+          </div>
+
+          {/* 3대 핵심 조인 시나리오 카드 (3열) */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 w-full mb-8">
+            <div className="p-6 rounded-2xl bg-white border border-indigo-200 shadow-2xs hover:shadow-md transition flex flex-col justify-between">
+              <div>
+                <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center mb-4">
+                  <Receipt className="w-5 h-5" />
+                </div>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-base font-extrabold text-slate-900">회계 · 세무 · 정산</h3>
+                  <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800">CRM 연동</span>
+                </div>
+                <h4 className="text-xs font-bold text-indigo-700 mb-2">영수증전표 ↔ 거래처 마스터</h4>
+                <p className="text-xs text-slate-600 leading-relaxed break-keep">
+                  영수증의 <strong>사업자등록번호</strong>를 외래키로 연결하면, 거래처 마스터의 [정산계좌], [담당영업], [여신한도]가 실시간 확장 표시되어 결제 실수가 원천 차단됩니다.
+                </p>
+              </div>
+              <div className="pt-3 border-t border-slate-100 text-[11px] text-indigo-600 font-bold flex items-center justify-between">
+                <span>Join Key: 사업자번호</span>
+                <span className="font-mono text-slate-400">1:1 매칭</span>
+              </div>
+            </div>
+
+            <div className="p-6 rounded-2xl bg-white border border-indigo-200 shadow-2xs hover:shadow-md transition flex flex-col justify-between">
+              <div>
+                <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center mb-4">
+                  <ShoppingCart className="w-5 h-5" />
+                </div>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-base font-extrabold text-slate-900">물류 · SCM · 유통</h3>
+                  <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">오배송 검증</span>
+                </div>
+                <h4 className="text-xs font-bold text-blue-700 mb-2">배송 송장 ↔ 본사 발주서</h4>
+                <p className="text-xs text-slate-600 leading-relaxed break-keep">
+                  택배 송장이나 인수증의 <strong>주문번호</strong>를 외래키로 묶어 발주서와 조인하면, 발주 수량과 실제 입고 수량 불일치 및 미출고 건을 원클릭으로 검출합니다.
+                </p>
+              </div>
+              <div className="pt-3 border-t border-slate-100 text-[11px] text-blue-600 font-bold flex items-center justify-between">
+                <span>Join Key: 주문번호</span>
+                <span className="font-mono text-slate-400">수량 불일치 대조</span>
+              </div>
+            </div>
+
+            <div className="p-6 rounded-2xl bg-white border border-indigo-200 shadow-2xs hover:shadow-md transition flex flex-col justify-between">
+              <div>
+                <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center mb-4">
+                  <Database className="w-5 h-5" />
+                </div>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-base font-extrabold text-slate-900">금융 · 자금 관리</h3>
+                  <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">자동 반제</span>
+                </div>
+                <h4 className="text-xs font-bold text-emerald-700 mb-2">통장 입출금 ↔ 매출 계산서</h4>
+                <p className="text-xs text-slate-600 leading-relaxed break-keep">
+                  통장 적요란의 입금자를 <strong>거래처코드</strong> 외래키로 매핑하여 매출 계산서와 조인하면, 청구액과 입금액이 자동 반제되어 미수금 목록만 단번에 분리됩니다.
+                </p>
+              </div>
+              <div className="pt-3 border-t border-slate-100 text-[11px] text-emerald-600 font-bold flex items-center justify-between">
+                <span>Join Key: 거래처코드</span>
+                <span className="font-mono text-slate-400">미수금 자동 추적</span>
+              </div>
+            </div>
+          </div>
+
+          {/* 라이브 조인 뷰 시뮬레이션 UI 쇼케이스 박스 */}
+          <div className="bg-white rounded-2xl border border-indigo-200 shadow-sm overflow-hidden w-full">
+            <div className="bg-slate-900 text-white px-4 py-3 flex items-center justify-between text-xs">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-pulse"></span>
+                <span className="font-bold">실제 조인 뷰 화면 미리보기 (Live Join View Simulation)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-0.5 rounded bg-indigo-600 text-white font-mono text-[10px] font-bold">
+                  🔗 4개 보조 열 실시간 결합 중
+                </span>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse font-sans">
+                <thead>
+                  <tr className="bg-slate-100 border-b border-slate-200 text-slate-600 text-[11px]">
+                    <th className="px-3 py-2 border-r border-slate-200">#</th>
+                    <th className="px-3 py-2 border-r border-slate-200 font-bold text-slate-800">가맹점(공급자)</th>
+                    <th className="px-3 py-2 border-r border-slate-200 font-bold text-slate-800">결제금액</th>
+                    <th className="px-3 py-2 border-r border-slate-200 font-bold text-indigo-700 bg-indigo-50/80">
+                      🔗 [FK] 사업자등록번호
+                    </th>
+                    <th className="px-3 py-2 border-r border-indigo-100 font-bold text-indigo-900 bg-indigo-100/60">
+                      [거래처] 상호
+                    </th>
+                    <th className="px-3 py-2 border-r border-indigo-100 font-bold text-indigo-900 bg-indigo-100/60">
+                      [거래처] 대표자
+                    </th>
+                    <th className="px-3 py-2 font-bold text-indigo-900 bg-indigo-100/60">
+                      [거래처] 정산계좌
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-slate-700">
+                  <tr className="hover:bg-slate-50">
+                    <td className="px-3 py-2.5 text-center text-slate-400 font-mono">1</td>
+                    <td className="px-3 py-2.5 font-medium">(주)이지데스크솔루션</td>
+                    <td className="px-3 py-2.5 font-mono">110,000원</td>
+                    <td className="px-3 py-2.5 font-mono font-bold text-indigo-600 bg-indigo-50/40">123-45-67890</td>
+                    <td className="px-3 py-2.5 bg-indigo-50/20 text-indigo-900 font-medium">
+                      <span className="inline-flex items-center gap-1">
+                        <Check className="w-3 h-3 text-emerald-500" />
+                        (주)이지데스크솔루션
+                      </span>
+                    </td>
+                    <td className="px-3 py-2.5 bg-indigo-50/20 text-indigo-900">홍길동 대표</td>
+                    <td className="px-3 py-2.5 bg-indigo-50/20 font-mono text-[11px] text-slate-600">국민 123-456-789012</td>
+                  </tr>
+                  <tr className="hover:bg-slate-50">
+                    <td className="px-3 py-2.5 text-center text-slate-400 font-mono">2</td>
+                    <td className="px-3 py-2.5 font-medium">알파문구 강남점</td>
+                    <td className="px-3 py-2.5 font-mono">27,500원</td>
+                    <td className="px-3 py-2.5 font-mono text-slate-500 bg-indigo-50/40">987-65-43210</td>
+                    <td className="px-3 py-2.5 bg-slate-50 text-slate-400 italic" colSpan={3}>
+                      ⚠️ (거래처 마스터에 미등록된 사업자번호 — 신규 등록 대상)
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div className="p-3 bg-slate-50 border-t border-slate-200 text-slate-500 text-[11px] flex items-center justify-between">
+              <span>💡 표 헤더 우측 [+ 열 추가] ➔ [🔗 외래키(조인 열)] 선택 시 즉시 생성됩니다.</span>
+              <span className="font-semibold text-indigo-600">인라인 편집 시 키 자동완성(Datalist) 지원</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* 5. FileToSheet만의 4대 차별화 핵심 기술 (Why Us? - max-w-5xl w-full 완전 통일) */}
       <section className="py-16 px-4 sm:px-6 lg:px-8 border-b border-slate-200 bg-slate-50/40 w-full">
         <div className="max-w-5xl mx-auto w-full">
@@ -724,6 +876,16 @@ export default function UseCasesPage() {
               </h4>
               <p className="text-xs sm:text-sm text-slate-600 leading-relaxed break-keep">
                 네, 완벽하게 지원합니다! File to Sheet는 시트별로 원하는 분석 및 적재 지침을 자연어로 직접 설정할 수 있는 <strong className="text-purple-700 font-bold">‘자연어 AI 적재 규칙’</strong> 기능을 기본 탑재하고 있습니다. 하단 시트 탭 바에서 <span className="bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded font-bold">[✨ 시트 AI 적재 규칙]</span> 버튼을 누르고 &quot;식대는 [복리후생비]로 분류&quot;, &quot;5만 원 이상은 [소액경비] 표기&quot;처럼 일상 언어로 입력해 두시면, 파일이 업로드될 때 AI가 해당 규칙을 스스로 인지하고 완벽하게 적용하여 표로 정리해 드립니다.
+              </p>
+            </div>
+
+            <div className="p-5 sm:p-6 rounded-2xl bg-slate-50/70 border border-slate-200 shadow-2xs">
+              <h4 className="text-sm font-bold text-slate-900 mb-2 flex items-center gap-2">
+                <span className="text-indigo-600 font-black">Q.</span>
+                <span>여러 시트에 나뉜 데이터(예: 영수증 전표와 거래처 마스터)를 서로 연결(JOIN)해서 볼 수 있나요?</span>
+              </h4>
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed break-keep">
+                네, 강력하게 지원합니다! 표데이터 탭에서 <span className="bg-indigo-100 text-indigo-800 px-1.5 py-0.5 rounded font-bold">[+ 열 추가] ➔ [🔗 외래키(조인 열)]</span>을 선택하시면, 다른 시트의 기준 키(예: 사업자등록번호, 주문번호)를 연결할 수 있습니다. 외래키 열이 생성되면 하단에 <strong className="text-indigo-700 font-bold">‘🔗 다른 시트 조인 뷰’</strong> 토글 버튼이 생기며, 이를 켜는 즉시 복잡한 VLOOKUP 수식 없이도 거래처 대표자, 정산계좌, 여신한도 등의 상세 데이터가 우측에 실시간으로 매칭되어 결합 표시됩니다.
               </p>
             </div>
 
