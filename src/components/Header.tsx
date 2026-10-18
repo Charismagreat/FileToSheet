@@ -126,6 +126,16 @@ export function Header({
             HOT
           </span>
         </Link>
+
+        {/* 👑 관리자 콘솔 바로가기 */}
+        <Link
+          href="/admin"
+          className="flex items-center gap-1.5 text-xs font-extrabold px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-200 transition transform hover:scale-105 active:scale-95 shadow-2xs cursor-pointer"
+          title="종합 관리자 대시보드 (회원, 토큰, SMS, 세금계산서, AI모델 설정)"
+        >
+          <ShieldCheck className="w-3.5 h-3.5 text-indigo-600" />
+          <span className="hidden sm:inline">관리자</span>
+        </Link>
       </div>
 
       {/* 2. 우측 정돈된 액션 바 (그룹화) */}
