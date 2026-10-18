@@ -31,6 +31,10 @@ import {
   Link2,
   Calendar,
   Moon,
+  Smartphone,
+  QrCode,
+  Camera,
+  Send,
 } from 'lucide-react';
 
 export default function UseCasesPage() {
@@ -959,6 +963,118 @@ export default function UseCasesPage() {
         </div>
       </section>
 
+      {/* 4-F. 신규: 시트봇 모바일앱 ↔ 파일투시트 직결 연동 & 1초 QR 페어링 (max-w-5xl w-full 완전 통일) */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8 border-b border-slate-200 bg-white w-full">
+        <div className="max-w-5xl mx-auto w-full">
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-600 text-white text-xs font-black tracking-wide uppercase mb-3 shadow-xs">
+              <Smartphone className="w-3.5 h-3.5 text-indigo-200" />
+              <span>Mobile Direct Ingest & Instant QR Pairing</span>
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 break-keep mb-3">
+              스마트폰 카메라로 찰칵, <br className="hidden sm:inline" />
+              <span className="text-indigo-600 underline decoration-indigo-300 decoration-wavy underline-offset-4">엑셀 시트에 1초 직결</span> 적재
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-600 max-w-2xl mx-auto break-keep leading-relaxed">
+              구글 드라이브나 클라우드 권한 승인의 번거로움 없이, PC 화면의 QR 코드를 스마트폰 카메라로 비추기만 하면 1초 만에 페어링 완료. 현장에서 영수증·송장·발주서를 찍는 즉시 내 파일투시트 시트에 새 행(Row)으로 실시간 꽂힙니다.
+            </p>
+          </div>
+
+          {/* 3대 핵심 모바일 직결 실무 시나리오 카드 (3열) */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 w-full mb-8">
+            {/* 1. 경비 영수증 즉시 적재 */}
+            <div className="p-6 rounded-2xl bg-indigo-50/40 border border-indigo-200 shadow-2xs hover:shadow-md hover:border-indigo-400 transition flex flex-col justify-between">
+              <div>
+                <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center mb-4 font-bold">
+                  <Receipt className="w-5 h-5" />
+                </div>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-base font-extrabold text-slate-900">외근 · 출장 경비</h3>
+                  <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800">
+                    실시간 영수증
+                  </span>
+                </div>
+                <h4 className="text-xs font-bold text-indigo-700 mb-2">결제 직후 카메라 촬영 ➔ 시트 자동 적재</h4>
+                <p className="text-xs text-slate-600 leading-relaxed break-keep">
+                  외근 중 식당/카페에서 결제하고 시트봇 모바일앱으로 영수증을 찰칵 찍는 순간, 본사 <strong>[법인카드_영수증_대장]</strong> 시트에 일자, 가맹점, 결제액, 부가세가 즉시 표로 완성되어 월말 영수증 풀칠이 영원히 사라집니다.
+                </p>
+              </div>
+              <div className="pt-3 border-t border-indigo-100 text-[11px] text-indigo-700 font-bold flex items-center justify-between">
+                <span>월말 정산 소요시간 95% 단축</span>
+                <span className="font-mono text-slate-400">Mobile ➔ Sheet</span>
+              </div>
+            </div>
+
+            {/* 2. 물류 창고 현장 입고/파손 검수 */}
+            <div className="p-6 rounded-2xl bg-blue-50/40 border border-blue-200 shadow-2xs hover:shadow-md hover:border-blue-400 transition flex flex-col justify-between">
+              <div>
+                <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center mb-4 font-bold">
+                  <ShoppingCart className="w-5 h-5" />
+                </div>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-base font-extrabold text-slate-900">물류 · 창고 · 배송</h3>
+                  <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">
+                    인수증 직결
+                  </span>
+                </div>
+                <h4 className="text-xs font-bold text-blue-700 mb-2">화물 인수증 & 박스 바코드 현장 전송</h4>
+                <p className="text-xs text-slate-600 leading-relaxed break-keep">
+                  물류 현장에서 지게차 기사님이나 검수 직원이 화물 인수증과 택배 라벨을 스마트폰으로 촬영하면, 사무실 <strong>[당일_입고_검수대장]</strong> 시트에 1초 만에 행이 추가되어 오배송 및 결품을 실시간 대조합니다.
+                </p>
+              </div>
+              <div className="pt-3 border-t border-blue-100 text-[11px] text-blue-700 font-bold flex items-center justify-between">
+                <span>현장-사무실 소통 딜레이 0초</span>
+                <span className="font-mono text-slate-400">Barcode / Invoice</span>
+              </div>
+            </div>
+
+            {/* 3. 영업 미팅 명함 및 견적 메모 */}
+            <div className="p-6 rounded-2xl bg-purple-50/40 border border-purple-200 shadow-2xs hover:shadow-md hover:border-purple-400 transition flex flex-col justify-between">
+              <div>
+                <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center mb-4 font-bold">
+                  <Briefcase className="w-5 h-5" />
+                </div>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-base font-extrabold text-slate-900">영업 · B2B 미팅</h3>
+                  <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-purple-100 text-purple-800">
+                    즉시 CRM화
+                  </span>
+                </div>
+                <h4 className="text-xs font-bold text-purple-700 mb-2">미팅 종료 직후 명함 촬영 ➔ 고객 DB 적재</h4>
+                <p className="text-xs text-slate-600 leading-relaxed break-keep">
+                  고객사 미팅이 끝나자마자 받은 명함을 스마트폰으로 찍으면, 파일투시트 <strong>[영업_고객_CRM_시트]</strong>에 회사명, 직책, 휴대전화, 이메일이 정밀 분할되어 누락 없이 전사 공유됩니다.
+                </p>
+              </div>
+              <div className="pt-3 border-t border-purple-100 text-[11px] text-purple-700 font-bold flex items-center justify-between">
+                <span>신규 리드 누락률 0% 달성</span>
+                <span className="font-mono text-slate-400">Biz Card ➔ CRM</span>
+              </div>
+            </div>
+          </div>
+
+          {/* 모바일 직결 연동 아키텍처 비교 & 체험 배너 */}
+          <div className="p-5 rounded-2xl bg-gradient-to-r from-indigo-900 via-slate-900 to-indigo-950 text-white flex flex-col sm:flex-row items-center justify-between gap-4 shadow-md w-full">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center shrink-0">
+                <QrCode className="w-5 h-5 text-indigo-300" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-white mb-0.5">상단 [📱 모바일 연동] 버튼을 눌러보세요</h4>
+                <p className="text-xs text-indigo-200 break-keep">
+                  화면에 뜬 QR코드를 스마트폰으로 스캔하거나, 모달 내 <span className="text-yellow-300 font-bold">[모바일 전송 시뮬레이션]</span> 버튼을 눌러 즉시 1초 실시간 적재를 테스트해 보세요.
+                </p>
+              </div>
+            </div>
+            <Link
+              href="/"
+              className="shrink-0 px-4 py-2 rounded-xl bg-indigo-400 hover:bg-indigo-300 text-slate-900 font-black text-xs transition shadow-sm cursor-pointer"
+            >
+              모바일 직결 체험하기 →
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* 5. FileToSheet만의 4대 차별화 핵심 기술 (Why Us? - max-w-5xl w-full 완전 통일) */}
       <section className="py-16 px-4 sm:px-6 lg:px-8 border-b border-slate-200 bg-slate-50/40 w-full">
         <div className="max-w-5xl mx-auto w-full">
@@ -1061,6 +1177,16 @@ export default function UseCasesPage() {
               </h4>
               <p className="text-xs sm:text-sm text-slate-600 leading-relaxed break-keep">
                 네, 스케줄 무인 자동화 파이프라인을 지원합니다! 매일 밤 자정(00:00)이나 택배 마감 시간(10:00, 16:00), 매주 월요일 아침 등 원하는 주기를 설정해 두면, 지정된 Google Drive나 로컬 공유 폴더에 인입된 신규 영수증·발주서·통장 내역을 <strong className="text-amber-700 font-bold">스케줄러가 백그라운드에서 무인(Unattended)으로 일괄 수집 및 파싱</strong>합니다. 사용자가 출근했을 때는 이미 전날 데이터가 완벽하게 적재된 엑셀 표를 즉시 확인하실 수 있습니다. 대화창에서 <span className="font-mono bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-bold">/schedule</span> 명령어로 바로 지정할 수 있습니다.
+              </p>
+            </div>
+
+            <div className="p-5 sm:p-6 rounded-2xl bg-slate-50/70 border border-slate-200 shadow-2xs">
+              <h4 className="text-sm font-bold text-slate-900 mb-2 flex items-center gap-2">
+                <span className="text-indigo-600 font-black">Q.</span>
+                <span>스마트폰 시트봇 앱으로 영수증이나 발주서를 찍으면 구글 계정이 없어도 파일투시트로 바로 들어오나요?</span>
+              </h4>
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed break-keep">
+                네, 100% 가능합니다! 구글 드라이브나 복잡한 클라우드 권한을 연결할 필요가 전혀 없습니다. 파일투시트 화면 상단 <span className="bg-indigo-100 text-indigo-800 px-1.5 py-0.5 rounded font-bold">[📱 모바일 연동]</span> 버튼을 누르고 화면에 뜬 QR코드를 스마트폰 시트봇 앱으로 비추기만 하면 1초 만에 페어링됩니다. 이후 외근지나 현장에서 카메라로 영수증이나 발주서를 촬영하면, 해당 파일투시트 시트에 <strong className="text-indigo-700 font-bold">새 행(Row)으로 1초 만에 실시간 스트리밍 적재</strong>됩니다.
               </p>
             </div>
 
