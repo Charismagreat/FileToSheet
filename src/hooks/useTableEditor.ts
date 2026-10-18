@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { ProjectWorkspace } from '@/types/workspace';
 import { getPlanLimits } from '@/lib/plan-limits';
 import { insertRows } from '@/egdesk-helpers';
+import { SheetRelation } from '@/lib/parser';
 
 interface UseTableEditorOptions {
   projects: ProjectWorkspace[];
@@ -20,6 +21,7 @@ export function useTableEditor({ projects, setProjects, activeProjectIndex, plan
   const [editingHeaderValue, setEditingHeaderValue] = useState<string>('');
   const [isAddingColumn, setIsAddingColumn] = useState<boolean>(false);
   const [newColumnName, setNewColumnName] = useState<string>('');
+  const [isJoinViewActive, setIsJoinViewActive] = useState<boolean>(false);
 
   const currentProject = projects[activeProjectIndex] || null;
   const currentSheet = currentProject ? currentProject.sheets[currentProject.activeSheetIndex] : null;
@@ -37,14 +39,18 @@ export function useTableEditor({ projects, setProjects, activeProjectIndex, plan
     });
   };
 
-  const handleAddColumn = () => {
-    const colName = newColumnName.trim();
+  const handleAddColumn = (customName?: string, relation?: SheetRelation) => {
+    const colName = (customName || newColumnName).trim();
     if (!colName || !currentSheet || currentSheet.headers.includes(colName)) return;
-    updateActiveSheet((sheet) => ({
-      ...sheet,
-      headers: [...sheet.headers, colName],
-      rows: sheet.rows.map((row: any) => ({ ...row, [colName]: '' })),
-    }));
+    updateActiveSheet((sheet) => {
+      const nextRelations = relation ? [...(sheet.relations || []), relation] : (sheet.relations || []);
+      return {
+        ...sheet,
+        headers: [...sheet.headers, colName],
+        rows: sheet.rows.map((row: any) => ({ ...row, [colName]: '' })),
+        relations: nextRelations,
+      };
+    });
     setNewColumnName('');
     setIsAddingColumn(false);
   };
@@ -59,6 +65,7 @@ export function useTableEditor({ projects, setProjects, activeProjectIndex, plan
         delete copy[headerName];
         return copy;
       }),
+      relations: (sheet.relations || []).filter((r: SheetRelation) => r.foreignKey !== headerName),
     }));
   };
 
@@ -192,6 +199,7 @@ export function useTableEditor({ projects, setProjects, activeProjectIndex, plan
     editingCell, setEditingCell, editValue, setEditValue, saveCellEdit,
     editingHeaderIdx, setEditingHeaderIdx, editingHeaderValue, setEditingHeaderValue, saveHeaderEdit,
     isAddingColumn, setIsAddingColumn, newColumnName, setNewColumnName,
+    isJoinViewActive, setIsJoinViewActive,
     handleAddColumn, handleDeleteColumn, handleReorderColumns, handleAddRow, handleDeleteRow,
   };
 }

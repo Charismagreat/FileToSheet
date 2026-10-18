@@ -576,6 +576,9 @@ export default function FileToSheetApp() {
                     sortCol={columnSort?.column || null}
                     sortDir={columnSort?.direction || null}
                     onToggleColSort={handleToggleColSort}
+                    projectSheets={currentProject.sheets}
+                    isJoinViewActive={ws.isJoinViewActive}
+                    setIsJoinViewActive={ws.setIsJoinViewActive}
                   />
                 )}
 
@@ -642,13 +645,15 @@ export default function FileToSheetApp() {
         project={currentProject}
       />
 
-      {/* 4. 새 열(Header) 추가 모달 */}
+      {/* 4. 새 열(Header) 추가 모달 (외래키 참조 열 지원) */}
       <AddColumnModal
         show={ws.isAddingColumn}
         onClose={() => ws.setIsAddingColumn(false)}
         newColumnName={ws.newColumnName}
         setNewColumnName={ws.setNewColumnName}
         onAddColumn={ws.handleAddColumn}
+        sheets={currentProject?.sheets || []}
+        activeSheetIndex={currentProject?.activeSheetIndex || 0}
       />
 
       {/* 5. Google 시트 내보내기 옵션 모달 */}

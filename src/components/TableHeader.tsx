@@ -1,10 +1,12 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, ChevronLeft, ChevronRight, GripVertical, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, GripVertical, ArrowUp, ArrowDown, ArrowUpDown, Link2 } from 'lucide-react';
+import { SheetRelation } from '@/lib/parser';
 
 interface TableHeaderProps {
   headers: string[];
+  relations?: SheetRelation[];
   editingHeaderIdx: number | null;
   setEditingHeaderIdx: (idx: number | null) => void;
   editingHeaderValue: string;
@@ -141,6 +143,21 @@ export function TableHeader({
                         기본열
                       </span>
                     )}
+
+                    {/* 외래키(FK) 연결 뱃지 */}
+                    {(() => {
+                      const matchedRel = relations?.find((r) => r.foreignKey === header);
+                      if (!matchedRel) return null;
+                      return (
+                        <span
+                          title={`🔗 외래키(FK): [${matchedRel.targetSheetName}] 시트의 [${matchedRel.targetKey}] 열 참조 중`}
+                          className="text-[9px] px-1.5 py-0.5 rounded-md bg-indigo-100 text-indigo-700 font-bold shrink-0 flex items-center gap-0.5 border border-indigo-200"
+                        >
+                          <Link2 className="w-2.5 h-2.5 text-indigo-600" />
+                          FK
+                        </span>
+                      );
+                    })()}
 
                     {/* 정렬 표시 아이콘 */}
                     <div className="shrink-0 flex items-center">

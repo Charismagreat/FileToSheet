@@ -1,6 +1,13 @@
 import * as XLSX from 'xlsx';
 import type { OriginalDocFile } from '@/types/workspace';
 
+export interface SheetRelation {
+  foreignKey: string;        // 현재 시트의 외래키 열 이름 (예: "사업자등록번호")
+  targetSheetName: string;   // 참조 대상 시트명 (예: "거래처마스터")
+  targetKey: string;         // 참조 대상 시트의 조인 기준 열 이름 (예: "사업자등록번호")
+  displayColumns?: string[]; // 조인 시 함께 가져와 표시할 대상 시트의 열 목록 (예: ["대표자", "연락처", "여신한도"])
+}
+
 export interface ParsedSheet {
   name: string;
   headers: string[];
@@ -8,6 +15,7 @@ export interface ParsedSheet {
   rawRows: any[][];
   originalFiles?: OriginalDocFile[];
   customPrompt?: string; // 🌟 시트별 전용 자연어 분석/적재 규칙
+  relations?: SheetRelation[]; // 🔗 다른 시트와의 외래키(FK) 조인 매핑 정보
 }
 
 export interface ParseResult {
