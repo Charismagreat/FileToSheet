@@ -519,7 +519,7 @@ export function ScheduleModal({ isOpen, onClose, project }: ScheduleModalProps) 
                   </div>
 
                   <p className="text-[11px] text-blue-800 leading-relaxed">
-                    불특정 다수 사용자 누구든, 본인의 구글 드라이브 폴더 1개를 파일투시트 자동화 로봇에게 공유만 해주시면 비밀번호나 복잡한 권한 없이 즉시 연동됩니다.
+                    불특정 다수 사용자 누구든, 본인의 구글 드라이브 폴더 1개를 File to Sheet 자동화 로봇에게 공유만 해주시면 비밀번호나 복잡한 권한 없이 즉시 연동됩니다.
                   </p>
 
                   <div className="space-y-1.5 bg-white/90 p-2.5 rounded-lg border border-blue-100 text-[11px]">

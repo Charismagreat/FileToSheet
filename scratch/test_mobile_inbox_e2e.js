@@ -74,7 +74,7 @@ async function runTests() {
     throw new Error('데이터 적재 실패!');
   }
 
-  console.log('\n✅ [검증 완료] 시트봇 모바일앱 ↔ 파일투시트 직결 연동 파이프라인 E2E 100% 정상 작동!');
+  console.log('\n✅ [검증 완료] 시트봇 모바일앱 ↔ File to Sheet 직결 연동 파이프라인 E2E 100% 정상 작동!');
 }
 
 runTests().catch(err => {

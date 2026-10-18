@@ -43,7 +43,7 @@ export async function GET(
       service: 'FileToSheet',
       token,
       projectId: link.project_id,
-      projectName: link.project_name || '파일투시트 프로젝트',
+      projectName: link.project_name || 'File to Sheet 프로젝트',
       sheetName: payload?.sheetName || '기본 시트',
       createdAt: link.created_at,
       message: `[${payload?.sheetName || '지정 시트'}]와 모바일 페어링이 준비되었습니다.`,
@@ -56,7 +56,7 @@ export async function GET(
 
 /**
  * POST /api/inbox/[token]
- * 시트봇 모바일앱에서 사진/문서/데이터를 수신하여 파일투시트 해당 시트에 즉시 행 적재
+ * 시트봇 모바일앱에서 사진/문서/데이터를 수신하여 File to Sheet 해당 시트에 즉시 행 적재
  */
 export async function POST(
   request: NextRequest,

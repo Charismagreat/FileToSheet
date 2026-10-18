@@ -1,6 +1,6 @@
 // test_admin_e2e.js
 /**
- * 파일투시트 종합 관리자 시스템 E2E 검증 테스트 스크립트
+ * File to Sheet 종합 관리자 시스템 E2E 검증 테스트 스크립트
  * 1. GET /api/admin/bootstrap (통합 번들 로더 초고속 수신 검증)
  * 2. POST /api/sms/compile (자연어 규칙 AI 자동 컴파일 검증)
  * 3. POST /api/admin/users/tokens (회원 토큰 수동 충전 및 감사로그 검증)
@@ -13,7 +13,7 @@ const BASE_URL = process.env.TEST_URL || 'http://localhost:4003';
 
 async function runAdminE2ETests() {
   console.log(`\n======================================================`);
-  console.log(`🚀 [Admin E2E Test] 파일투시트 종합 관리자 시스템 검증 시작 (${BASE_URL})`);
+  console.log(`🚀 [Admin E2E Test] File to Sheet 종합 관리자 시스템 검증 시작 (${BASE_URL})`);
   console.log(`======================================================\n`);
 
   let passCount = 0;

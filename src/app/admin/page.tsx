@@ -111,11 +111,11 @@ export default function AdminPage() {
     blog: 'https://blog.naver.com/egdesk',
   });
   const [aiModelConfig, setAiModelConfig] = useState<any>({
-    primaryModel: 'gemini-2.5-flash',
+    primaryModel: 'gemini-3.8-flash',
     fallbackModel: 'gemini-2.5-pro',
     temperature: 0.2,
     maxOutputTokens: 8192,
-    systemPrompt: '비정형 문서를 정형 엑셀 표로 완벽히 구조화합니다.',
+    systemPrompt: '당신은 거래명세서, 세금계산서, 영수증 등 비정형 문서를 정밀한 2차원 스프레드시트 표로 완벽하게 변환하는 Gemini 최신 비전 파서 AI입니다.',
   });
 
   // 토큰 조정 모달 상태
@@ -448,7 +448,7 @@ export default function AdminPage() {
                   ADMIN CONSOLE
                 </span>
                 <h1 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
-                  파일투시트 종합 관리자 시스템
+                  File to Sheet 종합 관리자 시스템
                 </h1>
               </div>
             </div>
@@ -1408,8 +1408,10 @@ export default function AdminPage() {
                   onChange={(e) => setAiModelConfig({ ...aiModelConfig, primaryModel: e.target.value })}
                   className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-indigo-500 bg-white font-mono"
                 >
-                  <option value="gemini-2.5-flash">gemini-2.5-flash (초고속 대량 처리 추천)</option>
-                  <option value="gemini-2.5-pro">gemini-2.5-pro (초고난도 다국어/복합 서식)</option>
+                  <option value="gemini-3.8-flash">gemini-3.8-flash (Google 최신 고속 멀티모달 비전 - 기본 권장)</option>
+                  <option value="gemini-3.5-flash-lite">gemini-3.5-flash-lite (초경량 초고속 멀티모달)</option>
+                  <option value="gemini-2.5-pro">gemini-2.5-pro (심층 추론 플래그십 / 복합 서식)</option>
+                  <option value="gemini-2.5-flash">gemini-2.5-flash (차세대 고속 모델)</option>
                 </select>
               </div>
 
@@ -1420,7 +1422,9 @@ export default function AdminPage() {
                   onChange={(e) => setAiModelConfig({ ...aiModelConfig, fallbackModel: e.target.value })}
                   className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-indigo-500 bg-white font-mono"
                 >
-                  <option value="gemini-2.5-pro">gemini-2.5-pro</option>
+                  <option value="gemini-2.5-pro">gemini-2.5-pro (심층 추론 폴백)</option>
+                  <option value="gemini-3.8-flash">gemini-3.8-flash (최신 고속 비전)</option>
+                  <option value="gemini-3.5-flash-lite">gemini-3.5-flash-lite (초경량 비전)</option>
                   <option value="gemini-2.5-flash">gemini-2.5-flash</option>
                 </select>
               </div>

@@ -134,7 +134,7 @@ export default function AboutPage() {
           </h1>
 
           <p className="max-w-2xl mx-auto text-sm sm:text-base text-slate-600 leading-relaxed font-medium">
-            <strong>FileToSheet(파일투시트)</strong>는 PDF, 사진, 종이 영수증, 발주서, 거래명세서 등 
+            <strong>File to Sheet</strong>는 PDF, 사진, 종이 영수증, 발주서, 거래명세서 등 
             서로 다른 양식의 비정형 문서를 독자적인 AI 엔진과 SQLite 스트리밍 기술로 완벽한 정형 표로 재구조화하는
             차세대 비즈니스 데이터 자동화 솔루션입니다.
           </p>
@@ -144,7 +144,7 @@ export default function AboutPage() {
         <section className="bg-white rounded-3xl border border-slate-200/80 shadow-xs p-8 sm:p-10 space-y-6">
           <div className="text-center max-w-xl mx-auto space-y-2">
             <span className="text-xs font-black text-indigo-600 tracking-wider uppercase">CORE TECHNOLOGY</span>
-            <h2 className="text-2xl font-black text-slate-900 tracking-tight">파일투시트를 지탱하는 3대 독자 기술</h2>
+            <h2 className="text-2xl font-black text-slate-900 tracking-tight">File to Sheet를 지탱하는 3대 독자 기술</h2>
             <p className="text-xs text-slate-500">
               기존 단순 OCR 서비스의 한계를 뛰어넘어, 대용량 실무 엑셀 환경에 최적화된 아키텍처를 제공합니다.
             </p>
@@ -291,7 +291,7 @@ export default function AboutPage() {
                 공식 소통 채널 및 미디어 바로가기
               </h3>
               <p className="text-xs text-slate-500">
-                파일투시트의 최신 업데이트 소식과 활용 가이드를 공식 채널에서 만나보세요.
+                File to Sheet의 최신 업데이트 소식과 활용 가이드를 공식 채널에서 만나보세요.
               </p>
 
               <div className="space-y-3 pt-2">

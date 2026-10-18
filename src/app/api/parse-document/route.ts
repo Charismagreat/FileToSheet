@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { callAiCaller, insertRows } from '@/egdesk-helpers';
+import { callAiCaller, insertRows, queryTable } from '@/egdesk-helpers';
 
 const FALLBACK_MODELS = [
   'gemini-3.8-flash',
-  'gemini-3.7-flash',
-  'gemini-3.6-flash',
-  'gemini-3.5-flash',
+  'gemini-3.5-flash-lite',
+  'gemini-2.5-pro',
   'gemini-2.5-flash',
-  'gemini-2.5-flash-lite',
+  'gemini-3.7-flash',
 ];
 
 export async function POST(request: NextRequest) {
@@ -111,18 +110,48 @@ ${sheetsDesc}
     const cleanBase64 = fileBase64.replace(/^data:[^;]+;base64,/, '');
     const isPdf = filename.toLowerCase().endsWith('.pdf') || fileBase64.startsWith('data:application/pdf');
 
+    // 관리자 AI 모델 설정 동적 조회 (설정된 기본/폴백 모델 최우선 반영)
+    let candidateModels = [...FALLBACK_MODELS];
+    let customTemp = 0.1;
+    let customSysPrefix = '';
+
+    try {
+      const settingsRes = await queryTable('admin_settings', { limit: 20 });
+      const aiSetting = (settingsRes.rows || []).find((s: any) => s.setting_key === 'ai_model_config');
+      if (aiSetting?.setting_value) {
+        const parsedSetting = JSON.parse(aiSetting.setting_value);
+        const dynamicList: string[] = [];
+        if (parsedSetting.primaryModel) dynamicList.push(parsedSetting.primaryModel);
+        if (parsedSetting.fallbackModel && parsedSetting.fallbackModel !== parsedSetting.primaryModel) {
+          dynamicList.push(parsedSetting.fallbackModel);
+        }
+        if (typeof parsedSetting.temperature === 'number') {
+          customTemp = parsedSetting.temperature;
+        }
+        if (parsedSetting.systemPrompt?.trim()) {
+          customSysPrefix = parsedSetting.systemPrompt.trim() + '\n\n';
+        }
+        // 중복 제거 후 앞단에 우선 배치
+        candidateModels = Array.from(new Set([...dynamicList, ...FALLBACK_MODELS]));
+      }
+    } catch (e) {
+      console.warn('[Universal AI Parser] 관리자 AI 모델 설정 로드 실패, 기본 모델 풀 사용:', e);
+    }
+
+    const effectiveSystemPrompt = customSysPrefix ? (customSysPrefix + systemPrompt) : systemPrompt;
+
     let lastError: any = null;
     let successfulResult: any = null;
     let successfulModel = '';
 
-    for (const model of FALLBACK_MODELS) {
+    for (const model of candidateModels) {
       try {
         console.log(`[Universal AI Parser] 표 추출 시도: 모델 = ${model}`);
 
         const aiCallerOptions: any = {
-          systemPrompt,
+          systemPrompt: effectiveSystemPrompt,
           model,
-          temperature: 0.1,
+          temperature: customTemp,
         };
 
         if (isPdf) {

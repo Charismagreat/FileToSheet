@@ -965,7 +965,7 @@ export default function UseCasesPage() {
         </div>
       </section>
 
-      {/* 4-F. 신규: 시트봇 모바일앱 ↔ 파일투시트 직결 연동 & 1초 QR 페어링 (max-w-5xl w-full 완전 통일) */}
+      {/* 4-F. 신규: 시트봇 모바일앱 ↔ File to Sheet 직결 연동 & 1초 QR 페어링 (max-w-5xl w-full 완전 통일) */}
       <section className="py-16 px-4 sm:px-6 lg:px-8 border-b border-slate-200 bg-white w-full">
         <div className="max-w-5xl mx-auto w-full">
           <div className="text-center mb-12">
@@ -978,7 +978,7 @@ export default function UseCasesPage() {
               <span className="text-indigo-600 underline decoration-indigo-300 decoration-wavy underline-offset-4">엑셀 시트에 1초 직결</span> 적재
             </h2>
             <p className="text-xs sm:text-sm text-slate-600 max-w-2xl mx-auto break-keep leading-relaxed">
-              구글 드라이브나 클라우드 권한 승인의 번거로움 없이, PC 화면의 QR 코드를 스마트폰 카메라로 비추기만 하면 1초 만에 페어링 완료. 현장에서 영수증·송장·발주서를 찍는 즉시 내 파일투시트 시트에 새 행(Row)으로 실시간 꽂힙니다.
+              구글 드라이브나 클라우드 권한 승인의 번거로움 없이, PC 화면의 QR 코드를 스마트폰 카메라로 비추기만 하면 1초 만에 페어링 완료. 현장에서 영수증·송장·발주서를 찍는 즉시 내 File to Sheet 시트에 새 행(Row)으로 실시간 꽂힙니다.
             </p>
           </div>
 
@@ -1044,7 +1044,7 @@ export default function UseCasesPage() {
                 </div>
                 <h4 className="text-xs font-bold text-purple-700 mb-2">미팅 종료 직후 명함 촬영 ➔ 고객 DB 적재</h4>
                 <p className="text-xs text-slate-600 leading-relaxed break-keep">
-                  고객사 미팅이 끝나자마자 받은 명함을 스마트폰으로 찍으면, 파일투시트 <strong>[영업_고객_CRM_시트]</strong>에 회사명, 직책, 휴대전화, 이메일이 정밀 분할되어 누락 없이 전사 공유됩니다.
+                  고객사 미팅이 끝나자마자 받은 명함을 스마트폰으로 찍으면, File to Sheet <strong>[영업_고객_CRM_시트]</strong>에 회사명, 직책, 휴대전화, 이메일이 정밀 분할되어 누락 없이 전사 공유됩니다.
                 </p>
               </div>
               <div className="pt-3 border-t border-purple-100 text-[11px] text-purple-700 font-bold flex items-center justify-between">
@@ -1090,7 +1090,7 @@ export default function UseCasesPage() {
               <span className="text-rose-600 underline decoration-rose-300 decoration-wavy underline-offset-4">자율 알림 문자와 실시간 경영 속보</span>
             </h2>
             <p className="text-xs sm:text-sm text-slate-600 max-w-2xl mx-auto break-keep leading-relaxed">
-              복잡한 코딩 없이 &quot;50만 원 이상 영수증은 팀장님께&quot;, &quot;재고 부족 시 담당 MD에게&quot;처럼 일상 한국어로 적어두면, 파일투시트가 이상 징후와 마감 결과를 감지하여 담당자 휴대폰으로 즉시 리포트 문자를 쏩니다.
+              복잡한 코딩 없이 &quot;50만 원 이상 영수증은 팀장님께&quot;, &quot;재고 부족 시 담당 MD에게&quot;처럼 일상 한국어로 적어두면, File to Sheet가 이상 징후와 마감 결과를 감지하여 담당자 휴대폰으로 즉시 리포트 문자를 쏩니다.
             </p>
           </div>
 
@@ -1114,7 +1114,7 @@ export default function UseCasesPage() {
                   [회계·경리] 심야 무인 배치 완료 & 이상 지출(고액) 즉시 경보
                 </h3>
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-700 font-mono mb-3 leading-relaxed">
-                  📱 &quot;[파일투시트] 10/18 영수증 34건 장부 적재 완료 (총 428만 원). ⚠️ 고액 지출 감지: [10/18 스타벅스 120만 원-확인요망]&quot;
+                  📱 &quot;[File to Sheet] 10/18 영수증 34건 장부 적재 완료 (총 428만 원). ⚠️ 고액 지출 감지: [10/18 스타벅스 120만 원-확인요망]&quot;
                 </div>
                 <p className="text-xs text-slate-600 leading-relaxed break-keep">
                   출근 후 수작업으로 영수증을 뒤적일 필요 없이, 아침 출근길 지하철에서 문자 한 통으로 어젯밤 결산 총액과 이상 지출을 1초 만에 파악하고 결재를 준비합니다.
@@ -1144,7 +1144,7 @@ export default function UseCasesPage() {
                   [물류·이커머스] 발주서 취합 마감 리포트 & 결품 긴급 알림
                 </h3>
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-700 font-mono mb-3 leading-relaxed">
-                  📱 &quot;[파일투시트] 16시 출고 큐 생성 완료 (185건). 🚨 재고 부족(결품): [슬림 텀블러 블랙] 2개 부족으로 주문 5건 보류 중.&quot;
+                  📱 &quot;[File to Sheet] 16시 출고 큐 생성 완료 (185건). 🚨 재고 부족(결품): [슬림 텀블러 블랙] 2개 부족으로 주문 5건 보류 중.&quot;
                 </div>
                 <p className="text-xs text-slate-600 leading-relaxed break-keep">
                   송장 출력 도중 뒤늦게 품절을 발견해 택배 출고가 지연되거나 고객 클레임이 터지는 사고를 사전에 100% 방지하고 즉시 공장 긴급 발주를 넣습니다.
@@ -1174,7 +1174,7 @@ export default function UseCasesPage() {
                   [금융·자금] 주간 통장 입출금 대조 & 미수금(미입금) 거래처 독촉 알림
                 </h3>
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-700 font-mono mb-3 leading-relaxed">
-                  📱 &quot;[파일투시트] 주간 입금 대조: 42개사 수납 완료. ⚠️ 미입금 거래처 3곳(총 1,840만 원): (주)대명상사(820만 원), 제일물류(650만 원)...&quot;
+                  📱 &quot;[File to Sheet] 주간 입금 대조: 42개사 수납 완료. ⚠️ 미입금 거래처 3곳(총 1,840만 원): (주)대명상사(820만 원), 제일물류(650만 원)...&quot;
                 </div>
                 <p className="text-xs text-slate-600 leading-relaxed break-keep">
                   매주 엑셀 VLOOKUP을 돌려 반나절씩 미수금을 찾던 수작업을 0초로 끝내고, 대표자와 자금팀장이 수금 전화를 제때 걸어 부실채권 발생을 원천 차단합니다.
@@ -1204,7 +1204,7 @@ export default function UseCasesPage() {
                   [프랜차이즈] 전국 매장 마감 영수증 독촉 & 본사 총괄 매출 속보
                 </h3>
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-700 font-mono mb-3 leading-relaxed">
-                  📱 &quot;[파일투시트] 📊 전국 50개 매장 마감 속보: 총매출 9,450만 원 (전일대비 +8.4%). 마감 1위: 홍대점 (482만 원), 전 매장 마감 완료.&quot;
+                  📱 &quot;[File to Sheet] 📊 전국 50개 매장 마감 속보: 총매출 9,450만 원 (전일대비 +8.4%). 마감 1위: 홍대점 (482만 원), 전 매장 마감 완료.&quot;
                 </div>
                 <p className="text-xs text-slate-600 leading-relaxed break-keep">
                   마감 영수증을 올리지 않은 점주에게는 자동 리마인드 문자를 발송하고, 본사 대표님에게는 자정 전에 전국 매장 실시간 매출 속보를 전송하여 일일 결산을 당일 종결합니다.
@@ -1348,10 +1348,10 @@ export default function UseCasesPage() {
             <div className="p-5 sm:p-6 rounded-2xl bg-slate-50/70 border border-slate-200 shadow-2xs">
               <h4 className="text-sm font-bold text-slate-900 mb-2 flex items-center gap-2">
                 <span className="text-indigo-600 font-black">Q.</span>
-                <span>스마트폰 시트봇 앱으로 영수증이나 발주서를 찍으면 구글 계정이 없어도 파일투시트로 바로 들어오나요?</span>
+                <span>스마트폰 시트봇 앱으로 영수증이나 발주서를 찍으면 구글 계정이 없어도 File to Sheet로 바로 들어오나요?</span>
               </h4>
               <p className="text-xs sm:text-sm text-slate-600 leading-relaxed break-keep">
-                네, 100% 가능합니다! 구글 드라이브나 복잡한 클라우드 권한을 연결할 필요가 전혀 없습니다. 파일투시트 화면 상단 <span className="bg-indigo-100 text-indigo-800 px-1.5 py-0.5 rounded font-bold">[📱 모바일 연동]</span> 버튼을 누르고 화면에 뜬 QR코드를 스마트폰 시트봇 앱으로 비추기만 하면 1초 만에 페어링됩니다. 이후 외근지나 현장에서 카메라로 영수증이나 발주서를 촬영하면, 해당 파일투시트 시트에 <strong className="text-indigo-700 font-bold">새 행(Row)으로 1초 만에 실시간 스트리밍 적재</strong>됩니다.
+                네, 100% 가능합니다! 구글 드라이브나 복잡한 클라우드 권한을 연결할 필요가 전혀 없습니다. File to Sheet 화면 상단 <span className="bg-indigo-100 text-indigo-800 px-1.5 py-0.5 rounded font-bold">[📱 모바일 연동]</span> 버튼을 누르고 화면에 뜬 QR코드를 스마트폰 시트봇 앱으로 비추기만 하면 1초 만에 페어링됩니다. 이후 외근지나 현장에서 카메라로 영수증이나 발주서를 촬영하면, 해당 File to Sheet 시트에 <strong className="text-indigo-700 font-bold">새 행(Row)으로 1초 만에 실시간 스트리밍 적재</strong>됩니다.
               </p>
             </div>
 
@@ -1361,7 +1361,7 @@ export default function UseCasesPage() {
                 <span>알림 문자 발송 조건을 자연어(일상 언어)로 설정할 수 있나요?</span>
               </h4>
               <p className="text-xs sm:text-sm text-slate-600 leading-relaxed break-keep">
-                네, 완벽하게 지원합니다! 복잡한 프로그래밍이나 조건문(if/else) 설정 없이, <strong className="text-rose-700 font-bold">&quot;50만 원 이상 영수증이 들어오면 내 번호(010-7216-5884)로 즉시 문자 보내줘&quot;</strong> 또는 &quot;재고 부족이나 미수금 발생 시 담당자에게 요약 전송해줘&quot;처럼 일상 한국어로 입력해 두시면, 파일투시트 AI가 조건(금액, 키워드, 마감 시각)과 수신 번호, 메시지 양식을 스스로 해석하여 실시간 알림 파이프라인으로 자동 가동합니다.
+                네, 완벽하게 지원합니다! 복잡한 프로그래밍이나 조건문(if/else) 설정 없이, <strong className="text-rose-700 font-bold">&quot;50만 원 이상 영수증이 들어오면 내 번호(010-7216-5884)로 즉시 문자 보내줘&quot;</strong> 또는 &quot;재고 부족이나 미수금 발생 시 담당자에게 요약 전송해줘&quot;처럼 일상 한국어로 입력해 두시면, File to Sheet AI가 조건(금액, 키워드, 마감 시각)과 수신 번호, 메시지 양식을 스스로 해석하여 실시간 알림 파이프라인으로 자동 가동합니다.
               </p>
             </div>
 

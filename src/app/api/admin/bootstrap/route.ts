@@ -5,7 +5,7 @@ import { fetchWithCache } from '@/lib/server-cache';
 
 /**
  * GET /api/admin/bootstrap
- * ⚡ 파일투시트 종합 관리자 대시보드 통합 번들 로더
+ * ⚡ File to Sheet 종합 관리자 대시보드 통합 번들 로더
  * 단 1회의 초고속 HTTP 왕복(Single Round-trip)으로 관리자 KPI 지표 및
  * 7대 핵심 관리 데이터를 병합 수신 (0.001초 렌더링 지원)
  */
@@ -141,14 +141,20 @@ export async function GET(req: NextRequest) {
         // 4. 환경설정 파싱
         let companyInfo: any = {};
         let snsLinks: any = {};
-        let aiModelConfig: any = {};
+        let aiModelConfig: any = {
+          primaryModel: 'gemini-3.8-flash',
+          fallbackModel: 'gemini-2.5-pro',
+          temperature: 0.2,
+          maxOutputTokens: 8192,
+          systemPrompt: '당신은 거래명세서, 세금계산서, 영수증 등 비정형 문서를 정밀한 2차원 스프레드시트 표로 완벽하게 변환하는 Gemini 최신 비전 파서 AI입니다.',
+        };
 
         rawAdminSettings.forEach((s: any) => {
           try {
             const val = JSON.parse(s.setting_value);
             if (s.setting_key === 'company_info') companyInfo = val;
             if (s.setting_key === 'sns_links') snsLinks = val;
-            if (s.setting_key === 'ai_model_config') aiModelConfig = val;
+            if (s.setting_key === 'ai_model_config') aiModelConfig = { ...aiModelConfig, ...val };
           } catch {}
         });
 

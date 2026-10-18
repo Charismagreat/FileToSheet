@@ -27,11 +27,11 @@ export async function GET(req: NextRequest) {
       blog: 'https://blog.naver.com/egdesk',
     };
     let aiModelConfig = {
-      primaryModel: 'gemini-2.5-flash',
+      primaryModel: 'gemini-3.8-flash',
       fallbackModel: 'gemini-2.5-pro',
       temperature: 0.2,
       maxOutputTokens: 8192,
-      systemPrompt: '당신은 비정형 문서(PDF, 이미지, 영수증, 발주서 등)를 정형 엑셀 표로 완벽하게 구조화하는 데이터 추출 전문 AI입니다.',
+      systemPrompt: '당신은 거래명세서, 세금계산서, 영수증 등 비정형 문서를 정밀한 2차원 스프레드시트 표로 완벽하게 변환하는 Gemini 최신 비전 파서 AI입니다.',
     };
 
     (res.rows || []).forEach((r: any) => {

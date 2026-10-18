@@ -133,7 +133,7 @@ export function Header({
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-1.5 text-xs font-extrabold px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-800 border border-slate-200 transition transform hover:scale-105 active:scale-95 shadow-2xs cursor-pointer"
-          title="파일투시트 비전, 3대 독자 기술, 보안 헌장 및 공식 회사정보 (새 창)"
+          title="File to Sheet 비전, 3대 독자 기술, 보안 헌장 및 공식 회사정보 (새 창)"
         >
           <Building2 className="w-3.5 h-3.5 text-indigo-600" />
           <span>회사소개</span>

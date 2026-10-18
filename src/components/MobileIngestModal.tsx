@@ -39,7 +39,7 @@ export function MobileIngestModal({
   const [testResult, setTestResult] = useState<string | null>(null);
 
   const projectId = project?.id ? String(project.id) : 'default';
-  const projectName = project?.name || '파일투시트 프로젝트';
+  const projectName = project?.name || 'File to Sheet 프로젝트';
   const targetSheet = activeSheetName || '기본 시트';
 
   // 토큰 조회 또는 자동 발급
