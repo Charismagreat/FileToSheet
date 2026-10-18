@@ -5,6 +5,7 @@ import Link from 'next/link';
 import {
   Building2,
   ShieldCheck,
+  Shield,
   Sparkles,
   FileSpreadsheet,
   Lock,
@@ -21,6 +22,9 @@ import {
   Layers,
   ArrowRight,
   Zap,
+  CreditCard,
+  HelpCircle,
+  X,
 } from 'lucide-react';
 
 interface CompanyInfo {
@@ -409,6 +413,171 @@ export default function AboutPage() {
           </div>
         </section>
       </div>
+
+      {/* ========================================================
+          7. 공식 엔터프라이즈 푸터 (SheetBot 법적 고지 규격 100% 반영)
+         ======================================================== */}
+      <footer className="mt-20 border-t border-slate-200/80 bg-white text-slate-500 text-xs font-normal">
+        <div className="max-w-5xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 pb-8 border-b border-slate-100">
+            {/* 좌측: 로고 & 플랫폼 설명 & 보안 신뢰 뱃지 */}
+            <div className="md:col-span-2 space-y-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-600/20 shrink-0">
+                  <FileSpreadsheet className="w-4 h-4" />
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-black tracking-tight text-slate-900 text-base">File to Sheet</span>
+                  <span className="px-1.5 py-0.2 bg-indigo-100 text-indigo-800 text-[10px] font-black rounded-md">
+                    SaaS
+                  </span>
+                </div>
+              </div>
+
+              <p className="text-slate-500 text-xs leading-relaxed max-w-md">
+                File to Sheet는 영수증, 세금계산서, 발주서, 통장내역 등 세상의 모든 비정형 서류를 멀티모달 비전 AI와 SQLite 스트리밍 기술로 1초 만에 엑셀 표로 자동 구조화하는 B2B 업무 생산성 플랫폼입니다.
+              </p>
+
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-400 pt-1">
+                <span className="flex items-center gap-1">
+                  <ShieldCheck className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>SSL 256-bit 안전 결제</span>
+                </span>
+                <span>•</span>
+                <span>회원 데이터 격리(Multi-User Isolation)</span>
+                <span>•</span>
+                <span>KST 서울 기준 정산</span>
+              </div>
+
+              {/* 고객 지원 센터 */}
+              <div className="pt-2 space-y-1.5 border-t border-slate-100">
+                <h4 className="font-bold text-slate-800 text-xs">고객 지원 센터</h4>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-slate-500 text-[11px]">
+                  <div className="flex items-center gap-1.5">
+                    <Mail className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    <span>{companyInfo.email}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    <span>대표전화: {companyInfo.phone} (평일 09:00 - 18:00, 점심 12-13)</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 text-indigo-700 font-medium text-[11px] pt-0.5">
+                  <Sparkles className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                  <span>File to Sheet AI 24시간 실시간 데이터 상담</span>
+                </div>
+              </div>
+            </div>
+
+            {/* 우측 상단: 서비스 바로가기 & 가이드 */}
+            <div className="space-y-2.5">
+              <h4 className="font-bold text-slate-800 text-xs">서비스 바로가기</h4>
+              <ul className="space-y-1.5 text-slate-500 text-xs">
+                <li>
+                  <Link href="/" className="hover:text-indigo-600 transition-colors">
+                    서비스 홈 (문서 변환기)
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/use-cases" className="hover:text-indigo-600 transition-colors">
+                    💡 직무별 6대 활용사례
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/about" className="hover:text-indigo-600 font-bold text-indigo-700 transition-colors">
+                    🏢 회사소개 &amp; 보안 헌장
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/admin" className="hover:text-indigo-600 transition-colors">
+                    👑 종합 관리자 콘솔
+                  </Link>
+                </li>
+              </ul>
+            </div>
+
+            {/* 우측 하단: 가이드 및 법적 규정 바로가기 */}
+            <div className="space-y-2.5">
+              <h4 className="font-bold text-slate-800 text-xs">약관 및 법적 고지</h4>
+              <ul className="space-y-1.5 text-slate-500 text-xs">
+                <li>
+                  <Link href="/terms" className="hover:text-slate-900 transition-colors flex items-center gap-1 font-medium">
+                    <FileText className="w-3 h-3 text-slate-400" />
+                    <span>서비스 이용약관</span>
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/privacy" className="hover:text-emerald-700 font-bold text-emerald-800 transition-colors flex items-center gap-1">
+                    <Shield className="w-3 h-3 text-emerald-600" />
+                    <span>개인정보처리방침</span>
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/finance-terms" className="hover:text-sky-700 font-medium text-slate-700 transition-colors flex items-center gap-1">
+                    <CreditCard className="w-3 h-3 text-sky-600" />
+                    <span>전자금융거래 이용약관</span>
+                  </Link>
+                </li>
+                <li className="pt-1.5 text-[11px] text-slate-400">
+                  <span>안전한 B2B 엔터프라이즈 표준 준수</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          {/* 사업자 법적 등록 정보 바 */}
+          <div className="pt-6 space-y-2 text-[11px] text-slate-400 leading-relaxed">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+              <span><strong>상호명:</strong> {companyInfo.companyName}</span>
+              <span>|</span>
+              <span><strong>대표자:</strong> {companyInfo.ceoName}</span>
+              <span>|</span>
+              <span><strong>사업자등록번호:</strong> {companyInfo.bizNumber}</span>
+              <span>|</span>
+              <span><strong>통신판매업신고:</strong> {companyInfo.mailOrderNumber}</span>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+              <span className="flex items-center gap-1">
+                <MapPin className="w-3 h-3 text-slate-400" />
+                <span><strong>사업장 주소:</strong> {companyInfo.address}</span>
+              </span>
+              <span>|</span>
+              <span><strong>개인정보보호책임자:</strong> {companyInfo.ceoName} (privacy@filetosheet.com)</span>
+              <span>|</span>
+              <span><strong>호스팅 및 백엔드:</strong> EGDesk Cloud &amp; Host Infrastructure</span>
+            </div>
+
+            {/* 최하단 Copyright & 3대 약관 링크 바 */}
+            <div className="pt-3 mt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-t border-slate-100 text-slate-500">
+              <p>© 2026 {companyInfo.companyName} File to Sheet. All rights reserved.</p>
+              
+              <div className="flex items-center gap-3 text-[11px]">
+                <Link
+                  href="/terms"
+                  className="hover:text-slate-900 transition-colors underline decoration-slate-300 underline-offset-2"
+                >
+                  이용약관
+                </Link>
+                <span>•</span>
+                <Link
+                  href="/privacy"
+                  className="hover:text-emerald-800 font-bold transition-colors text-slate-700 underline decoration-slate-300 underline-offset-2"
+                >
+                  개인정보처리방침
+                </Link>
+                <span>•</span>
+                <Link
+                  href="/finance-terms"
+                  className="hover:text-sky-800 transition-colors underline decoration-slate-300 underline-offset-2"
+                >
+                  전자금융거래 이용약관
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

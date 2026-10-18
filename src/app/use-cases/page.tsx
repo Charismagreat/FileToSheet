@@ -1446,11 +1446,20 @@ export default function UseCasesPage() {
         <div className="max-w-5xl mx-auto w-full flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <FileSpreadsheet className="w-4 h-4 text-blue-600" />
-            <span className="font-extrabold text-slate-700">FileToSheet</span>
+            <span className="font-extrabold text-slate-700">File to Sheet</span>
             <span className="text-slate-300">|</span>
-            <span>어떤 파일이든 업로드 즉시 엑셀 표로, FileToSheet</span>
+            <span>어떤 파일이든 업로드 즉시 엑셀 표로, File to Sheet</span>
           </div>
-          <div>© 2026 FileToSheet. All rights reserved.</div>
+
+          <div className="flex items-center gap-3 text-[11px] text-slate-400">
+            <Link href="/terms" className="hover:text-slate-700 transition">이용약관</Link>
+            <span>•</span>
+            <Link href="/privacy" className="hover:text-emerald-700 font-bold text-slate-600 transition">개인정보처리방침</Link>
+            <span>•</span>
+            <Link href="/finance-terms" className="hover:text-sky-700 transition">전자금융거래</Link>
+            <span>|</span>
+            <span>© 2026 File to Sheet. All rights reserved.</span>
+          </div>
         </div>
       </footer>
     </div>
