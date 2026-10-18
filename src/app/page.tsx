@@ -30,6 +30,7 @@ import { useFileExport } from '@/hooks/useFileExport';
 import { useBatchUploadQueue } from '@/hooks/useBatchUploadQueue';
 import { getSheetOriginalFiles } from '@/lib/sheet-helpers';
 import { ProjectWorkspace } from '@/types/workspace';
+import { insertRows } from '@/egdesk-helpers';
 
 export default function FileToSheetApp() {
   const auth = useAuth();
@@ -403,8 +404,12 @@ export default function FileToSheetApp() {
     setActiveSubTab('table');
   };
 
-  // 🌟 시트별 AI 분석·적재 자연어 규칙 저장
-  const handleSaveSheetRule = (sheetIndex: number, rule: string) => {
+  // 🌟 시트별 AI 분석·적재 자연어 규칙 저장 (로컬 워크스페이스 및 sheet_rules 물리 테이블 동기화)
+  const handleSaveSheetRule = async (sheetIndex: number, rule: string) => {
+    const targetProj = currentProject;
+    const targetSheet = targetProj?.sheets[sheetIndex];
+    const sheetName = targetSheet?.name || 'Sheet1';
+
     ws.setProjects((prev) =>
       prev.map((proj, pIdx) => {
         if (pIdx !== ws.activeProjectIndex) return proj;
@@ -415,6 +420,24 @@ export default function FileToSheetApp() {
         return { ...proj, sheets: nextSheets };
       })
     );
+
+    // 물리 DB (sheet_rules)에도 안전하게 영구 저장
+    try {
+      const now = new Date().toISOString();
+      await insertRows('sheet_rules', [
+        {
+          project_id: targetProj?.id ? Number(targetProj.id) : null,
+          sheet_name: sheetName,
+          rule_text: rule || '',
+          rule_type: 'manual',
+          is_active: rule ? 1 : 0,
+          created_at: now,
+          updated_at: now,
+        },
+      ]);
+    } catch (e) {
+      console.warn('sheet_rules 물리 테이블 동기화 예외 (로컬 워크스페이스는 보존됨):', e);
+    }
   };
 
   return (
