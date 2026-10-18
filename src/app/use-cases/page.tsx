@@ -29,6 +29,8 @@ import {
   FileCheck2,
   RotateCcw,
   Link2,
+  Calendar,
+  Moon,
 } from 'lucide-react';
 
 export default function UseCasesPage() {
@@ -794,6 +796,169 @@ export default function UseCasesPage() {
         </div>
       </section>
 
+      {/* 4-E. 신규: 정기 스케줄 & 무인 파이프라인 (Scheduled Automation & Batch Pipeline - max-w-5xl w-full 완전 통일) */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8 border-b border-slate-200 bg-white w-full">
+        <div className="max-w-5xl mx-auto w-full">
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900 text-white text-xs font-black tracking-wide uppercase mb-3 shadow-xs">
+              <Clock className="w-3.5 h-3.5 text-amber-400" />
+              <span>Scheduled Automation & Unattended Pipeline</span>
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 break-keep mb-3">
+              정기 스케줄과 무인 자동화 — <br className="hidden sm:inline" />
+              <span className="text-amber-600 underline decoration-amber-300 decoration-wavy underline-offset-4">사람이 잠든 사이 완성되는</span> 엑셀 파이프라인
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-600 max-w-2xl mx-auto break-keep leading-relaxed">
+              매일 밤 자정 영수증 일괄 파싱, 택배 마감 시간 발주서 취합, 매주 월요일 아침 미수금 대조까지. 반복되는 문서 작업을 스케줄러에 맡기면 출근 즉시 완벽한 엑셀 장부를 만날 수 있습니다.
+            </p>
+          </div>
+
+          {/* 4대 핵심 스케줄 자동화 카드 (2x2 그리드) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 w-full mb-8">
+            {/* 1. 회계 심야 무인 일괄 파싱 */}
+            <div className="p-6 rounded-2xl bg-slate-50/80 border border-slate-200 shadow-2xs hover:shadow-md hover:border-amber-300 transition flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center font-bold">
+                      <Moon className="w-4 h-4" />
+                    </div>
+                    <span className="text-xs font-black text-amber-800 bg-amber-100/70 px-2 py-0.5 rounded-md">
+                      매일 밤 00:00 (Cron)
+                    </span>
+                  </div>
+                  <span className="text-[11px] text-slate-400 font-medium">출근 즉시 장부 확인</span>
+                </div>
+                <h3 className="text-base font-extrabold text-slate-900 mb-2">
+                  [회계·경리] 심야 무인 일괄 파싱 (Overnight Batch)
+                </h3>
+                <div className="p-3 bg-white rounded-xl border border-slate-200 text-xs text-slate-700 font-mono mb-3 leading-relaxed">
+                  ⏰ 매일 자정, Google Drive / 지정 폴더의 신규 영수증·계산서 전수 감지 ➔ 자동 파싱
+                </div>
+                <p className="text-xs text-slate-600 leading-relaxed break-keep">
+                  직원들이 낮 동안 업로드해 둔 수백 장의 영수증을 심야 시간에 AI가 전수 분석하여 월간 경비 시트에 적재합니다. 경리 담당자가 아침 9시에 출근하면 이미 완벽히 정렬된 엑셀 표가 준비되어 있습니다.
+                </p>
+              </div>
+              <div className="pt-4 border-t border-slate-200/80 mt-4 text-[11px] text-amber-700 font-bold flex items-center justify-between">
+                <span>월말 정산 야근 100% 해소</span>
+                <span className="font-mono">Unattended Auto-Parse</span>
+              </div>
+            </div>
+
+            {/* 2. 이커머스 마감 발주서 자동 취합 */}
+            <div className="p-6 rounded-2xl bg-slate-50/80 border border-slate-200 shadow-2xs hover:shadow-md hover:border-blue-300 transition flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-800 flex items-center justify-center font-bold">
+                      <ShoppingCart className="w-4 h-4" />
+                    </div>
+                    <span className="text-xs font-black text-blue-800 bg-blue-100/70 px-2 py-0.5 rounded-md">
+                      매일 10:00 / 16:00
+                    </span>
+                  </div>
+                  <span className="text-[11px] text-slate-400 font-medium">택배 마감 완벽 대응</span>
+                </div>
+                <h3 className="text-base font-extrabold text-slate-900 mb-2">
+                  [물류·이커머스] 발주서 자동 표준화 & 출고 큐 생성
+                </h3>
+                <div className="p-3 bg-white rounded-xl border border-slate-200 text-xs text-slate-700 font-mono mb-3 leading-relaxed">
+                  ⏰ 마감 정각마다 복수 쇼핑몰 발주서 수집 ➔ 본사 단일 출고 규격 시트로 병합
+                </div>
+                <p className="text-xs text-slate-600 leading-relaxed break-keep">
+                  스마트스토어, 쿠팡, 자사몰 등 제각각인 양식의 발주서를 자동으로 표준화하고, 품목 마스터의 SKU 외래키를 조인하여 재고 부족 및 오배송 위험을 사전에 자동 경고합니다.
+                </p>
+              </div>
+              <div className="pt-4 border-t border-slate-200/80 mt-4 text-[11px] text-blue-700 font-bold flex items-center justify-between">
+                <span>수기 복사-붙여넣기 0건 달성</span>
+                <span className="font-mono">Order Batch Queue</span>
+              </div>
+            </div>
+
+            {/* 3. 금융 주간 미수금 자동 반제 */}
+            <div className="p-6 rounded-2xl bg-slate-50/80 border border-slate-200 shadow-2xs hover:shadow-md hover:border-emerald-300 transition flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
+                      <Calendar className="w-4 h-4" />
+                    </div>
+                    <span className="text-xs font-black text-emerald-800 bg-emerald-100/70 px-2 py-0.5 rounded-md">
+                      매주 월요일 08:00
+                    </span>
+                  </div>
+                  <span className="text-[11px] text-slate-400 font-medium">주간 경영회의 보고용</span>
+                </div>
+                <h3 className="text-base font-extrabold text-slate-900 mb-2">
+                  [금융·자금] 주간 통장 입출금 & 미수금 자동 반제
+                </h3>
+                <div className="p-3 bg-white rounded-xl border border-slate-200 text-xs text-slate-700 font-mono mb-3 leading-relaxed">
+                  ⏰ 주말 은행 거래내역 파싱 ➔ 매출 계산서 조인 ➔ 미입금 거래처 목록 자동 추출
+                </div>
+                <p className="text-xs text-slate-600 leading-relaxed break-keep">
+                  주말 동안 발생한 모든 통장 입출금 내역을 파싱하여 매출 세금계산서와 거래처코드 외래키로 대조합니다. 금액이 일치하는 건은 자동 수납 처리하고, 미입금된 거래처 명단만 별도로 뽑아 리포트를 발행합니다.
+                </p>
+              </div>
+              <div className="pt-4 border-t border-slate-200/80 mt-4 text-[11px] text-emerald-700 font-bold flex items-center justify-between">
+                <span>미수금 회수율 35% 증대</span>
+                <span className="font-mono">Auto-Reconciliation</span>
+              </div>
+            </div>
+
+            {/* 4. 프랜차이즈 지점 마감 매출 동기화 */}
+            <div className="p-6 rounded-2xl bg-slate-50/80 border border-slate-200 shadow-2xs hover:shadow-md hover:border-purple-300 transition flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-purple-100 text-purple-800 flex items-center justify-center font-bold">
+                      <Briefcase className="w-4 h-4" />
+                    </div>
+                    <span className="text-xs font-black text-purple-800 bg-purple-100/70 px-2 py-0.5 rounded-md">
+                      매일 밤 23:00 (마감 직후)
+                    </span>
+                  </div>
+                  <span className="text-[11px] text-slate-400 font-medium">전사 매출 실시간 집계</span>
+                </div>
+                <h3 className="text-base font-extrabold text-slate-900 mb-2">
+                  [다지점·프랜차이즈] 전국 매장 마감 매출 통합 동기화
+                </h3>
+                <div className="p-3 bg-white rounded-xl border border-slate-200 text-xs text-slate-700 font-mono mb-3 leading-relaxed">
+                  ⏰ 전국 지점 수신함 인입 전표 취합 ➔ 본사 통합 시트 자동 갱신
+                </div>
+                <p className="text-xs text-slate-600 leading-relaxed break-keep">
+                  전국 50개 매장에서 전송한 일일 마감 포스 영수증과 정산서를 스케줄러가 일괄 취합하여 본사 통합 매출 시트에 합산합니다. 마감 누락 매장을 자동 판별하여 본사 집계 업무를 당일 자정 전에 마감합니다.
+                </p>
+              </div>
+              <div className="pt-4 border-t border-slate-200/80 mt-4 text-[11px] text-purple-700 font-bold flex items-center justify-between">
+                <span>지점별 마감 누락률 0%</span>
+                <span className="font-mono">Multi-Branch Sync</span>
+              </div>
+            </div>
+          </div>
+
+          {/* 4단계 스케줄 자동화 파이프라인 흐름도 바 */}
+          <div className="p-5 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex flex-col sm:flex-row items-center justify-between gap-4 shadow-md w-full">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-400/30 flex items-center justify-center shrink-0">
+                <Clock className="w-5 h-5 text-amber-300" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-white mb-0.5">대화창에서 바로 스케줄을 설정할 수 있습니다</h4>
+                <p className="text-xs text-slate-300 break-keep">
+                  채팅창에 <span className="text-amber-300 font-mono font-bold">/schedule</span> 명령어를 입력하여 원하는 정기 실행 주기와 폴더 경로를 자연어로 등록해 보세요.
+                </p>
+              </div>
+            </div>
+            <Link
+              href="/"
+              className="shrink-0 px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-900 font-black text-xs transition shadow-sm cursor-pointer"
+            >
+              스케줄 자동화 체험하기 →
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* 5. FileToSheet만의 4대 차별화 핵심 기술 (Why Us? - max-w-5xl w-full 완전 통일) */}
       <section className="py-16 px-4 sm:px-6 lg:px-8 border-b border-slate-200 bg-slate-50/40 w-full">
         <div className="max-w-5xl mx-auto w-full">
@@ -886,6 +1051,16 @@ export default function UseCasesPage() {
               </h4>
               <p className="text-xs sm:text-sm text-slate-600 leading-relaxed break-keep">
                 네, 강력하게 지원합니다! 표데이터 탭에서 <span className="bg-indigo-100 text-indigo-800 px-1.5 py-0.5 rounded font-bold">[+ 열 추가] ➔ [🔗 외래키(조인 열)]</span>을 선택하시면, 다른 시트의 기준 키(예: 사업자등록번호, 주문번호)를 연결할 수 있습니다. 외래키 열이 생성되면 하단에 <strong className="text-indigo-700 font-bold">‘🔗 다른 시트 조인 뷰’</strong> 토글 버튼이 생기며, 이를 켜는 즉시 복잡한 VLOOKUP 수식 없이도 거래처 대표자, 정산계좌, 여신한도 등의 상세 데이터가 우측에 실시간으로 매칭되어 결합 표시됩니다.
+              </p>
+            </div>
+
+            <div className="p-5 sm:p-6 rounded-2xl bg-slate-50/70 border border-slate-200 shadow-2xs">
+              <h4 className="text-sm font-bold text-slate-900 mb-2 flex items-center gap-2">
+                <span className="text-amber-600 font-black">Q.</span>
+                <span>매일 특정 시간이나 밤사이에 자동으로 문서를 파싱하고 시트를 갱신할 수 있나요?</span>
+              </h4>
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed break-keep">
+                네, 스케줄 무인 자동화 파이프라인을 지원합니다! 매일 밤 자정(00:00)이나 택배 마감 시간(10:00, 16:00), 매주 월요일 아침 등 원하는 주기를 설정해 두면, 지정된 Google Drive나 로컬 공유 폴더에 인입된 신규 영수증·발주서·통장 내역을 <strong className="text-amber-700 font-bold">스케줄러가 백그라운드에서 무인(Unattended)으로 일괄 수집 및 파싱</strong>합니다. 사용자가 출근했을 때는 이미 전날 데이터가 완벽하게 적재된 엑셀 표를 즉시 확인하실 수 있습니다. 대화창에서 <span className="font-mono bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-bold">/schedule</span> 명령어로 바로 지정할 수 있습니다.
               </p>
             </div>
 
