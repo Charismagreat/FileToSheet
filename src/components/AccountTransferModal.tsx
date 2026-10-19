@@ -1,5 +1,6 @@
 'use client';
 
+import { apiFetch } from '@/lib/api';
 import React, { useState, useEffect } from 'react';
 import { Smartphone, X, AlertCircle, CheckCircle, ArrowRight, ShieldCheck, RefreshCw } from 'lucide-react';
 import { UserSession } from '@/types/workspace';
@@ -59,7 +60,7 @@ export function AccountTransferModal({
 
     setIsSending(true);
     try {
-      const res = await fetch('/api/auth/phone/send-code', {
+      const res = await apiFetch('/api/auth/phone/send-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phoneNumber: cleanNew }),
@@ -94,7 +95,7 @@ export function AccountTransferModal({
 
     setIsSubmitting(true);
     try {
-      const res = await fetch('/api/auth/phone/transfer-account', {
+      const res = await apiFetch('/api/auth/phone/transfer-account', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

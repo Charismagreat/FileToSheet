@@ -1,7 +1,9 @@
 'use client';
 
+import { apiFetch } from '@/lib/api';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { isPhoneNumberAdmin } from '@/lib/admin-auth';
 import {
   Building2,
   ShieldCheck,
@@ -35,6 +37,9 @@ interface CompanyInfo {
   address: string;
   email: string;
   phone: string;
+  bankName?: string;
+  bankAccount?: string;
+  bankHolder?: string;
 }
 
 interface SnsLinks {
@@ -53,6 +58,9 @@ export default function AboutPage() {
     address: '서울특별시 강남구 테헤란로 123, 이지빌딩 7층',
     email: 'support@filetosheet.com',
     phone: '1588-0000',
+    bankName: '',
+    bankAccount: '',
+    bankHolder: '',
   });
 
   const [snsLinks, setSnsLinks] = useState<SnsLinks>({
@@ -63,12 +71,26 @@ export default function AboutPage() {
   });
 
   const [loading, setLoading] = useState<boolean>(true);
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+
+  // 로컬 세션으로부터 관리자 여부 확인
+  useEffect(() => {
+    try {
+      const savedUser = localStorage.getItem('filetosheet_user');
+      if (savedUser) {
+        const user = JSON.parse(savedUser);
+        setIsAdmin(isPhoneNumberAdmin(user?.phoneNumber));
+      }
+    } catch (e) {
+      console.error('관리자 세션 확인 실패:', e);
+    }
+  }, []);
 
   // 관리자 콘솔에서 실시간 설정한 회사정보 & SNS 링크 불러오기
   useEffect(() => {
     async function loadCompanySettings() {
       try {
-        const res = await fetch('/api/admin/settings');
+        const res = await apiFetch('/api/admin/settings');
         const data = await res.json();
         if (data.success) {
           if (data.companyInfo) setCompanyInfo(data.companyInfo);
@@ -107,17 +129,25 @@ export default function AboutPage() {
 
           <div className="flex items-center gap-2">
             <Link
+              href="/"
+              className="text-xs font-bold px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition"
+            >
+              🚀 메인 홈
+            </Link>
+            <Link
               href="/use-cases"
               className="text-xs font-bold px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 transition"
             >
               💡 활용사례 보기
             </Link>
-            <Link
-              href="/admin"
-              className="text-xs font-bold px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white transition shadow-2xs"
-            >
-              👑 관리자 콘솔
-            </Link>
+            {isAdmin && (
+              <Link
+                href="/admin"
+                className="text-xs font-bold px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white transition shadow-2xs"
+              >
+                👑 관리자 콘솔
+              </Link>
+            )}
           </div>
         </div>
       </div>
@@ -285,6 +315,16 @@ export default function AboutPage() {
                   <span className="text-slate-500 font-medium">대표 이메일</span>
                   <span className="font-mono text-slate-700">{companyInfo.email}</span>
                 </div>
+                {companyInfo.bankAccount && (
+                  <div className="py-2.5 flex justify-between">
+                    <span className="text-slate-500 font-medium">공식 결제/입금계좌</span>
+                    <span className="font-mono font-bold text-indigo-700">
+                      {companyInfo.bankName ? `${companyInfo.bankName} ` : ''}
+                      {companyInfo.bankAccount}
+                      {companyInfo.bankHolder ? ` (예금주: ${companyInfo.bankHolder})` : ''}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -488,11 +528,13 @@ export default function AboutPage() {
                     🏢 회사소개 &amp; 보안 헌장
                   </Link>
                 </li>
-                <li>
-                  <Link href="/admin" className="hover:text-indigo-600 transition-colors">
-                    👑 종합 관리자 콘솔
-                  </Link>
-                </li>
+                {isAdmin && (
+                  <li>
+                    <Link href="/admin" className="hover:text-indigo-600 transition-colors">
+                      👑 종합 관리자 콘솔
+                    </Link>
+                  </li>
+                )}
               </ul>
             </div>
 

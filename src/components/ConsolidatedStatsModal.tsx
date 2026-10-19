@@ -1,5 +1,6 @@
 'use client';
 
+import { apiFetch } from '@/lib/api';
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   Inbox, X, Download, BarChart3, CheckSquare, Square,
@@ -42,7 +43,7 @@ export function ConsolidatedStatsModal({
     if (!currentUser?.phoneNumber) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/share/to-manager?receiverPhone=${currentUser.phoneNumber}`);
+      const res = await apiFetch(`/api/share/to-manager?receiverPhone=${currentUser.phoneNumber}`);
       const data = await res.json();
       if (data.success && Array.isArray(data.items)) {
         setItems(data.items);
@@ -67,7 +68,7 @@ export function ConsolidatedStatsModal({
     e.stopPropagation();
     if (!confirm('이 공유 시트를 수신함에서 삭제하시겠습니까?')) return;
     try {
-      await fetch(`/api/share/to-manager?id=${id}`, { method: 'DELETE' });
+      await apiFetch(`/api/share/to-manager?id=${id}`, { method: 'DELETE' });
       setItems((prev) => prev.filter((it) => it.id !== id));
       setSelectedIds((prev) => prev.filter((selId) => selId !== id));
     } catch (err) {

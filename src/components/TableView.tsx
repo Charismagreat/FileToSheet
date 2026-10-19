@@ -1,11 +1,19 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Trash2, UploadCloud, RefreshCw, FileText, Link2, Check, ExternalLink } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Trash2, UploadCloud, RefreshCw, FileText, Link2, Check, ExternalLink, AlertCircle, Sparkles } from 'lucide-react';
 import { ParsedSheet, SheetRelation } from '@/lib/parser';
 import { TableHeader } from './TableHeader';
 import { TableEmptyDropzone } from './TableEmptyDropzone';
 import { TablePagination } from './TablePagination';
+import { ValidationBanner } from './ValidationBanner';
+import { ValidationRuleModal } from './ValidationRuleModal';
+import { DailyAuditReportModal } from './DailyAuditReportModal';
+import {
+  ValidationRule,
+  generateDefaultRules,
+  validateSheetRows,
+} from '@/lib/validation-engine';
 
 interface TableViewProps {
   sheet: ParsedSheet;
@@ -33,6 +41,7 @@ interface TableViewProps {
   sortCol?: string | null;
   sortDir?: 'asc' | 'desc' | null;
   onToggleColSort?: (header: string) => void;
+  onSetColSort?: (header: string, dir: 'asc' | 'desc' | null) => void;
   projectSheets?: ParsedSheet[];
   isJoinViewActive?: boolean;
   setIsJoinViewActive?: (v: boolean) => void;
@@ -64,6 +73,7 @@ export function TableView({
   sortCol,
   sortDir,
   onToggleColSort,
+  onSetColSort,
   projectSheets,
   isJoinViewActive = false,
   setIsJoinViewActive,
@@ -74,22 +84,136 @@ export function TableView({
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(50);
 
+  // 🌟 유효성 검증 규칙 상태 (시트별 localStorage 연동 및 지능형 기본 규칙 생성)
+  const [rules, setRules] = useState<ValidationRule[]>([]);
+  const [isRuleModalOpen, setIsRuleModalOpen] = useState<boolean>(false);
+  const [isDailyAuditModalOpen, setIsDailyAuditModalOpen] = useState<boolean>(false);
+  const [filterOnlyErrors, setFilterOnlyErrors] = useState<boolean>(false);
+
+  // 시트 변경 시 유효성 검증 규칙 로드
+  useEffect(() => {
+    if (!sheet?.name) return;
+    try {
+      const storageKey = `fts_val_rules_${sheet.name}`;
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        setRules(JSON.parse(saved));
+        return;
+      }
+    } catch {}
+
+    // 기본 규칙 자동 감지
+    const defaults = generateDefaultRules(sheet.headers || []);
+    setRules(defaults);
+  }, [sheet.name, sheet.headers]);
+
+  // 규칙 변경 핸들러
+  const handleUpdateRules = (newRules: ValidationRule[]) => {
+    setRules(newRules);
+    try {
+      if (sheet?.name) {
+        localStorage.setItem(`fts_val_rules_${sheet.name}`, JSON.stringify(newRules));
+      }
+    } catch {}
+  };
+
+  // 실시간 유효성 검증 평가
+  const validationResult = useMemo(() => {
+    return validateSheetRows(sheet.rows || [], rules);
+  }, [sheet.rows, rules]);
+
+  // 불일치 행만 모아보기 필터 적용
+  const displayRows = useMemo(() => {
+    if (!filterOnlyErrors) return filteredRows;
+    return filteredRows.filter((r, idx) => {
+      const actualIdx = r._originIdx !== undefined ? r._originIdx : idx;
+      return validationResult.errorRowIndices.has(actualIdx);
+    });
+  }, [filteredRows, filterOnlyErrors, validationResult.errorRowIndices]);
+
   // 필터링 결과나 행 개수 변경 시 유효 페이지 범위 보정
   useEffect(() => {
-    const maxPage = pageSize >= 999999 ? 1 : Math.max(1, Math.ceil(filteredRows.length / pageSize));
+    const maxPage = pageSize >= 999999 ? 1 : Math.max(1, Math.ceil(displayRows.length / pageSize));
     if (currentPage > maxPage) {
       setCurrentPage(maxPage);
     }
-  }, [filteredRows.length, pageSize, currentPage]);
+  }, [displayRows.length, pageSize, currentPage]);
 
   const isAll = pageSize >= 999999;
   const paginatedRows = isAll
-    ? filteredRows
-    : filteredRows.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+    ? displayRows
+    : displayRows.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   // 외래키(FK) 관계 및 조인 컬럼 계산
   const relations: SheetRelation[] = sheet.relations || [];
   const hasRelations = relations.length > 0;
+
+  // 🌟 컬럼 너비 상태 관리 (시트별 localStorage 영속화 지원)
+  const [colWidths, setColWidths] = useState<Record<string, number>>({});
+
+  // 시트 변경 시 저장된 너비 로드 또는 기본값 계산
+  useEffect(() => {
+    if (!sheet?.name) return;
+    try {
+      const storageKey = `fts_col_widths_${sheet.name}`;
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        setColWidths(JSON.parse(saved));
+        return;
+      }
+    } catch {}
+
+    // 기본 너비 초기값 지능형 설정
+    const initial: Record<string, number> = {};
+    (sheet.headers || []).forEach((h) => {
+      if (h === '일련번호') initial[h] = 75;
+      else if (h === '등록일시') initial[h] = 150;
+      else if (h.includes('명') || h.includes('품목') || h.includes('내역') || h.includes('주소') || h.includes('비고') || h.includes('내용')) initial[h] = 220;
+      else if (h.includes('금액') || h.includes('단가') || h.includes('세액') || h.includes('합계') || h.includes('공급가액')) initial[h] = 130;
+      else if (h.includes('수량') || h.includes('규격') || h.includes('단위')) initial[h] = 95;
+      else initial[h] = 130;
+    });
+    setColWidths(initial);
+  }, [sheet.name, sheet.headers]);
+
+  // 컬럼 너비 변경 핸들러
+  const handleColWidthChange = (header: string, width: number) => {
+    setColWidths((prev) => {
+      const next = { ...prev, [header]: width };
+      try {
+        if (sheet?.name) {
+          localStorage.setItem(`fts_col_widths_${sheet.name}`, JSON.stringify(next));
+        }
+      } catch {}
+      return next;
+    });
+  };
+
+  // 컬럼 너비 자동 맞춤 (Auto-fit): 최장 텍스트 길이에 맞춰 지능형 확장
+  const handleColAutoFit = (header: string) => {
+    let maxPixel = header.length * 14;
+    const sampleRows = (sheet.rows || []).slice(0, 100);
+    sampleRows.forEach((r) => {
+      const val = r[header];
+      if (val !== undefined && val !== null) {
+        const str = String(val);
+        let px = 0;
+        for (let i = 0; i < str.length; i++) {
+          px += str.charCodeAt(i) > 127 ? 13 : 8;
+        }
+        if (px > maxPixel) maxPixel = px;
+      }
+    });
+
+    const fitWidth = Math.max(70, Math.min(650, maxPixel + 40));
+    handleColWidthChange(header, fitWidth);
+  };
+
+  // 컬럼 너비 기본값 복원
+  const handleResetColWidth = (header: string) => {
+    const defaultW = header === '일련번호' ? 75 : header === '등록일시' ? 150 : 130;
+    handleColWidthChange(header, defaultW);
+  };
 
   interface JoinedColMeta {
     headerName: string;
@@ -154,6 +278,16 @@ export function TableView({
 
   return (
     <>
+      <ValidationBanner
+        validationResult={validationResult}
+        totalRowCount={sheet.rows?.length || 0}
+        filterOnlyErrors={filterOnlyErrors}
+        onToggleFilterOnlyErrors={() => setFilterOnlyErrors((prev) => !prev)}
+        onOpenRuleModal={() => setIsRuleModalOpen(true)}
+        onOpenDailyAuditModal={() => setIsDailyAuditModalOpen(true)}
+        activeRuleCount={rules.filter((r) => r.enabled).length}
+      />
+
       <div
         onDragOver={(e) => {
           e.preventDefault();
@@ -224,6 +358,11 @@ export function TableView({
             sortCol={sortCol}
             sortDir={sortDir}
             onToggleColSort={onToggleColSort}
+            onSetColSort={onSetColSort}
+            colWidths={colWidths}
+            onColWidthChange={handleColWidthChange}
+            onColAutoFit={handleColAutoFit}
+            onResetColWidth={handleResetColWidth}
           />
 
           <tbody className="divide-y divide-slate-100 font-sans">
@@ -264,22 +403,45 @@ export function TableView({
                   {/* 기본 시트 컬럼 렌더링 */}
                   {sheet.headers.map((header, colIdx) => {
                     const isEditing = editingCell?.rowIdx === actualIdx && editingCell?.colKey === header;
-                    const cellVal = row[header] ?? '';
+                    let cellVal = row[header] ?? '';
+                    if (header === '등록일시' && (!cellVal || String(cellVal).trim() === '')) {
+                      const matchedDoc = (sheet.originalFiles || []).find(
+                        (f) =>
+                          (row._fileUid && f.id === row._fileUid) ||
+                          (row._fileId && f.id === row._fileId) ||
+                          (row._fileName && f.name === row._fileName)
+                      );
+                      if (matchedDoc?.uploadedAt) {
+                        cellVal = matchedDoc.uploadedAt;
+                      }
+                    }
                     const isFkCol = relations.some((r) => r.foreignKey === header);
+                    const w = colWidths[header];
+                    const cellError = validationResult.errorMap.get(`${actualIdx}_${header}`);
 
                     return (
                       <td
                         key={colIdx}
+                        style={{
+                          width: w ? `${w}px` : undefined,
+                          minWidth: w ? `${w}px` : '80px',
+                          maxWidth: w ? `${w}px` : undefined,
+                        }}
+                        title={cellError ? cellError.message : undefined}
                         onDoubleClick={() => {
                           setEditingCell({ rowIdx: actualIdx, colKey: header });
                           setEditValue(String(cellVal));
                         }}
-                        className={`px-3.5 py-2 border-r border-slate-200 text-slate-700 max-w-xs truncate cursor-cell relative ${
-                          isFkCol ? 'bg-indigo-50/20' : ''
+                        className={`px-3 py-2 border-r border-slate-200 text-slate-700 truncate cursor-cell relative transition-colors ${
+                          cellError
+                            ? 'bg-rose-50/90 text-rose-950 font-medium ring-1 ring-rose-300 ring-inset'
+                            : isFkCol
+                            ? 'bg-indigo-50/20'
+                            : ''
                         }`}
                       >
                         {isEditing ? (
-                          <>
+                          <div className="flex flex-col gap-1">
                             <input
                               autoFocus
                               type="text"
@@ -293,6 +455,20 @@ export function TableView({
                               }}
                               className="w-full bg-white text-slate-900 px-2 py-0.5 rounded border-2 border-indigo-500 shadow-xs focus:outline-none text-xs"
                             />
+                            {cellError?.suggestedFix !== undefined && (
+                              <button
+                                type="button"
+                                onMouseDown={(e) => {
+                                  e.preventDefault(); // onBlur 방지
+                                  setEditValue(String(cellError.suggestedFix));
+                                }}
+                                className="text-[10px] text-left px-1.5 py-0.5 bg-rose-100 hover:bg-rose-200 text-rose-800 rounded font-sans flex items-center gap-1 transition-colors select-none"
+                                title="클릭 시 계산된 정상 값으로 자동 치환합니다"
+                              >
+                                <Sparkles className="w-2.5 h-2.5 text-rose-600 shrink-0" />
+                                <span>계산값({cellError.suggestedFix})으로 수정</span>
+                              </button>
+                            )}
                             {isFkCol && targetKeyOptions.length > 0 && (
                               <datalist id="fk-key-suggestions">
                                 {targetKeyOptions.map((opt) => (
@@ -300,18 +476,28 @@ export function TableView({
                                 ))}
                               </datalist>
                             )}
-                          </>
+                          </div>
                         ) : (
-                          <div className="flex items-center gap-1.5 truncate">
+                          <div className="flex items-center justify-between gap-1.5 truncate">
                             <span className="truncate">{String(cellVal)}</span>
-                            {isFkCol && cellVal && (
-                              <span
-                                title="외래키(FK) 값"
-                                className="text-[10px] text-indigo-400 opacity-60 group-hover:opacity-100"
-                              >
-                                🔗
-                              </span>
-                            )}
+                            <div className="flex items-center gap-1 shrink-0">
+                              {cellError && (
+                                <span
+                                  title={cellError.message}
+                                  className="flex items-center justify-center w-4 h-4 rounded bg-rose-200 text-rose-700 animate-pulse cursor-help"
+                                >
+                                  <AlertCircle className="w-3 h-3 stroke-[2.5]" />
+                                </span>
+                              )}
+                              {isFkCol && cellVal && (
+                                <span
+                                  title="외래키(FK) 값"
+                                  className="text-[10px] text-indigo-400 opacity-60 group-hover:opacity-100"
+                                >
+                                  🔗
+                                </span>
+                              )}
+                            </div>
                           </div>
                         )}
                       </td>
@@ -360,7 +546,7 @@ export function TableView({
       {/* 페이지네이션 컨트롤러 */}
       <TablePagination
         currentPage={currentPage}
-        totalRows={filteredRows.length}
+        totalRows={displayRows.length}
         pageSize={pageSize}
         onPageChange={setCurrentPage}
         onPageSizeChange={setPageSize}
@@ -405,6 +591,22 @@ export function TableView({
           <span>더블클릭 편집 • 일련번호 옆 📄 호버 시 동일 파일 행 그룹 하이라이트</span>
         </div>
       </div>
+
+      {/* 데이터 유효성 검증 규칙 관리 모달 */}
+      <ValidationRuleModal
+        isOpen={isRuleModalOpen}
+        onClose={() => setIsRuleModalOpen(false)}
+        headers={sheet.headers || []}
+        rules={rules}
+        onUpdateRules={handleUpdateRules}
+      />
+
+      {/* AI 상시 데이터 감사 & 일일 리포트 모달 */}
+      <DailyAuditReportModal
+        isOpen={isDailyAuditModalOpen}
+        onClose={() => setIsDailyAuditModalOpen(false)}
+        sheets={projectSheets && projectSheets.length > 0 ? projectSheets : [sheet]}
+      />
     </>
   );
 }

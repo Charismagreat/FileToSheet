@@ -1,5 +1,6 @@
 'use client';
 
+import { apiFetch } from '@/lib/api';
 import React, { useState, useEffect } from 'react';
 import { ShieldAlert, X, AlertTriangle, CheckCircle, RefreshCw, Smartphone, ArrowRight, Lock } from 'lucide-react';
 import { UserSession } from '@/types/workspace';
@@ -57,7 +58,7 @@ export function EmergencyRecoveryModal({
 
     setLoading(true);
     try {
-      const res = await fetch('/api/auth/phone/emergency-recovery', {
+      const res = await apiFetch('/api/auth/phone/emergency-recovery', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -95,7 +96,7 @@ export function EmergencyRecoveryModal({
 
     setLoading(true);
     try {
-      const res = await fetch('/api/auth/phone/emergency-recovery', {
+      const res = await apiFetch('/api/auth/phone/emergency-recovery', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

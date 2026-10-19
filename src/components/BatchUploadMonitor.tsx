@@ -12,9 +12,9 @@ import {
   X,
   RotateCcw,
   Plus,
-  Sparkles,
   Layers,
   Trash2,
+  ShieldAlert,
 } from 'lucide-react';
 import { BatchQueueItem } from '@/hooks/useBatchUploadQueue';
 
@@ -28,11 +28,17 @@ interface BatchUploadMonitorProps {
   completedCount: number;
   mismatchedCount: number;
   failedCount: number;
+  canceledCount?: number;
+  duplicateCount?: number;
   inProgressCount: number;
   waitingCount: number;
   totalAddedRows: number;
   isAllFinished: boolean;
   onRetryItem: (itemId: string) => void;
+  onCancelItem?: (itemId: string) => void;
+  onCancelAll?: () => void;
+  onRemoveItem?: (itemId: string) => void;
+  onForceUploadItem?: (itemId: string) => void;
   onCreateSheetFromMismatched: (itemId: string) => void;
   onClearFinished: () => void;
 }
@@ -47,17 +53,24 @@ export function BatchUploadMonitor({
   completedCount,
   mismatchedCount,
   failedCount,
+  canceledCount = 0,
+  duplicateCount = 0,
   inProgressCount,
   waitingCount,
   totalAddedRows,
   isAllFinished,
   onRetryItem,
+  onCancelItem,
+  onCancelAll,
+  onRemoveItem,
+  onForceUploadItem,
   onCreateSheetFromMismatched,
   onClearFinished,
 }: BatchUploadMonitorProps) {
   if (!isOpen || totalCount === 0) return null;
 
-  const percent = totalCount > 0 ? Math.round(((completedCount + mismatchedCount + failedCount) / totalCount) * 100) : 0;
+  const doneCount = completedCount + mismatchedCount + failedCount + canceledCount + duplicateCount;
+  const percent = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0;
 
   return (
     <div className="fixed bottom-6 right-6 z-50 w-96 max-w-[calc(100vw-2rem)] bg-white rounded-2xl shadow-2xl shadow-slate-900/20 border border-slate-200/90 overflow-hidden flex flex-col transition-all duration-300 animate-in fade-in slide-in-from-bottom-4">
@@ -75,13 +88,26 @@ export function BatchUploadMonitor({
             <h4 className="text-xs font-black truncate flex items-center gap-1.5">
               <span>스마트 시트 일괄 적재</span>
               <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-white/20 text-white/90">
-                {completedCount + mismatchedCount + failedCount}/{totalCount}
+                {doneCount}/{totalCount}
               </span>
             </h4>
           </div>
         </div>
 
-        <div className="flex items-center gap-1 shrink-0">
+        <div className="flex items-center gap-1.5 shrink-0">
+          {/* 대기 또는 진행 중인 작업이 있을 때 원클릭 전체 취소 버튼 */}
+          {(waitingCount > 0 || inProgressCount > 0) && onCancelAll && (
+            <button
+              type="button"
+              onClick={onCancelAll}
+              className="px-2 py-0.5 rounded-md bg-rose-500/25 hover:bg-rose-500/40 text-rose-200 border border-rose-400/30 text-[10px] font-bold transition cursor-pointer flex items-center gap-1 active:scale-95"
+              title="대기 및 진행 중인 모든 작업을 일괄 취소합니다"
+            >
+              <X className="w-3 h-3 text-rose-300" />
+              <span>전체 취소</span>
+            </button>
+          )}
+
           <button
             type="button"
             onClick={() => setIsMinimized((prev) => !prev)}
@@ -162,6 +188,16 @@ export function BatchUploadMonitor({
                   오류 {failedCount}건
                 </span>
               )}
+              {canceledCount > 0 && (
+                <span className="px-2 py-0.5 rounded-md bg-slate-200/80 text-slate-700 font-bold">
+                  취소 {canceledCount}건
+                </span>
+              )}
+              {duplicateCount > 0 && (
+                <span className="px-2 py-0.5 rounded-md bg-purple-100/90 text-purple-800 font-bold">
+                  중복제외 {duplicateCount}건
+                </span>
+              )}
               {waitingCount > 0 && (
                 <span className="px-2 py-0.5 rounded-md bg-slate-200/80 text-slate-700">
                   대기 {waitingCount}건
@@ -173,11 +209,8 @@ export function BatchUploadMonitor({
           {/* 파일 큐 리스트 (스크롤 영역) */}
           <div className="flex-1 max-h-64 overflow-y-auto p-2.5 space-y-2 divide-y divide-slate-100">
             {queue.map((item) => {
-              const isImage = Boolean(item.file.type?.includes('image'));
-              const isPdf = Boolean(item.file.type?.includes('pdf'));
-
               return (
-                <div key={item.id} className="pt-2 first:pt-0 flex flex-col gap-1.5">
+                <div key={item.id} className="pt-2 first:pt-0 flex flex-col gap-1.5 group/item">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-2 min-w-0 flex-1">
                       <div className="w-6 h-6 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center shrink-0">
@@ -193,17 +226,53 @@ export function BatchUploadMonitor({
                       </div>
                     </div>
 
-                    {/* 상태별 우측 인디케이터 */}
+                    {/* 상태별 우측 인디케이터 및 취소 버튼 */}
                     <div className="shrink-0 flex items-center gap-1">
                       {item.status === 'waiting' && (
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-medium">
-                          대기
-                        </span>
+                        <div className="flex items-center gap-1">
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-medium">
+                            대기
+                          </span>
+                          {onCancelItem && (
+                            <button
+                              type="button"
+                              onClick={() => onCancelItem(item.id)}
+                              className="p-1 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded transition cursor-pointer"
+                              title="대기 작업 취소"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
                       )}
                       {(item.status === 'uploading' || item.status === 'analyzing') && (
-                        <div className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-bold animate-pulse">
-                          <Loader2 className="w-3 h-3 animate-spin" />
-                          <span>{item.status === 'uploading' ? '업로드' : 'AI 분석'}</span>
+                        <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-bold animate-pulse">
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                            <span>{item.status === 'uploading' ? '업로드' : 'AI 분석'}</span>
+                          </div>
+                          {onCancelItem && (
+                            <button
+                              type="button"
+                              onClick={() => onCancelItem(item.id)}
+                              className="p-1 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded transition cursor-pointer"
+                              title="분석 중단 및 취소"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      )}
+                      {item.status === 'duplicate' && (
+                        <div className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 font-bold border border-purple-200">
+                          <ShieldAlert className="w-3 h-3 text-purple-600" />
+                          <span>중복 제외</span>
+                        </div>
+                      )}
+                      {item.status === 'canceled' && (
+                        <div className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-medium">
+                          <XCircle className="w-3 h-3 text-slate-400" />
+                          <span>취소됨</span>
                         </div>
                       )}
                       {item.status === 'success' && (
@@ -227,13 +296,74 @@ export function BatchUploadMonitor({
                     </div>
                   </div>
 
-                  {/* 세부 상태 메시지 & 구제 액션 버튼 */}
+                  {/* 세부 상태 메시지 & 구제/재시도/취소 액션 버튼 */}
                   {item.status === 'success' && (
                     <div className="text-[11px] text-emerald-700 bg-emerald-50/60 rounded-lg px-2 py-1 flex items-center justify-between">
                       <span className="truncate">
                         👉 <strong>[{item.matchedSheetName}]</strong> 시트에 적재됨
                       </span>
                       <span className="font-mono font-bold shrink-0">+{item.addedRowCount}행</span>
+                    </div>
+                  )}
+
+                  {item.status === 'duplicate' && (
+                    <div className="text-[11px] bg-purple-50/70 border border-purple-200/70 rounded-lg p-2 flex flex-col gap-1.5">
+                      <div className="text-purple-800">
+                        🛡️ {item.mismatchReason || item.errorMessage || '동일한 내용의 파일이 이미 시트에 존재하여 중복 적재를 방지했습니다.'}
+                      </div>
+                      <div className="flex items-center justify-between pt-0.5">
+                        <span className="text-[10px] text-purple-600 font-medium">AI 사용량 미차감 (보존됨)</span>
+                        <div className="flex items-center gap-1">
+                          {onForceUploadItem && (
+                            <button
+                              type="button"
+                              onClick={() => onForceUploadItem(item.id)}
+                              className="flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded bg-white hover:bg-purple-100 text-purple-800 border border-purple-300 transition active:scale-95 cursor-pointer shadow-2xs"
+                              title="중복 검사를 건너뛰고 강제로 분석하여 적재합니다"
+                            >
+                              <span>강제 적재</span>
+                            </button>
+                          )}
+                          {onRemoveItem && (
+                            <button
+                              type="button"
+                              onClick={() => onRemoveItem(item.id)}
+                              className="p-1 hover:bg-purple-100 text-purple-400 hover:text-purple-700 rounded transition cursor-pointer"
+                              title="목록에서 제거"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {item.status === 'canceled' && (
+                    <div className="text-[11px] bg-slate-50 border border-slate-200/80 rounded-lg p-2 flex items-center justify-between gap-1">
+                      <span className="text-slate-500 truncate" title={item.errorMessage}>
+                        {item.errorMessage || '작업이 취소되었습니다.'}
+                      </span>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => onRetryItem(item.id)}
+                          className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 transition cursor-pointer"
+                        >
+                          <RotateCcw className="w-3 h-3" />
+                          <span>재시도</span>
+                        </button>
+                        {onRemoveItem && (
+                          <button
+                            type="button"
+                            onClick={() => onRemoveItem(item.id)}
+                            className="p-1 hover:bg-slate-200 text-slate-400 hover:text-slate-700 rounded transition cursor-pointer"
+                            title="목록에서 제거"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
                     </div>
                   )}
 
@@ -260,14 +390,26 @@ export function BatchUploadMonitor({
                       <span className="text-rose-700 truncate" title={item.errorMessage}>
                         {item.errorMessage || '문서 분석에 실패했습니다.'}
                       </span>
-                      <button
-                        type="button"
-                        onClick={() => onRetryItem(item.id)}
-                        className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded bg-white hover:bg-rose-100 text-rose-700 border border-rose-300 transition shrink-0 cursor-pointer"
-                      >
-                        <RotateCcw className="w-3 h-3" />
-                        <span>재시도</span>
-                      </button>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => onRetryItem(item.id)}
+                          className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded bg-white hover:bg-rose-100 text-rose-700 border border-rose-300 transition cursor-pointer"
+                        >
+                          <RotateCcw className="w-3 h-3" />
+                          <span>재시도</span>
+                        </button>
+                        {onRemoveItem && (
+                          <button
+                            type="button"
+                            onClick={() => onRemoveItem(item.id)}
+                            className="p-1 hover:bg-rose-100 text-rose-400 hover:text-rose-700 rounded transition cursor-pointer"
+                            title="목록에서 제거"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -281,15 +423,15 @@ export function BatchUploadMonitor({
               {isAllFinished ? '모든 작업 완료' : '백그라운드에서 자동 적재 중'}
             </span>
             <div className="flex items-center gap-1.5">
-              {completedCount > 0 && (
+              {(completedCount > 0 || canceledCount > 0 || duplicateCount > 0) && (
                 <button
                   type="button"
                   onClick={onClearFinished}
                   className="flex items-center gap-1 text-[11px] text-slate-500 hover:text-slate-800 px-2 py-1 rounded hover:bg-slate-200/60 transition cursor-pointer"
-                  title="성공한 항목 목록 지우기"
+                  title="완료, 취소 및 중복 제외 항목 목록 정리"
                 >
                   <Trash2 className="w-3 h-3" />
-                  <span>완료 정리</span>
+                  <span>완료/정리</span>
                 </button>
               )}
               {isAllFinished && (

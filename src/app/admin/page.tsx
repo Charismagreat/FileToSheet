@@ -1,7 +1,9 @@
 'use client';
 
+import { apiFetch } from '@/lib/api';
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { isPhoneNumberAdmin } from '@/lib/admin-auth';
 import {
   Users,
   ShieldCheck,
@@ -29,6 +31,8 @@ import {
   X,
   Sliders,
   BellRing,
+  CreditCard,
+  LogOut,
 } from 'lucide-react';
 
 type TabType =
@@ -57,34 +61,23 @@ export default function AdminPage() {
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [liveConnected, setLiveConnected] = useState<boolean>(false);
 
-  // SWR 캐시 복원 상태
-  const [stats, setStats] = useState<Stats>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = sessionStorage.getItem('fts_admin_stats');
-        if (saved) return JSON.parse(saved);
-      } catch {}
-    }
-    return {
-      totalUsersCount: 0,
-      totalProjectsCount: 0,
-      totalExtractedRowsCount: 0,
-      pendingInquiriesCount: 0,
-      requestedTaxCount: 0,
-      todaySmsCount: 0,
-      activeRulesCount: 0,
-    };
+  // 관리자 권한 검증 상태
+  const [authChecked, setAuthChecked] = useState<boolean>(false);
+  const [isAuthorized, setIsAuthorized] = useState<boolean>(false);
+  const [adminPhone, setAdminPhone] = useState<string>('');
+
+  // SWR 캐시 복원 상태 (SSR-Client 일치성을 위해 결정적 기본값 할당)
+  const [stats, setStats] = useState<Stats>({
+    totalUsersCount: 0,
+    totalProjectsCount: 0,
+    totalExtractedRowsCount: 0,
+    pendingInquiriesCount: 0,
+    requestedTaxCount: 0,
+    todaySmsCount: 0,
+    activeRulesCount: 0,
   });
 
-  const [users, setUsers] = useState<any[]>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = sessionStorage.getItem('fts_admin_users');
-        if (saved) return JSON.parse(saved);
-      } catch {}
-    }
-    return [];
-  });
+  const [users, setUsers] = useState<any[]>([]);
 
   const [rules, setRules] = useState<any[]>([]);
   const [inquiries, setInquiries] = useState<any[]>([]);
@@ -103,6 +96,9 @@ export default function AdminPage() {
     address: '서울특별시 강남구 테헤란로 123, 이지빌딩 7층',
     email: 'support@filetosheet.com',
     phone: '1588-0000',
+    bankName: '',
+    bankAccount: '',
+    bankHolder: '',
   });
   const [snsLinks, setSnsLinks] = useState<any>({
     kakaoChannel: 'https://pf.kakao.com/_example',
@@ -152,7 +148,9 @@ export default function AdminPage() {
   const fetchAdminBootstrap = async (forceRefresh = false) => {
     try {
       if (forceRefresh) setIsRefreshing(true);
-      const res = await fetch(`/api/admin/bootstrap?refresh=${forceRefresh ? 'true' : 'false'}`);
+      const res = await apiFetch(`/api/admin/bootstrap?refresh=${forceRefresh ? 'true' : 'false'}`, {
+        headers: adminPhone ? { 'x-admin-phone': adminPhone } : undefined,
+      });
       const json = await res.json();
 
       if (json.success && json.bundle) {
@@ -183,9 +181,41 @@ export default function AdminPage() {
   };
 
   /**
-   * 2. 👁️ 실시간 DB 왓처 (SSE Stream Hub 연동)
+   * 1. 🛡️ 관리자 권한 클라이언트 세션 1차 검증
    */
   useEffect(() => {
+    try {
+      const savedUser = localStorage.getItem('filetosheet_user');
+      if (savedUser) {
+        const user = JSON.parse(savedUser);
+        if (isPhoneNumberAdmin(user?.phoneNumber)) {
+          setIsAuthorized(true);
+          setAdminPhone(user.phoneNumber);
+          setAuthChecked(true);
+          return;
+        }
+      }
+    } catch (e) {
+      console.error('관리자 권한 확인 오류:', e);
+    }
+    setIsAuthorized(false);
+    setAuthChecked(true);
+  }, []);
+
+  /**
+   * 2. 👁️ 실시간 DB 왓처 (SSE Stream Hub 연동) - 관리자 인증 완료 시에만 가동
+   */
+  useEffect(() => {
+    if (!authChecked || !isAuthorized) return;
+
+    // 클라이언트 마운트 완료 후 캐시 복원 (SSR 하이드레이션 불일치 원천 차단)
+    try {
+      const savedStats = sessionStorage.getItem('fts_admin_stats');
+      if (savedStats) setStats(JSON.parse(savedStats));
+      const savedUsers = sessionStorage.getItem('fts_admin_users');
+      if (savedUsers) setUsers(JSON.parse(savedUsers));
+    } catch {}
+
     fetchAdminBootstrap();
 
     // SSE 실시간 스트림 연결
@@ -214,14 +244,14 @@ export default function AdminPage() {
         eventSource.close();
       }
     };
-  }, []);
+  }, [authChecked, isAuthorized, adminPhone]);
 
   // 토큰 조정 제출
   const handleUpdateTokens = async (delta: number) => {
     if (!selectedUser) return;
     setIsSubmittingTokens(true);
     try {
-      const res = await fetch('/api/admin/users/tokens', {
+      const res = await apiFetch('/api/admin/users/tokens', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -251,7 +281,7 @@ export default function AdminPage() {
     if (!rulePromptInput.trim()) return;
     setCompilingRule(true);
     try {
-      const res = await fetch('/api/sms/compile', {
+      const res = await apiFetch('/api/sms/compile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: rulePromptInput }),
@@ -271,7 +301,7 @@ export default function AdminPage() {
   const handleSaveRule = async () => {
     if (!compiledResult) return;
     try {
-      const res = await fetch('/api/admin/smart-rules', {
+      const res = await apiFetch('/api/admin/smart-rules', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(compiledResult),
@@ -290,7 +320,7 @@ export default function AdminPage() {
   // 규칙 토글
   const handleToggleRule = async (ruleId: number, currentStatus: number) => {
     try {
-      await fetch('/api/admin/smart-rules', {
+      await apiFetch('/api/admin/smart-rules', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: ruleId, is_active: currentStatus === 1 ? 0 : 1 }),
@@ -306,7 +336,7 @@ export default function AdminPage() {
     if (!testSmsRecipient || !testSmsBody) return;
     setSendingTestSms(true);
     try {
-      const res = await fetch('/api/admin/sms/test', {
+      const res = await apiFetch('/api/admin/sms/test', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ recipient: testSmsRecipient, message: testSmsBody }),
@@ -330,7 +360,7 @@ export default function AdminPage() {
     if (!selectedInquiry) return;
     setGeneratingAiDraft(true);
     try {
-      const res = await fetch('/api/admin/inquiries/ai-draft', {
+      const res = await apiFetch('/api/admin/inquiries/ai-draft', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -355,7 +385,7 @@ export default function AdminPage() {
     if (!selectedInquiry || !inquiryAnswerInput.trim()) return;
     setSubmittingAnswer(true);
     try {
-      const res = await fetch('/api/admin/inquiries', {
+      const res = await apiFetch('/api/admin/inquiries', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -381,7 +411,7 @@ export default function AdminPage() {
   // 세금계산서 상태 변경
   const handleUpdateTaxInvoiceStatus = async (id: number, newStatus: string) => {
     try {
-      const res = await fetch('/api/admin/tax-invoices', {
+      const res = await apiFetch('/api/admin/tax-invoices', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, newStatus }),
@@ -399,7 +429,7 @@ export default function AdminPage() {
   // 설정 저장
   const handleSaveSetting = async (key: string, value: any, category: string) => {
     try {
-      const res = await fetch('/api/admin/settings', {
+      const res = await apiFetch('/api/admin/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ key, value, category }),
@@ -411,6 +441,15 @@ export default function AdminPage() {
       }
     } catch (err) {
       alert('설정 저장 실패');
+    }
+  };
+
+  // 관리자 로그아웃
+  const handleAdminLogout = () => {
+    if (confirm('관리자 세션에서 로그아웃 하시겠습니까?')) {
+      localStorage.removeItem('filetosheet_user');
+      document.cookie = 'fts_user_phone=; path=/; max-age=0; SameSite=Lax';
+      window.location.href = '/';
     }
   };
 
@@ -427,6 +466,44 @@ export default function AdminPage() {
     if (logFilterStatus === 'ALL') return true;
     return log.status === logFilterStatus;
   });
+
+  if (!authChecked) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
+        <div className="flex flex-col items-center gap-3 text-slate-400">
+          <RefreshCw className="w-8 h-8 animate-spin text-indigo-500" />
+          <p className="text-sm font-semibold">관리자 권한 확인 중...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthorized) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-slate-800 border border-slate-700 rounded-3xl p-8 text-center space-y-6 shadow-2xl">
+          <div className="w-16 h-16 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-400 flex items-center justify-center mx-auto">
+            <ShieldCheck className="w-8 h-8" />
+          </div>
+          <div className="space-y-2">
+            <h1 className="text-xl font-black text-white">관리자 전용 시스템</h1>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              이 공간은 File to Sheet 최고 관리자만 접근할 수 있습니다.<br />
+              관리자 권한 계정으로 로그인 후 다시 접속해 주세요.
+            </p>
+          </div>
+          <div className="pt-2 flex flex-col gap-2">
+            <Link
+              href="/"
+              className="w-full py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm transition shadow-lg active:scale-98"
+            >
+              메인 서비스 홈으로 돌아가기
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 pb-20">
@@ -475,11 +552,21 @@ export default function AdminPage() {
               <button
                 onClick={() => fetchAdminBootstrap(true)}
                 disabled={isRefreshing}
-                className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition flex items-center gap-1 text-xs font-bold"
+                className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition flex items-center gap-1 text-xs font-bold cursor-pointer"
                 title="단일 통합 번들 즉시 재수신"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-indigo-600' : ''}`} />
                 <span className="hidden sm:inline">동기화</span>
+              </button>
+
+              {/* 관리자 로그아웃 버튼 */}
+              <button
+                onClick={handleAdminLogout}
+                className="p-2 rounded-lg bg-slate-100 hover:bg-rose-50 hover:text-rose-600 border border-slate-200 hover:border-rose-200 text-slate-700 transition flex items-center gap-1.5 text-xs font-bold cursor-pointer active:scale-95"
+                title="관리자 세션 로그아웃 후 메인 홈으로 이동"
+              >
+                <LogOut className="w-3.5 h-3.5 text-rose-500" />
+                <span className="hidden sm:inline">로그아웃</span>
               </button>
             </div>
           </div>
@@ -927,7 +1014,7 @@ export default function AdminPage() {
 
                 <button
                   onClick={async () => {
-                    await fetch('/api/admin/sms', {
+                    await apiFetch('/api/admin/sms', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify(smsSettings),
@@ -1318,9 +1405,55 @@ export default function AdminPage() {
                   </div>
                 </div>
 
+                {/* 결제 및 입금 계좌 정보 설정 */}
+                <div className="pt-3 border-t border-slate-100 space-y-2">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-md flex items-center gap-1">
+                      <CreditCard className="w-3 h-3 text-indigo-600" />
+                      결제 및 입금계좌 안내 설정
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2">
+                    <div>
+                      <label className="text-xs font-bold text-slate-700 mb-1 block">은행명</label>
+                      <input
+                        type="text"
+                        placeholder="예: 국민은행"
+                        value={companyInfo.bankName || ''}
+                        onChange={(e) => setCompanyInfo({ ...companyInfo, bankName: e.target.value })}
+                        className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold text-slate-700 mb-1 block">계좌번호</label>
+                      <input
+                        type="text"
+                        placeholder="예: 123-456-789012"
+                        value={companyInfo.bankAccount || ''}
+                        onChange={(e) => setCompanyInfo({ ...companyInfo, bankAccount: e.target.value })}
+                        className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold text-slate-700 mb-1 block">예금주</label>
+                      <input
+                        type="text"
+                        placeholder="예: (주)이지데스크"
+                        value={companyInfo.bankHolder || ''}
+                        onChange={(e) => setCompanyInfo({ ...companyInfo, bankHolder: e.target.value })}
+                        className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-slate-400">
+                    * 무통장 입금, 유료 요금제 결제 및 세금계산서 청구 시 안내될 공식 결제계좌입니다.
+                  </p>
+                </div>
+
                 <button
                   onClick={() => handleSaveSetting('company_info', companyInfo, 'company')}
-                  className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black transition mt-2"
+                  className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black transition mt-2 cursor-pointer"
                 >
                   회사 정보 실시간 저장
                 </button>

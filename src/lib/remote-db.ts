@@ -1,3 +1,4 @@
+import { apiFetch } from '@/lib/api';
 /**
  * 원격지 이지데스크 터널링 서버 및 My DB(Product) 연동 헬퍼
  */
@@ -59,7 +60,7 @@ export async function testRemoteDbConnection(config: RemoteDbConfig): Promise<{
   error?: string;
 }> {
   try {
-    const res = await fetch('/api/remote-db', {
+    const res = await apiFetch('/api/remote-db', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -93,7 +94,7 @@ export async function fetchRemoteTableData(config: RemoteDbConfig, limit: number
   error?: string;
 }> {
   try {
-    const res = await fetch('/api/remote-db', {
+    const res = await apiFetch('/api/remote-db', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -149,7 +150,7 @@ export async function fetchRemoteMultipleTables(
   error?: string;
 }> {
   try {
-    const res = await fetch('/api/remote-db', {
+    const res = await apiFetch('/api/remote-db', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

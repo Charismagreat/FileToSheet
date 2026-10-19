@@ -15,8 +15,12 @@ import {
   CheckCircle2,
   AlertCircle,
   Sparkles,
+  Download,
 } from 'lucide-react';
 import { ProjectWorkspace } from '@/types/workspace';
+
+const APK_DOWNLOAD_URL =
+  'https://github.com/Charismagreat/SheetBot/releases/latest/download/SheetBotAgent.apk';
 
 interface MobileIngestModalProps {
   isOpen: boolean;
@@ -36,6 +40,7 @@ export function MobileIngestModal({
   const [loading, setLoading] = useState<boolean>(false);
   const [copiedToken, setCopiedToken] = useState<boolean>(false);
   const [copiedUrl, setCopiedUrl] = useState<boolean>(false);
+  const [copiedApkUrl, setCopiedApkUrl] = useState<boolean>(false);
   const [testSending, setTestSending] = useState<boolean>(false);
   const [testResult, setTestResult] = useState<string | null>(null);
 
@@ -50,6 +55,16 @@ export function MobileIngestModal({
   }, [activeSheetName]);
 
   const targetSheet = selectedSheet || activeSheetName || '기본 시트';
+
+  const handleCopyApkUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(APK_DOWNLOAD_URL);
+      setCopiedApkUrl(true);
+      setTimeout(() => setCopiedApkUrl(false), 2000);
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   // 토큰 조회 또는 자동 발급
   const fetchOrCreateToken = async () => {
@@ -225,6 +240,55 @@ export function MobileIngestModal({
                   </select>
                 </div>
               )}
+              {/* 0. 시트봇 모바일 에이전트 앱 다운로드 카드 */}
+              <div className="p-4 bg-gradient-to-br from-emerald-50 via-teal-50/60 to-slate-50 rounded-2xl border border-emerald-200 shadow-2xs space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                      <Download className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <h4 className="text-xs font-black text-slate-900">
+                          시트봇 모바일 에이전트 앱 설치
+                        </h4>
+                        <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-emerald-100 text-emerald-800 font-extrabold">
+                          Android APK
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500">
+                        스마트폰에 앱이 없다면 APK를 먼저 다운로드하여 설치해 주세요 (v1.0.0 / 5.2MB)
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-0.5">
+                  <a
+                    href={APK_DOWNLOAD_URL}
+                    download="SheetBotAgent.apk"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 inline-flex items-center justify-center gap-2 py-2 px-3.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-extrabold rounded-xl shadow-xs transition cursor-pointer"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>SheetBotAgent.apk 다운로드 받기</span>
+                  </a>
+                  <button
+                    type="button"
+                    onClick={handleCopyApkUrl}
+                    className="inline-flex items-center justify-center gap-1.5 py-2 px-3 bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold rounded-xl border border-slate-200 transition cursor-pointer shadow-2xs shrink-0"
+                    title="APK 다운로드 URL 클립보드 복사"
+                  >
+                    {copiedApkUrl ? (
+                      <Check className="w-3.5 h-3.5 text-emerald-600" />
+                    ) : (
+                      <Copy className="w-3.5 h-3.5 text-slate-500" />
+                    )}
+                    <span>{copiedApkUrl ? '주소 복사됨' : '다운로드 링크 복사'}</span>
+                  </button>
+                </div>
+              </div>
 
               {/* 1. QR 코드 스캔 영역 */}
               <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">

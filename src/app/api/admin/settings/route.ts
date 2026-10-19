@@ -19,6 +19,9 @@ export async function GET(req: NextRequest) {
       address: '서울특별시 강남구 테헤란로 123, 이지빌딩 7층',
       email: 'support@filetosheet.com',
       phone: '1588-0000',
+      bankName: '국민은행',
+      bankAccount: '123-456-789012',
+      bankHolder: '(주)이지데스크',
     };
     let snsLinks = {
       kakaoChannel: 'https://pf.kakao.com/_example',

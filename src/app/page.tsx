@@ -14,6 +14,7 @@ import {
   ExportOptionModal, ShareModal, PlanLimitModal, PricingModal, EnterpriseInquiryModal, DuplicateFileModal,
   AccountTransferModal, ShareToManagerModal, ConsolidatedStatsModal, EmergencyRecoveryModal,
   ShareManagementModal, ExportScopeModal, SheetRuleModal, ScheduleModal, MobileIngestModal,
+  DeduplicateRowsModal,
 } from '@/components/modals';
 import { UploadUndoToast } from '@/components/UploadUndoToast';
 import { AiChatDrawer, ChatScope } from '@/components/AiChatDrawer';
@@ -69,13 +70,23 @@ export default function FileToSheetApp() {
     plan: auth.currentUser?.plan,
     onPlanLimit: handlePlanLimit,
     onItemAppended: (targetSheetIndex, newRows, docItem) => {
+      const kstTime = new Intl.DateTimeFormat('ko-KR', {
+        timeZone: 'Asia/Seoul',
+        dateStyle: 'short',
+        timeStyle: 'medium',
+      }).format(new Date());
+
       ws.setProjects((prev) =>
         prev.map((proj, pIdx) => {
           if (pIdx !== ws.activeProjectIndex) return proj;
           const nextSheets = proj.sheets.map((sh, sIdx) => {
             if (sIdx !== targetSheetIndex) return sh;
             const existingOriginalFiles = sh.originalFiles || [];
-            const nextRows = [...sh.rows, ...newRows].map((r, i) => ({ ...r, 일련번호: i + 1 }));
+            const nextRows = [...sh.rows, ...newRows].map((r, i) => ({
+              ...r,
+              일련번호: i + 1,
+              등록일시: r.등록일시 || docItem.uploadedAt || kstTime,
+            }));
             return {
               ...sh,
               rows: nextRows,
@@ -92,10 +103,25 @@ export default function FileToSheetApp() {
       );
     },
     onNewSheetCreated: (newSheet, docItem) => {
+      const kstTime = new Intl.DateTimeFormat('ko-KR', {
+        timeZone: 'Asia/Seoul',
+        dateStyle: 'short',
+        timeStyle: 'medium',
+      }).format(new Date());
+
+      const preparedSheet = {
+        ...newSheet,
+        rows: (newSheet.rows || []).map((r, i) => ({
+          ...r,
+          일련번호: r.일련번호 || i + 1,
+          등록일시: r.등록일시 || docItem.uploadedAt || kstTime,
+        })),
+      };
+
       ws.setProjects((prev) =>
         prev.map((proj, pIdx) => {
           if (pIdx !== ws.activeProjectIndex) return proj;
-          const nextSheets = [...proj.sheets, newSheet];
+          const nextSheets = [...proj.sheets, preparedSheet];
           const nextOriginalFiles = [...(proj.originalFiles || []), docItem];
           return {
             ...proj,
@@ -258,6 +284,14 @@ export default function FileToSheetApp() {
       }
       return null;
     });
+  };
+
+  const handleSetColSort = (colName: string, dir: 'asc' | 'desc' | null) => {
+    if (!dir) {
+      setColumnSort(null);
+    } else {
+      setColumnSort({ column: colName, direction: dir });
+    }
   };
 
   // 엑셀 다운로드 클릭 핸들러 (필터 시 범위 선택)
@@ -545,6 +579,7 @@ export default function FileToSheetApp() {
                   onResetFilter={handleResetFilter}
                   isFilterActive={isFilterActive}
                   activeFilterCount={activeFilterCount}
+                  onDeduplicateRows={ws.handleDeduplicateRows}
                 />
 
                 {activeSubTab === 'table' && (
@@ -580,6 +615,7 @@ export default function FileToSheetApp() {
                     sortCol={columnSort?.column || null}
                     sortDir={columnSort?.direction || null}
                     onToggleColSort={handleToggleColSort}
+                    onSetColSort={handleSetColSort}
                     projectSheets={currentProject.sheets}
                     isJoinViewActive={ws.isJoinViewActive}
                     setIsJoinViewActive={ws.setIsJoinViewActive}
@@ -771,7 +807,17 @@ export default function FileToSheetApp() {
         loading={fileExport.exportLoading}
       />
 
-      {/* 17. 파일 업로드 직후 1-Click 실행 취소 (Undo) 토스트 알림 */}
+      {/* 17. 중복 행 정리 미리보기 및 선택 삭제 모달 */}
+      <DeduplicateRowsModal
+        isOpen={ws.isDeduplicateModalOpen}
+        onClose={ws.handleCloseDeduplicateModal}
+        duplicateGroups={ws.duplicateGroups}
+        headers={currentSheet?.headers || []}
+        totalSheetRows={currentSheet?.rows.length || 0}
+        onConfirmDeduplicate={ws.handleConfirmDeduplicate}
+      />
+
+      {/* 18. 파일 업로드 직후 1-Click 실행 취소 (Undo) 토스트 알림 */}
       <UploadUndoToast
         uploadInfo={upload.lastUploadAction}
         onUndo={upload.undoLastUpload}
@@ -819,11 +865,17 @@ export default function FileToSheetApp() {
         completedCount={batchQueue.completedCount}
         mismatchedCount={batchQueue.mismatchedCount}
         failedCount={batchQueue.failedCount}
+        canceledCount={batchQueue.canceledCount}
+        duplicateCount={batchQueue.duplicateCount}
         inProgressCount={batchQueue.inProgressCount}
         waitingCount={batchQueue.waitingCount}
         totalAddedRows={batchQueue.totalAddedRows}
         isAllFinished={batchQueue.isAllFinished}
         onRetryItem={batchQueue.retryItem}
+        onCancelItem={batchQueue.cancelItem}
+        onCancelAll={batchQueue.cancelAll}
+        onRemoveItem={batchQueue.removeItem}
+        onForceUploadItem={batchQueue.forceUploadItem}
         onCreateSheetFromMismatched={batchQueue.createSheetFromMismatched}
         onClearFinished={batchQueue.clearFinished}
       />

@@ -2,6 +2,7 @@
  * FileToSheet 결제, 충전, 사용 내역 관리 및 엑셀/세금계산서/영수증 유틸
  */
 
+import { apiFetch } from '@/lib/api';
 import * as XLSX from 'xlsx';
 import { getUsedCoupons } from './coupon-helpers';
 
@@ -105,7 +106,7 @@ export async function fetchBillingHistoryFromDb(): Promise<BillingRecord[]> {
       phone = u.phone || '';
     }
 
-    const res = await fetch(`/api/billing?phone=${encodeURIComponent(phone)}`);
+    const res = await apiFetch(`/api/billing?phone=${encodeURIComponent(phone)}`);
     const data = await res.json();
     if (data.success && Array.isArray(data.records) && data.records.length > 0) {
       const mapped: BillingRecord[] = data.records.map((r: any) => ({
@@ -177,7 +178,7 @@ export function addBillingRecord(data: {
       }
     } catch {}
 
-    fetch('/api/billing', {
+    apiFetch('/api/billing', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -218,7 +219,7 @@ export function requestTaxInvoice(recordId: string, info: Omit<TaxInvoiceInfo, '
     window.dispatchEvent(new Event('filetosheet_billing_updated'));
 
     // 물리 DB (billing_history) 세금계산서 정보 업데이트 API 비동기 호출
-    fetch('/api/billing', {
+    apiFetch('/api/billing', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
