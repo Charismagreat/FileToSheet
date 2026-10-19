@@ -1,5 +1,6 @@
 'use client';
 
+import { apiFetch } from '@/lib/api';
 import React, { useState } from 'react';
 import { 
   X, 
@@ -97,7 +98,7 @@ export default function FdeSupportModal({
         sampleRows: (p.tableData?.rows?.slice(0, 3) || []).map(r => maskRowData(r))
       }));
 
-      const res = await fetch('/api/fde/diagnose', {
+      const res = await apiFetch('/api/fde/diagnose', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

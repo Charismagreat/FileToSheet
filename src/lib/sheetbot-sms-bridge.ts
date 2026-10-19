@@ -1,6 +1,9 @@
 import { insertRows } from '@/egdesk-helpers';
 
+export type SmsPurpose = 'send-code' | 'emergency-recovery' | 'transfer-account';
+
 export interface DispatchSmsOptions {
+  purpose: SmsPurpose;
   recipient: string;
   message: string;
   triggerName?: string;
@@ -16,31 +19,69 @@ export interface DispatchSmsResult {
   uuid?: string;
   status?: string;
   error?: string;
+  /** SheetBot error code, e.g. 'NO_MANAGER_ONLINE' */
+  code?: string;
 }
 
-const DEFAULT_BRIDGE_KEY = 'sb_bridge_sec_98f41e0a82b3d17c';
-const DEFAULT_BRIDGE_URL = 'https://tunneling-service.onrender.com/t/mcp-server-fxkud1/p/SheetBot';
 const PUBLIC_DOMAIN = 'https://file2sheet.cloud';
+
+/** 4~8자리 숫자(인증번호 등)를 마스킹 — SheetBot 로그 정책과 동일 */
+export function maskDigits(text: string): string {
+  return (text || '').replace(/\d{4,8}/g, (m) => '*'.repeat(m.length));
+}
+
+function buildCallbackUrl(explicit?: string): string {
+  let url = explicit;
+  if (!url) {
+    const base = process.env.NEXTAUTH_URL;
+    // 브릿지는 https callbackUrl만 허용
+    const origin = base && base.startsWith('https://') ? base : PUBLIC_DOMAIN;
+    url = `${origin.replace(/\/$/, '')}/api/sms/callback`;
+    const secret = process.env.SMS_CALLBACK_SECRET;
+    if (secret) url += `?token=${encodeURIComponent(secret)}`;
+  }
+  return url;
+}
 
 /**
  * 파일투시트(FileToSheet) -> 시트봇(SheetBot) 모바일 SMS 브릿지 발송 클라이언트
- * 
- * sheetbot.cloud 백엔드(/api/sms/bridge/dispatch)로 요청을 전송하면,
- * 운영자의 스마트폰(시트봇 모바일 에이전트)이 15초 내에 통신사 LTE/5G 단문 SMS로 실제 발송합니다.
+ *
+ * SHEETBOT_BRIDGE_URL / SHEETBOT_BRIDGE_API_KEY 환경변수 필수 (기본값 없음).
  */
 export async function dispatchSmsViaSheetBot(options: DispatchSmsOptions): Promise<DispatchSmsResult> {
   const startTime = Date.now();
-  const bridgeUrl = process.env.SHEETBOT_BRIDGE_URL || DEFAULT_BRIDGE_URL;
-  const bridgeKey = process.env.SHEETBOT_BRIDGE_API_KEY || DEFAULT_BRIDGE_KEY;
+  const bridgeUrl = process.env.SHEETBOT_BRIDGE_URL?.replace(/\/$/, '');
+  const bridgeKey = process.env.SHEETBOT_BRIDGE_API_KEY;
+
+  if (!bridgeUrl || !bridgeKey) {
+    console.error('[SheetBotSmsBridge] bridge not configured');
+    return { success: false, error: 'bridge not configured' };
+  }
 
   // 본문 말머리 자동 부착: [FileToSheet] 접두어가 없으면 자동 부착
   let formattedMessage = (options.message || '').trim();
   if (!formattedMessage.startsWith('[FileToSheet]') && !formattedMessage.startsWith('[파일투시트]')) {
     formattedMessage = `[FileToSheet] ${formattedMessage}`;
   }
+  const maskedMessage = maskDigits(formattedMessage);
+  const callbackUrl = buildCallbackUrl(options.callbackUrl);
 
-  // 기본 웹훅 콜백 URL 자동 지정
-  const callbackUrl = options.callbackUrl || `${process.env.NEXTAUTH_URL || PUBLIC_DOMAIN}/api/sms/callback`;
+  const writeLog = async (row: Record<string, any>) => {
+    try {
+      await insertRows('sms_dispatch_logs', [
+        {
+          recipient: options.recipient,
+          message_type: options.messageType || 'ALERT',
+          channel: 'SMS_BRIDGE',
+          latency_ms: `${Date.now() - startTime}ms`,
+          sent_at: new Date().toISOString(),
+          ...row,
+        },
+      ]);
+    } catch (logErr: any) {
+      console.warn('[SheetBotSmsBridge] Log write warning:', logErr?.message);
+    }
+  };
 
   try {
     const res = await fetch(`${bridgeUrl}/api/sms/bridge/dispatch`, {
@@ -50,6 +91,7 @@ export async function dispatchSmsViaSheetBot(options: DispatchSmsOptions): Promi
         'x-sheetbot-bridge-key': bridgeKey,
       },
       body: JSON.stringify({
+        purpose: options.purpose,
         sourceService: 'FileToSheet',
         recipient: options.recipient,
         message: formattedMessage,
@@ -57,84 +99,39 @@ export async function dispatchSmsViaSheetBot(options: DispatchSmsOptions): Promi
         callbackUrl,
         userEmail: options.userEmail,
       }),
-      signal: AbortSignal.timeout(8000), // 8초 타임아웃
+      signal: AbortSignal.timeout(8000),
     });
 
     const data = await res.json().catch(() => ({}));
-    const latencyMs = `${Date.now() - startTime}ms`;
 
     if (res.ok && data.success) {
-      // 1. 발송 대기 이력 즉시 기록 (QUEUED)
-      try {
-        await insertRows('sms_dispatch_logs', [
-          {
-            recipient: options.recipient,
-            message_type: options.messageType || 'ALERT',
-            channel: 'SMS_BRIDGE',
-            trigger_name: options.triggerName || '[FileToSheet] 알림 발송',
-            body: formattedMessage,
-            status: 'QUEUED',
-            latency_ms: latencyMs,
-            error_message: null,
-            sent_at: new Date().toISOString(),
-          },
-        ]);
-      } catch (logErr: any) {
-        console.warn('[SheetBotSmsBridge] Initial log write warning:', logErr?.message);
-      }
-
-      return {
-        success: true,
-        dispatchId: data.dispatchId,
-        uuid: data.uuid,
+      // dispatch id/uuid를 본문 꼬리표로 남겨 콜백에서 매칭
+      const tag = `[dispatch:${data.uuid ?? ''}|${data.dispatchId ?? ''}]`;
+      await writeLog({
+        trigger_name: options.triggerName || '[FileToSheet] 알림 발송',
+        body: `${maskedMessage} ${tag}`,
         status: 'QUEUED',
-      };
-    } else {
-      const err = data.error || `HTTP ${res.status}: ${res.statusText}`;
-      // 실패 이력 기록
-      try {
-        await insertRows('sms_dispatch_logs', [
-          {
-            recipient: options.recipient,
-            message_type: options.messageType || 'ALERT',
-            channel: 'SMS_BRIDGE',
-            trigger_name: options.triggerName || '[FileToSheet] 알림 발송 실패',
-            body: formattedMessage,
-            status: 'FAILED',
-            latency_ms: latencyMs,
-            error_message: err,
-            sent_at: new Date().toISOString(),
-          },
-        ]);
-      } catch (_) {}
-
-      return {
-        success: false,
-        error: err,
-      };
+        error_message: null,
+      });
+      return { success: true, dispatchId: data.dispatchId, uuid: data.uuid, status: 'QUEUED' };
     }
-  } catch (err: any) {
-    const latencyMs = `${Date.now() - startTime}ms`;
-    console.error('[SheetBotSmsBridge] Dispatch error:', err);
-    try {
-      await insertRows('sms_dispatch_logs', [
-        {
-          recipient: options.recipient,
-          message_type: options.messageType || 'ALERT',
-          channel: 'SMS_BRIDGE',
-          trigger_name: options.triggerName || '[FileToSheet] 알림 발송 오류',
-          body: formattedMessage,
-          status: 'FAILED',
-          latency_ms: latencyMs,
-          error_message: err.message || '네트워크 연결 오류',
-          sent_at: new Date().toISOString(),
-        },
-      ]);
-    } catch (_) {}
 
-    return {
-      success: false,
-      error: err.message || '브릿지 서버 통신 실패',
-    };
+    const err = data.error || `HTTP ${res.status}: ${res.statusText}`;
+    await writeLog({
+      trigger_name: options.triggerName || '[FileToSheet] 알림 발송 실패',
+      body: maskedMessage,
+      status: 'FAILED',
+      error_message: data.code ? `${data.code}: ${err}` : err,
+    });
+    return { success: false, error: err, code: data.code };
+  } catch (err: any) {
+    console.error('[SheetBotSmsBridge] Dispatch error:', err?.message);
+    await writeLog({
+      trigger_name: options.triggerName || '[FileToSheet] 알림 발송 오류',
+      body: maskedMessage,
+      status: 'FAILED',
+      error_message: err?.message || '네트워크 연결 오류',
+    });
+    return { success: false, error: err?.message || '브릿지 서버 통신 실패' };
   }
 }

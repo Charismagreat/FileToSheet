@@ -3514,7 +3514,7 @@ export async function callAiCallerTool(
 }
 
 /** Known API key names discovered at setup time from EGDesk AI Keys Manager */
-export const AI_KEY_NAMES = ['wonconduct'] as const;
+export const AI_KEY_NAMES = ['coasegdesk', 'wonconductor'] as const;
 
 export type AiCallerCallOptions = {
   systemPrompt?: string;
@@ -3543,7 +3543,7 @@ export type AiCallerCallOptions = {
     mimeType?: string;
   }>;
   /** Select a specific Google API key by name (as saved in EGDesk AI Keys Manager). Leave empty to use the default key. */
-  keyName?: 'wonconduct' | (string & {});
+  keyName?: 'coasegdesk' | 'wonconductor' | (string & {});
   /** standard = default. flex = 50% cheaper, slower/sheddable. priority = more expensive. */
   serviceTier?: 'standard' | 'flex' | 'priority';
   /** Explicit cache name from createAiCallerCache (cachedContents/...). */
@@ -3629,7 +3629,7 @@ export type AiCallerGenerateImageOptions = {
   fallbackModel?: string;
   caller?: string;
   /** Select a specific Google API key by name (as saved in EGDesk AI Keys Manager). Leave empty to use the default key. */
-  keyName?: 'wonconduct' | (string & {});
+  keyName?: 'coasegdesk' | 'wonconductor' | (string & {});
   /** standard = default. flex = 50% cheaper, slower/sheddable. */
   serviceTier?: 'standard' | 'flex' | 'priority';
 };
@@ -3728,7 +3728,7 @@ export type AiCallerBatchSubmitOptions = {
   model?: string;
   displayName?: string;
   caller?: string;
-  keyName?: 'wonconduct' | (string & {});
+  keyName?: 'coasegdesk' | 'wonconductor' | (string & {});
 };
 
 /** Submit an async Gemini Batch job (50% of standard price). Poll with getAiCallerBatch. */
@@ -3765,7 +3765,7 @@ export type AiCallerCacheCreateOptions = {
   filePaths?: string[];
   files?: AiCallerCallOptions['files'];
   caller?: string;
-  keyName?: 'wonconduct' | (string & {});
+  keyName?: 'coasegdesk' | 'wonconductor' | (string & {});
 };
 
 /** Create an explicit Gemini context cache. Pass the returned name as cachedContent on later calls. */

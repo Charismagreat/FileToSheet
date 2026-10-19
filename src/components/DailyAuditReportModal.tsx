@@ -1,3 +1,4 @@
+import { apiFetch } from '@/lib/api';
 import React, { useState } from 'react';
 import {
   X,
@@ -41,7 +42,7 @@ export const DailyAuditReportModal: React.FC<DailyAuditReportModalProps> = ({
     setIsLoading(true);
     setNotificationSent(false);
     try {
-      const res = await fetch('/api/audit/daily-report', {
+      const res = await apiFetch('/api/audit/daily-report', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

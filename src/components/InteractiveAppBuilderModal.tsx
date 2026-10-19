@@ -1,3 +1,4 @@
+import { apiFetch } from '@/lib/api';
 import React, { useState } from 'react';
 import {
   X,
@@ -61,7 +62,7 @@ export const InteractiveAppBuilderModal: React.FC<InteractiveAppBuilderModalProp
     if (!promptText.trim()) return;
     setIsLoading(true);
     try {
-      const res = await fetch('/api/portal/generate-ideas', {
+      const res = await apiFetch('/api/portal/generate-ideas', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -156,7 +157,7 @@ export const InteractiveAppBuilderModal: React.FC<InteractiveAppBuilderModalProp
 
     // 🌟 백엔드 물리 데이터베이스(user_portal_apps)에 포털 설정 비동기 영구 저장
     try {
-      fetch('/api/portal/save', {
+      apiFetch('/api/portal/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

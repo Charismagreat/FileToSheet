@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { insertRows } from '@/egdesk-helpers';
+import { OTP_TTL_MS, isDevEnv, sendOtpOrFail } from '@/lib/sms-otp';
 
 export async function POST(request: NextRequest) {
   try {
-    const { phoneNumber } = await request.json();
+    const { phoneNumber, purpose } = await request.json();
+    const smsPurpose = purpose === 'transfer-account' ? 'transfer-account' : 'send-code';
 
     if (!phoneNumber) {
       return NextResponse.json(
@@ -24,7 +26,7 @@ export async function POST(request: NextRequest) {
     // 6자리 랜덤 인증번호 생성
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     const now = new Date();
-    const expiresAt = new Date(now.getTime() + 3 * 60 * 1000).toISOString(); // 3분 유효
+    const expiresAt = new Date(now.getTime() + OTP_TTL_MS).toISOString(); // 5분 유효
 
     // 이지데스크 My DB phone_verifications 테이블에 저장
     await insertRows('phone_verifications', [
@@ -37,14 +39,20 @@ export async function POST(request: NextRequest) {
       },
     ]);
 
-    console.log(`[Phone Auth] 휴대폰 인증번호 생성: ${cleanNumber} -> [${code}] (3분간 유효)`);
+    const failure = await sendOtpOrFail({
+      purpose: smsPurpose,
+      phone: cleanNumber,
+      code,
+      message: `[FileToSheet] 인증번호 ${code} (5분 이내 입력)`,
+      triggerName: '[FileToSheet] 휴대폰 인증번호',
+    });
+    if (failure) return failure;
 
     return NextResponse.json({
       success: true,
-      message: '인증번호 6자리가 발송되었습니다. (3분 이내 입력)',
+      message: '인증번호 6자리가 발송되었습니다. (5분 이내 입력)',
       expiresAt,
-      // 로컬 개발/테스트 환경에서 즉시 확인 가능하도록 테스트 코드 제공
-      testCode: code,
+      ...(isDevEnv() ? { testCode: code } : {}),
     });
   } catch (error: any) {
     console.error('인증번호 발송 오류:', error);

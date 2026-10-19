@@ -9,6 +9,19 @@ import { insertRows, updateRows, queryTable } from "@/egdesk-helpers";
  */
 export async function POST(req: NextRequest) {
   try {
+    // 공유 시크릿 인증 (callbackUrl의 ?token= 으로 전달됨)
+    const secret = process.env.SMS_CALLBACK_SECRET;
+    if (!secret) {
+      if (process.env.NODE_ENV === "production") {
+        return NextResponse.json({ success: false, error: "callback not configured" }, { status: 503 });
+      }
+    } else {
+      const given = req.nextUrl.searchParams.get("token") || req.headers.get("x-callback-token") || "";
+      if (given !== secret) {
+        return NextResponse.json({ success: false, error: "unauthorized" }, { status: 401 });
+      }
+    }
+
     const body = await req.json().catch(() => ({}));
     const {
       success,
@@ -26,18 +39,24 @@ export async function POST(req: NextRequest) {
     const finalStatus = isSuccess ? "SENT" : "FAILED";
     const nowIso = reportedAt || new Date().toISOString();
 
-    // 1. 최근 해당 수신번호의 대기(QUEUED) 항목 탐색하여 상태 업데이트
+    // 1. 대기(QUEUED) 항목 중 body 꼬리표 [dispatch:uuid|id] 가 일치하는 행을 갱신
     let updated = false;
-    if (recipient) {
+    if (recipient && (uuid || dispatchId)) {
       try {
         const res = await queryTable("sms_dispatch_logs", {
           filters: { recipient: String(recipient), status: "QUEUED" },
-          limit: 1,
+          limit: 50,
           orderBy: "id",
           orderDirection: "DESC",
         });
 
-        const targetRow = (res.rows || [])[0];
+        const targetRow = (res.rows || []).find((r: any) => {
+          const b = String(r.body || "");
+          return (
+            (uuid && b.includes(`[dispatch:${uuid}|`)) ||
+            (dispatchId && b.endsWith(`|${dispatchId}]`))
+          );
+        });
         if (targetRow?.id) {
           await updateRows("sms_dispatch_logs", {
             filters: { id: String(targetRow.id) },

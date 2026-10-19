@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { queryTable, insertRows, updateRows } from '@/egdesk-helpers';
+import { OTP_TTL_MS, isDevEnv, sendOtpOrFail } from '@/lib/sms-otp';
 
 /**
  * 대표자(CFO) 2차 실시간 SMS 인증 기반 비상 계정 강제 회수 API
@@ -48,7 +49,7 @@ export async function POST(request: NextRequest) {
     if (action === 'send_code') {
       // 6자리 난수 OTP 생성
       const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-      const expiresAt = new Date(now.getTime() + 3 * 60 * 1000).toISOString(); // 3분 유효
+      const expiresAt = new Date(now.getTime() + OTP_TTL_MS).toISOString(); // 5분 유효
 
       // 보안 감사(Audit) 로그용 접두어 저장
       await insertRows('phone_verifications', [
@@ -61,14 +62,23 @@ export async function POST(request: NextRequest) {
         },
       ]);
 
+      const failure = await sendOtpOrFail({
+        purpose: 'emergency-recovery',
+        phone: cleanAdmin,
+        code: otpCode,
+        message: `[FileToSheet] 비상 승인번호 ${otpCode} (5분 이내 입력)`,
+        triggerName: '[FileToSheet] 비상 계정 회수 승인번호',
+      });
+      if (failure) return failure;
+
       console.warn(
-        `[SECURITY AUDIT] 비상 계정 회수 승인코드 발송: 대상(${cleanTarget}) -> 신규(${cleanNew}), 승인대표자(${cleanAdmin}) [OTP: ${otpCode}]`
+        `[SECURITY AUDIT] 비상 계정 회수 승인코드 발송: 대상(${cleanTarget}) -> 신규(${cleanNew}), 승인대표자(${cleanAdmin})`
       );
 
       return NextResponse.json({
         success: true,
         message: `대표자 휴대폰(${cleanAdmin.replace(/(\d{3})(\d{4})(\d{4})/, '$1-****-$3')})으로 6자리 비상 승인번호가 발송되었습니다.`,
-        testCode: otpCode, // 로컬 개발/테스트 지원
+        ...(isDevEnv() ? { testCode: otpCode } : {}),
       });
     }
 
