@@ -18,7 +18,7 @@ export async function GET(
     }
 
     const res = await queryTable('share_links', {
-      filter: { token, status: 'active' },
+      filters: { token, status: 'active' },
       limit: 1,
     });
 
@@ -67,7 +67,7 @@ export async function POST(
 
     // 1. 토큰 유효성 검사
     const res = await queryTable('share_links', {
-      filter: { token, status: 'active' },
+      filters: { token, status: 'active' },
       limit: 1,
     });
 

@@ -11,6 +11,17 @@ function generateInboxToken(): string {
   return result;
 }
 
+function resolvePublicInboxUrl(request: NextRequest, token: string): string {
+  const host = request.headers.get('x-forwarded-host') || request.headers.get('host') || '';
+  if (host.includes('file2sheet.cloud')) {
+    return `https://file2sheet.cloud/api/inbox/${token}`;
+  }
+  if (host.includes('tunneling-service.onrender.com') || request.nextUrl.pathname.includes('/p/FileToSheet')) {
+    return `https://tunneling-service.onrender.com/t/mcp-server-fxkud1/p/FileToSheet/api/inbox/${token}`;
+  }
+  return `https://tunneling-service.onrender.com/t/mcp-server-fxkud1/p/FileToSheet/api/inbox/${token}`;
+}
+
 /**
  * GET /api/inbox/token?projectId=...&sheetName=...
  * 해당 프로젝트 및 시트에 기발급된 모바일 수신 토큰 조회
@@ -22,7 +33,7 @@ export async function GET(request: NextRequest) {
     const sheetName = searchParams.get('sheetName');
 
     const res = await queryTable('share_links', {
-      filter: { project_id: projectId, status: 'active' },
+      filters: { project_id: projectId, status: 'active' },
       limit: 50,
     });
 
@@ -37,18 +48,18 @@ export async function GET(request: NextRequest) {
       });
 
       if (match) {
-        const origin = request.nextUrl.origin || 'http://localhost:4003';
+        const webhookUrl = resolvePublicInboxUrl(request, match.token);
         return NextResponse.json({
           success: true,
           exists: true,
           token: match.token,
           sheetName: sheetName || '전체 시트',
-          webhookUrl: `${origin}/api/inbox/${match.token}`,
+          webhookUrl,
           qrPayload: JSON.stringify({
             service: 'FileToSheet',
             action: 'sheet_ingest',
             token: match.token,
-            endpoint: `${origin}/api/inbox/${match.token}`,
+            endpoint: webhookUrl,
             sheetName: sheetName || '기본 시트',
             projectId,
           }),
@@ -74,8 +85,7 @@ export async function POST(request: NextRequest) {
 
     const token = generateInboxToken();
     const nowIso = new Date().toISOString();
-    const origin = request.nextUrl.origin || 'http://localhost:4003';
-    const webhookUrl = `${origin}/api/inbox/${token}`;
+    const webhookUrl = resolvePublicInboxUrl(request, token);
 
     const payloadData = {
       mode: 'mobile_sheet_ingest',

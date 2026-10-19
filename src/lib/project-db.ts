@@ -90,17 +90,16 @@ export async function saveUserProjectToDb(
 
   if (project.id) {
     // 기존 프로젝트 업데이트
-    await updateRows(
-      'user_projects',
-      {
+    await updateRows('user_projects', {
+      filters: { id: String(project.id) },
+      updates: {
         project_name: project.name,
         category: project.category || '기본',
         sheets_data: sheetsJson,
         original_files: originalFilesJson,
         updated_at: now,
       },
-      { ids: [Number(project.id)] }
-    );
+    });
     return project.id;
   }
 

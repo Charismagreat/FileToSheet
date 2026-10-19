@@ -1,5 +1,6 @@
 'use client';
 
+import { apiFetch } from '@/lib/api';
 import { useState, useEffect, useRef } from 'react';
 import { ProjectWorkspace, OriginalDocFile } from '@/types/workspace';
 import { deleteUploadedFile } from '@/lib/egdesk-db';
@@ -27,29 +28,59 @@ export function useWorkspace({ phoneNumber, plan, onPlanLimit }: UseWorkspaceOpt
   const currentProject = projects[activeProjectIndex] || null;
   const currentSheet = currentProject ? currentProject.sheets[currentProject.activeSheetIndex] : null;
 
-  // 1. 실제 DB에서 사용자의 프로젝트 목록 자동 복원
+  // 1. 실제 DB 또는 로컬 스토리지에서 프로젝트 목록 자동 복원
   useEffect(() => {
-    if (!phoneNumber) {
-      setProjects([]);
-      setActiveProjectIndex(0);
-      isLoadedRef.current = false;
-      return;
-    }
     isLoadedRef.current = false;
-    fetchUserProjectsFromDb(phoneNumber).then((dbProjects) => {
-      if (dbProjects && dbProjects.length > 0) {
-        setProjects(dbProjects);
-        setActiveProjectIndex(0);
+    if (phoneNumber) {
+      fetchUserProjectsFromDb(phoneNumber).then((dbProjects) => {
+        if (dbProjects && dbProjects.length > 0) {
+          setProjects(dbProjects);
+          setActiveProjectIndex(0);
+        } else {
+          try {
+            const guestSaved = localStorage.getItem('filetosheet_guest_projects');
+            if (guestSaved) {
+              const parsed = JSON.parse(guestSaved);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                setProjects(parsed);
+              }
+            }
+          } catch {}
+        }
+        isLoadedRef.current = true;
+      }).catch(() => {
+        isLoadedRef.current = true;
+      });
+    } else {
+      // 미로그인(게스트) 상태일 경우 로컬 스토리지에서 이전 시트/프로젝트 복원 (F5 새로고침 증발 방지)
+      try {
+        const guestSaved = localStorage.getItem('filetosheet_guest_projects');
+        if (guestSaved) {
+          const parsed = JSON.parse(guestSaved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setProjects(parsed);
+            setActiveProjectIndex(0);
+          }
+        }
+      } catch (e) {
+        console.warn('게스트 프로젝트 복원 실패:', e);
       }
       isLoadedRef.current = true;
-    }).catch(() => {
-      isLoadedRef.current = true;
-    });
+    }
   }, [phoneNumber]);
 
-  // 2. 프로젝트 변경 시 실제 DB에 자동 동기화 (안전 락 + 디바운스 1000ms)
+  // 2. 프로젝트 변경 시 실제 DB 또는 로컬 스토리지에 자동 동기화 (안전 락 + 디바운스 1000ms)
   useEffect(() => {
-    if (!isLoadedRef.current || !phoneNumber || !currentProject) return;
+    if (!isLoadedRef.current || !currentProject) return;
+
+    // 게스트 상태인 경우 로컬 스토리지에 즉시 안전 보존 (새로고침 시 증발 방지)
+    if (!phoneNumber) {
+      try {
+        localStorage.setItem('filetosheet_guest_projects', JSON.stringify(projects));
+      } catch {}
+      return;
+    }
+
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
 
     saveTimeoutRef.current = setTimeout(async () => {
@@ -67,7 +98,7 @@ export function useWorkspace({ phoneNumber, plan, onPlanLimit }: UseWorkspaceOpt
           });
         }
         if (plan === 'pro') {
-          fetch('/api/sync-sqlite', {
+          apiFetch('/api/sync-sqlite', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ project: { ...currentProject, id: savedId || currentProject.id } }),
@@ -81,7 +112,7 @@ export function useWorkspace({ phoneNumber, plan, onPlanLimit }: UseWorkspaceOpt
     }, 1000);
 
     return () => { if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current); };
-  }, [projects, phoneNumber, activeProjectIndex, plan]);
+  }, [projects, phoneNumber, activeProjectIndex, plan, currentProject]);
 
 
   const saveProjectName = () => {

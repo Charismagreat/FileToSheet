@@ -1,6 +1,7 @@
 // c:\dev\FileToSheet\src\components\MobileIngestModal.tsx
 'use client';
 
+import { apiFetch } from '@/lib/api';
 import React, { useState, useEffect } from 'react';
 import {
   Smartphone,
@@ -40,7 +41,15 @@ export function MobileIngestModal({
 
   const projectId = project?.id ? String(project.id) : 'default';
   const projectName = project?.name || 'File to Sheet 프로젝트';
-  const targetSheet = activeSheetName || '기본 시트';
+  const [selectedSheet, setSelectedSheet] = useState<string>(activeSheetName || '기본 시트');
+
+  useEffect(() => {
+    if (activeSheetName) {
+      setSelectedSheet(activeSheetName);
+    }
+  }, [activeSheetName]);
+
+  const targetSheet = selectedSheet || activeSheetName || '기본 시트';
 
   // 토큰 조회 또는 자동 발급
   const fetchOrCreateToken = async () => {
@@ -48,8 +57,7 @@ export function MobileIngestModal({
     setTestResult(null);
     try {
       // 1. 기존 토큰 조회
-      const queryRes = await fetch(
-        `/api/inbox/token?projectId=${encodeURIComponent(projectId)}&sheetName=${encodeURIComponent(targetSheet)}`
+      const queryRes = await apiFetch(`/api/inbox/token?projectId=${encodeURIComponent(projectId)}&sheetName=${encodeURIComponent(targetSheet)}`
       );
       const queryData = await queryRes.json();
 
@@ -61,7 +69,7 @@ export function MobileIngestModal({
       }
 
       // 2. 없으면 신규 발급
-      const createRes = await fetch('/api/inbox/token', {
+      const createRes = await apiFetch('/api/inbox/token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -116,7 +124,7 @@ export function MobileIngestModal({
     setTestSending(true);
     setTestResult(null);
     try {
-      const res = await fetch(`/api/inbox/${token}`, {
+      const res = await apiFetch(`/api/inbox/${token}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -194,6 +202,30 @@ export function MobileIngestModal({
             </div>
           ) : (
             <>
+              {/* 0. 기존 시트 선택 드롭다운 */}
+              {project?.sheets && project.sheets.length > 0 && (
+                <div className="p-3 bg-indigo-50/70 rounded-xl border border-indigo-100 flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-indigo-900 flex items-center gap-1">
+                      <span>📋 모바일 수신 대상 시트:</span>
+                      <span className="text-[11px] px-1.5 py-0.2 rounded bg-indigo-200/60 text-indigo-800 font-extrabold">기존 시트 직결</span>
+                    </span>
+                    <span className="text-[11px] text-indigo-600 font-medium">총 {project.sheets.length}개 시트</span>
+                  </div>
+                  <select
+                    value={targetSheet}
+                    onChange={(e) => setSelectedSheet(e.target.value)}
+                    className="w-full bg-white border border-indigo-200 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-800 shadow-2xs outline-none focus:ring-2 focus:ring-indigo-500"
+                  >
+                    {project.sheets.map((sh) => (
+                      <option key={sh.name} value={sh.name}>
+                        📄 {sh.name} ({sh.rows?.length || 0}개 행 데이터)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               {/* 1. QR 코드 스캔 영역 */}
               <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
                 <div className="bg-white p-2 rounded-xl border border-slate-200 shadow-xs shrink-0">
