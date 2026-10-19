@@ -7,8 +7,8 @@ export interface ValidationRule {
   id: string;
   name: string;
   targetCol: string; // 검증 대상 컬럼 (예: '금액', '합계금액', '세액')
-  type: 'ARITHMETIC_MULTIPLY' | 'ARITHMETIC_SUM' | 'PERCENTAGE' | 'REGEX' | 'CUSTOM';
-  operandCols?: string[]; // 피연산자 컬럼 (예: ['수량', '단가'] 또는 ['공급가액', '세액'])
+  type: 'ARITHMETIC_MULTIPLY' | 'ARITHMETIC_SUM' | 'PERCENTAGE' | 'REGEX' | 'DUPLICATE_ENTRY' | 'CUSTOM';
+  operandCols?: string[]; // 피연산자 컬럼 (예: ['수량', '단가'] 또는 ['공급가액', '세액'] 또는 ['거래일자', '거래처명'])
   percentage?: number; // 퍼센트 검증용 (예: 0.1)
   tolerance?: number; // 허용 오차 (원 단위 절사/반올림용, 기본 1)
   pattern?: string; // 정규식 패턴 (예: YYYY-MM-DD)
@@ -109,8 +109,33 @@ export function generateDefaultRules(headers: string[]): ValidationRule[] {
     });
   }
 
-  // 4. 날짜 포맷 검증 규칙
-  const dateCol = headers.find((h) => h.includes('일자') || h.includes('날짜') || h.includes('일시'));
+  // 4. 동일자 + 동일 거래처 + 동일 금액 이중 등록 검출 규칙 (회계/세무 실무 감사 핵심)
+  const dateCol = headers.find((h) => h.includes('일자') || h.includes('날짜'));
+  const partnerCol = headers.find(
+    (h) =>
+      h.includes('거래처') ||
+      h.includes('상호') ||
+      h.includes('공급자') ||
+      h.includes('고객') ||
+      h.includes('업체') ||
+      h.includes('회사')
+  );
+  const targetAmountCol = totalCol || amountCol || supplyCol;
+
+  if (dateCol && partnerCol && targetAmountCol) {
+    rules.push({
+      id: 'default_duplicate_entry',
+      name: `동일 거래일자 + 동일 거래처 + 동일 금액 이중 전표 검출`,
+      targetCol: targetAmountCol,
+      type: 'DUPLICATE_ENTRY',
+      operandCols: [dateCol, partnerCol],
+      errorMessage: `동일한 거래일자(${dateCol})와 거래처(${partnerCol})에 동일한 금액(${targetAmountCol})이 이중 등록된 전표입니다.`,
+      enabled: true,
+      naturalPrompt: `동일한 날짜에 동일 거래처 동일 금액으로 이중 등록된 전표 감지해줘`,
+    });
+  }
+
+  // 5. 날짜 포맷 검증 규칙
   if (dateCol) {
     rules.push({
       id: 'default_date_format',
@@ -265,6 +290,48 @@ export function validateSheetRows(
     });
   });
 
+  // 5. 실무 핵심: 동일자 + 동일 거래처 + 동일 금액 이중 전표(중복) 검출
+  const duplicateRules = activeRules.filter((r) => r.type === 'DUPLICATE_ENTRY');
+  duplicateRules.forEach((rule) => {
+    const dateCol = rule.operandCols?.[0];
+    const partnerCol = rule.operandCols?.[1];
+    const amountCol = rule.targetCol;
+    if (!dateCol || !partnerCol || !amountCol) return;
+
+    const groupMap = new Map<string, number[]>();
+    rows.forEach((row, rowIdx) => {
+      const dVal = String(row[dateCol] ?? '').trim();
+      const pVal = String(row[partnerCol] ?? '').trim();
+      const aVal = parseNumericValue(row[amountCol]);
+      if (dVal && pVal && aVal !== null) {
+        const key = `${dVal}__${pVal}__${aVal}`;
+        const list = groupMap.get(key) || [];
+        list.push(rowIdx);
+        groupMap.set(key, list);
+      }
+    });
+
+    groupMap.forEach((indices, key) => {
+      if (indices.length > 1) {
+        const [dVal, pVal, aVal] = key.split('__');
+        const formattedAmount = Number(aVal).toLocaleString('ko-KR');
+        indices.forEach((idx) => {
+          const errorKey = `${idx}_${amountCol}`;
+          const otherRows = indices.filter((i) => i !== idx).map((i) => `${i + 1}행`).join(', ');
+          errorMap.set(errorKey, {
+            rowIdx: idx,
+            colKey: amountCol,
+            ruleName: rule.name,
+            expectedValue: '단일 등록',
+            actualValue: `${indices.length}회 중복`,
+            message: `[이중 전표 의심] 동일 일자(${dVal}), 거래처(${pVal}), 금액(${formattedAmount}원) 전표가 ${indices.length}건 등록되었습니다. (동일 전표: ${otherRows})`,
+          });
+          errorRowIndices.add(idx);
+        });
+      }
+    });
+  });
+
   return {
     hasErrors: errorMap.size > 0,
     totalErrorCount: errorMap.size,
@@ -284,7 +351,35 @@ export function parseNaturalLanguageRule(
   const p = prompt.trim();
   if (!p) return null;
 
-  // 1. 곱셈 패턴: "A는 B 곱하기 C여야 해", "A = B * C"
+  // 1. 중복/이중 등록 패턴: "동일 날짜", "동일 거래처", "중복", "이중"
+  if (p.includes('중복') || p.includes('이중') || (p.includes('동일') && (p.includes('금액') || p.includes('거래처')))) {
+    const dateCol = headers.find((h) => h.includes('일자') || h.includes('날짜'));
+    const partnerCol = headers.find(
+      (h) =>
+        h.includes('거래처') ||
+        h.includes('상호') ||
+        h.includes('공급자') ||
+        h.includes('고객') ||
+        h.includes('업체') ||
+        h.includes('회사')
+    );
+    const amountCol = headers.find((h) => h.includes('합계') || h.includes('금액') || h.includes('공급가액'));
+
+    if (dateCol && partnerCol && amountCol) {
+      return {
+        id: `custom_dup_${Date.now()}`,
+        name: `동일 거래일자 + 거래처 + 금액 이중 전표 검출`,
+        targetCol: amountCol,
+        type: 'DUPLICATE_ENTRY',
+        operandCols: [dateCol, partnerCol],
+        errorMessage: `동일한 거래일자(${dateCol})와 거래처(${partnerCol})에 동일한 금액(${amountCol})이 이중 등록되었습니다.`,
+        enabled: true,
+        naturalPrompt: prompt,
+      };
+    }
+  }
+
+  // 2. 곱셈 패턴: "A는 B 곱하기 C여야 해", "A = B * C"
   if (p.includes('곱') || p.includes('*') || p.includes('x') || p.includes('×')) {
     // 헤더 중 대상 컬럼 찾기
     const foundHeaders = headers.filter((h) => p.includes(h));
@@ -308,7 +403,7 @@ export function parseNaturalLanguageRule(
     }
   }
 
-  // 2. 덧셈 패턴: "A는 B 더하기 C", "A = B + C"
+  // 3. 덧셈 패턴: "A는 B 더하기 C", "A = B + C"
   if (p.includes('더하') || p.includes('+') || p.includes('합한')) {
     const foundHeaders = headers.filter((h) => p.includes(h));
     if (foundHeaders.length >= 3) {
@@ -330,7 +425,7 @@ export function parseNaturalLanguageRule(
     }
   }
 
-  // 3. 부가세율/비율 패턴: "10%", "부가세", "세액"
+  // 4. 부가세율/비율 패턴: "10%", "부가세", "세액"
   if (p.includes('10%') || p.includes('부가세') || p.includes('세액') || p.includes('0.1')) {
     const foundHeaders = headers.filter((h) => p.includes(h));
     const target = foundHeaders.find((h) => h.includes('세액') || h.includes('부가세'));
@@ -351,7 +446,7 @@ export function parseNaturalLanguageRule(
     }
   }
 
-  // 4. 날짜 패턴
+  // 5. 날짜 패턴
   if (p.includes('날짜') || p.includes('일자') || p.includes('YYYY-MM-DD')) {
     const target = headers.find((h) => p.includes(h)) || headers.find((h) => h.includes('일자') || h.includes('날짜'));
     if (target) {

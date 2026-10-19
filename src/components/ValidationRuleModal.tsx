@@ -10,6 +10,7 @@ import {
   Percent,
   Calendar,
   Layers,
+  CopyCheck,
 } from 'lucide-react';
 import {
   ValidationRule,
@@ -96,6 +97,8 @@ export const ValidationRuleModal: React.FC<ValidationRuleModalProps> = ({
         return <Percent className="w-4 h-4 text-amber-500" />;
       case 'REGEX':
         return <Calendar className="w-4 h-4 text-sky-500" />;
+      case 'DUPLICATE_ENTRY':
+        return <CopyCheck className="w-4 h-4 text-rose-500" />;
       default:
         return <Sparkles className="w-4 h-4 text-purple-500" />;
     }
@@ -167,6 +170,7 @@ export const ValidationRuleModal: React.FC<ValidationRuleModalProps> = ({
                 '금액은 수량 곱하기 단가',
                 '합계는 공급가액 더하기 세액',
                 '세액은 공급가액의 10%',
+                '동일일자 동일거래처 중복 전표 감지',
                 '작성일자는 YYYY-MM-DD 날짜',
               ].map((sample, idx) => (
                 <button
