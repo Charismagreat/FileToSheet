@@ -31,6 +31,7 @@ interface HeaderProps {
   onOpenConsolidatedModal?: () => void;
   onOpenShareManagementModal?: () => void;
   onOpenDailyAuditModal?: () => void;
+  onOpenAppBuilderModal?: () => void;
   onOpenAiChat?: () => void;
   onExportGoogleSheets: () => void;
   onOpenOriginalModal: () => void;
@@ -59,6 +60,7 @@ export function Header({
   onOpenConsolidatedModal,
   onOpenShareManagementModal,
   onOpenDailyAuditModal,
+  onOpenAppBuilderModal,
   onOpenAiChat,
   onExportGoogleSheets,
   onOpenShareModal,
@@ -206,6 +208,20 @@ export function Header({
             <span>AI 데이터 감사</span>
             <span className="text-[9px] font-bold bg-indigo-600 text-white px-1.5 py-0.2 rounded-full leading-none hidden xl:inline-block">
               Daily
+            </span>
+          </button>
+        )}
+
+        {onOpenAppBuilderModal && (
+          <button
+            onClick={onOpenAppBuilderModal}
+            className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-xs transition active:scale-95"
+            title="자연어로 원하는 사내 관리 포털/웹앱을 1초 만에 자동 생성합니다"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+            <span>CRUD 웹앱 빌더</span>
+            <span className="text-[9px] font-bold bg-white/20 text-white px-1.5 py-0.2 rounded-full leading-none hidden xl:inline-block">
+              No-Code
             </span>
           </button>
         )}

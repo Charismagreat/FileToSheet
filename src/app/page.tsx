@@ -22,6 +22,8 @@ import { BillingHistoryModal } from '@/components/BillingHistoryModal';
 import { RemoteDbModal } from '@/components/RemoteDbModal';
 import { BatchUploadMonitor } from '@/components/BatchUploadMonitor';
 import { DailyAuditReportModal } from '@/components/DailyAuditReportModal';
+import { InteractiveAppBuilderModal } from '@/components/InteractiveAppBuilderModal';
+import { StandalonePortalView } from '@/components/StandalonePortalView';
 import { Sparkles, Upload } from 'lucide-react';
 import { ExportTargetType } from '@/components/ExportScopeModal';
 import { FilterState } from '@/components/DataFilterPopover';
@@ -47,6 +49,8 @@ export default function FileToSheetApp() {
   const [showEmergencyRecoveryModal, setShowEmergencyRecoveryModal] = useState<boolean>(false);
   const [showShareManagementModal, setShowShareManagementModal] = useState<boolean>(false);
   const [showDailyAuditModal, setShowDailyAuditModal] = useState<boolean>(false);
+  const [showAppBuilderModal, setShowAppBuilderModal] = useState<boolean>(false);
+  const [activePortalConfig, setActivePortalConfig] = useState<any | null>(null);
   const [showAiChatDrawer, setShowAiChatDrawer] = useState<boolean>(false);
   const [aiChatInitialScope, setAiChatInitialScope] = useState<ChatScope>('current_sheet');
   const [ruleModalSheetIdx, setRuleModalSheetIdx] = useState<number | null>(null);
@@ -478,6 +482,32 @@ export default function FileToSheetApp() {
     }
   };
 
+  // 🌟 AI 빌더가 제안한 보조 시트 및 샘플 데이터를 현재 워크스페이스에 즉시 주입
+  const handleAddGeneratedSheetsToWorkspace = (newSheets: any[]) => {
+    if (!currentProject) return;
+    ws.setProjects((prev) => {
+      const next = [...prev];
+      if (!next[ws.activeProjectIndex]) return prev;
+      const proj = { ...next[ws.activeProjectIndex] };
+      proj.sheets = [...proj.sheets, ...newSheets];
+      next[ws.activeProjectIndex] = proj;
+      return next;
+    });
+  };
+
+  // 🌟 포털 뷰 내부에서 CRUD 발생 시 워크스페이스 시트 행 데이터 동기화
+  const handleUpdateSheetRowsInPortal = (sheetName: string, updatedRows: Record<string, any>[]) => {
+    if (!currentProject) return;
+    ws.setProjects((prev) => {
+      const next = [...prev];
+      if (!next[ws.activeProjectIndex]) return prev;
+      const proj = { ...next[ws.activeProjectIndex] };
+      proj.sheets = proj.sheets.map((s) => (s.name === sheetName ? { ...s, rows: updatedRows } : s));
+      next[ws.activeProjectIndex] = proj;
+      return next;
+    });
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-slate-50 text-slate-800 font-sans selection:bg-blue-100 selection:text-blue-900">
       <Header
@@ -505,6 +535,7 @@ export default function FileToSheetApp() {
         onOpenShareModal={() => setShowShareModal(true)}
         onOpenShareManagementModal={() => setShowShareManagementModal(true)}
         onOpenDailyAuditModal={() => setShowDailyAuditModal(true)}
+        onOpenAppBuilderModal={() => setShowAppBuilderModal(true)}
         onOpenAiChat={() => setShowAiChatDrawer(true)}
         hasOriginalFile={Boolean(currentProject?.originalFileUrl)}
         hasSheetData={Boolean(currentSheet && currentSheet.rows.length > 0)}
@@ -971,6 +1002,28 @@ export default function FileToSheetApp() {
         }
         userPhone={auth.currentUser?.phoneNumber}
       />
+
+      {/* 26. AI 인터랙티브 CRUD 웹앱 빌더 모달 */}
+      <InteractiveAppBuilderModal
+        isOpen={showAppBuilderModal}
+        onClose={() => setShowAppBuilderModal(false)}
+        sheets={currentProject?.sheets || []}
+        onLaunchPortal={(config) => {
+          setActivePortalConfig(config);
+        }}
+        onAddSheetsToWorkspace={handleAddGeneratedSheetsToWorkspace}
+      />
+
+      {/* 27. 독립 동적 CRUD 웹앱 런타임 뷰어 (전체화면 포털) */}
+      {activePortalConfig && (
+        <StandalonePortalView
+          portalName={activePortalConfig.portalName}
+          useCase={activePortalConfig.useCase}
+          sheets={currentProject?.sheets || []}
+          onClose={() => setActivePortalConfig(null)}
+          onUpdateSheetRows={handleUpdateSheetRowsInPortal}
+        />
+      )}
     </div>
   );
 }
