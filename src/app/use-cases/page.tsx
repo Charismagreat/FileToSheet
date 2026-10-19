@@ -38,6 +38,11 @@ import {
   MessageSquare,
   Bell,
   Download,
+  Wrench,
+  Lock,
+  ArrowUpRight,
+  ShieldAlert,
+  Cpu,
 } from 'lucide-react';
 
 export default function UseCasesPage() {
@@ -1254,6 +1259,152 @@ export default function UseCasesPage() {
         </div>
       </section>
 
+      {/* 4-B. 2026 차세대 엔터프라이즈 3대 혁신 엔진: AI 일일 감사 / No-Code 웹앱 빌더 / FDE 개발자 협업 */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8 border-b border-slate-200 bg-gradient-to-b from-white via-indigo-50/20 to-white w-full">
+        <div className="max-w-5xl mx-auto w-full space-y-12">
+          <div className="text-center max-w-3xl mx-auto">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gradient-to-r from-purple-100 to-indigo-100 text-indigo-900 text-xs font-black mb-3 border border-indigo-200 shadow-2xs">
+              <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+              <span>2026 NEXT-GEN ENTERPRISE SUITE</span>
+            </div>
+            <h2 className="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight leading-tight break-keep">
+              단순 엑셀 변환을 넘어, <br />
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 via-purple-600 to-rose-600">
+                AI 전사 감사 · No-Code 웹앱 · FDE 밀착 지원까지
+              </span>
+            </h2>
+            <p className="text-slate-600 text-xs sm:text-sm mt-3 leading-relaxed break-keep">
+              File to Sheet는 전사 회계 무결성을 지키는 AI 감사 엔진, 실무자를 위한 맞춤형 독립 포털 생성, 
+              그리고 복잡한 로직을 해결해 주는 전문 전진배치 엔지니어(FDE) 협업까지 완벽하게 지원합니다.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+            {/* 카드 1: AI 상시 일일 데이터 감사 */}
+            <div className="p-7 rounded-3xl bg-white border border-indigo-200 shadow-sm hover:shadow-xl hover:border-indigo-400 transition flex flex-col justify-between group">
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold shadow-inner group-hover:scale-110 transition">
+                    <ShieldCheck className="w-6 h-6 text-indigo-600" />
+                  </div>
+                  <span className="text-[11px] font-black bg-indigo-100 text-indigo-800 px-2.5 py-1 rounded-full">
+                    Daily Audit
+                  </span>
+                </div>
+                <h3 className="text-lg font-black text-slate-900 mb-2 leading-snug">
+                  AI 전사 데이터 일일 감사
+                </h3>
+                <p className="text-xs text-indigo-600 font-bold mb-3">
+                  동일자·동일 거래처·동일 금액 이중 전표 및 부가세 10% 불일치 전수 자동 적발
+                </p>
+                <p className="text-xs text-slate-600 leading-relaxed mb-4 break-keep">
+                  매일 밤 백엔드 AI가 회사의 모든 프로젝트 시트를 전수 스캔합니다. 
+                  동일자에 동일 거래처로 동일 금액이 5분 간격 이중 등록된 전표, 
+                  부가세 10% 단수 계산 오차, 
+                  수식 결함을 자동으로 찾아내 종합 일일 감사 리포트를 발행합니다.
+                </p>
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-[11px] space-y-1.5 font-mono text-slate-700">
+                  <div className="flex items-center justify-between text-emerald-700 font-bold">
+                    <span>✓ 정상 전표 142건</span>
+                    <span>무결성 98.6%</span>
+                  </div>
+                  <div className="flex items-center justify-between text-rose-600 font-bold bg-rose-50 p-1 rounded">
+                    <span>🚨 이중등록 1건 감지</span>
+                    <span>(주)대한상사 120만원</span>
+                  </div>
+                </div>
+              </div>
+              <div className="pt-5 border-t border-slate-100 mt-5 flex items-center justify-between text-xs text-indigo-700 font-bold">
+                <span>전사 회계 사고 제로 달성</span>
+                <span className="font-mono">Daily Engine →</span>
+              </div>
+            </div>
+
+            {/* 카드 2: AI 대화형 No-Code CRUD 웹앱 빌더 */}
+            <div className="p-7 rounded-3xl bg-white border border-purple-200 shadow-sm hover:shadow-xl hover:border-purple-400 transition flex flex-col justify-between group">
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-12 h-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold shadow-inner group-hover:scale-110 transition">
+                    <Sparkles className="w-6 h-6 text-purple-600" />
+                  </div>
+                  <span className="text-[11px] font-black bg-purple-100 text-purple-800 px-2.5 py-1 rounded-full">
+                    No-Code WebApp
+                  </span>
+                </div>
+                <h3 className="text-lg font-black text-slate-900 mb-2 leading-snug">
+                  AI 대화형 No-Code 웹앱 빌더
+                </h3>
+                <p className="text-xs text-purple-600 font-bold mb-3">
+                  자연어 요청 ➔ 부족한 시트 & 샘플 3행 자동 주입 ➔ 3대 유스케이스 레고식 조합
+                </p>
+                <p className="text-xs text-slate-600 leading-relaxed mb-4 break-keep">
+                  &quot;거래처 발주 및 미수금 관리 웹앱 만들어줘&quot;라고 자연어로 요청하면, 
+                  AI가 누락된 보조 시트(발주서, 배송현황)를 감지해 현실적 샘플 데이터 3행과 함께 제안합니다. 
+                  실무자 운영 포털, 경영 대시보드, 고객 전용 뷰 중 원하는 모듈을 조합해 독립 웹앱으로 3초 만에 론칭합니다.
+                </p>
+                <div className="p-3 bg-purple-50/50 rounded-xl border border-purple-200 text-[11px] space-y-1 font-mono text-purple-900">
+                  <div className="flex items-center gap-1.5 font-bold">
+                    <span>⚡ 종합 KPI 통계 대시보드</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-slate-600">
+                    <span>• 실시간 검색 & 신규 등록/수정 모달</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-slate-600">
+                    <span>• 마스터-디테일 관계형 조인 뷰</span>
+                  </div>
+                </div>
+              </div>
+              <div className="pt-5 border-t border-slate-100 mt-5 flex items-center justify-between text-xs text-purple-700 font-bold">
+                <span>외주 개발비 3,000만원 절감</span>
+                <span className="font-mono">Live Portal →</span>
+              </div>
+            </div>
+
+            {/* 카드 3: 전문개발자(FDE) 1:1 SOS 협업 지원 */}
+            <div className="p-7 rounded-3xl bg-white border border-amber-200 shadow-sm hover:shadow-xl hover:border-amber-400 transition flex flex-col justify-between group">
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold shadow-inner group-hover:scale-110 transition">
+                    <Wrench className="w-6 h-6 text-amber-600" />
+                  </div>
+                  <span className="text-[11px] font-black bg-amber-100 text-amber-900 px-2.5 py-1 rounded-full">
+                    FDE SOS
+                  </span>
+                </div>
+                <h3 className="text-lg font-black text-slate-900 mb-2 leading-snug">
+                  전문개발자(FDE) SOS 협업
+                </h3>
+                <p className="text-xs text-amber-700 font-bold mb-3">
+                  개인정보 100% 마스킹 ➔ AI 1차 기술명세 변환 ➔ FDE 솔루션 원클릭 패치 병합
+                </p>
+                <p className="text-xs text-slate-600 leading-relaxed mb-4 break-keep">
+                  복잡한 단수 절사/할인율 수식이나 홈택스·카카오 등 외부 API 연동에서 막혔을 때, 
+                  버튼 하나로 전담 엔지니어에게 SOS를 요청합니다. 
+                  민감정보는 자동 마스킹되고, FDE가 가상 샌드박스에서 검증한 패치를 보내오면 
+                  클릭 한 번으로 내 시트에 안전하게 이식(Merge)됩니다.
+                </p>
+                <div className="p-3 bg-amber-50/50 rounded-xl border border-amber-200 text-[11px] space-y-1 font-mono text-amber-950">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold">🔒 개인정보 마스킹 실드</span>
+                    <span className="text-emerald-700 font-bold">100% 난독화</span>
+                  </div>
+                  <div className="text-slate-600">
+                    <span>• FDE 표준 기술 명세(Tech Spec) 자동 변환</span>
+                  </div>
+                  <div className="text-slate-600">
+                    <span>• 원클릭 솔루션 패치 병합 (1-Click Merge)</span>
+                  </div>
+                </div>
+              </div>
+              <div className="pt-5 border-t border-slate-100 mt-5 flex items-center justify-between text-xs text-amber-800 font-bold">
+                <span>노코드 중도 포기율 0% 방어</span>
+                <span className="font-mono">FDE Co-pilot →</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* 5. FileToSheet만의 4대 차별화 핵심 기술 (Why Us? - max-w-5xl w-full 완전 통일) */}
       <section className="py-16 px-4 sm:px-6 lg:px-8 border-b border-slate-200 bg-slate-50/40 w-full">
         <div className="max-w-5xl mx-auto w-full">
@@ -1329,6 +1480,39 @@ export default function UseCasesPage() {
           </div>
 
           <div className="space-y-4 w-full">
+            {/* 1. AI 데이터 감사 Q&A */}
+            <div className="p-5 sm:p-6 rounded-2xl bg-indigo-50/60 border border-indigo-200 shadow-2xs">
+              <h4 className="text-sm font-bold text-slate-900 mb-2 flex items-center gap-2">
+                <span className="text-indigo-600 font-black">Q.</span>
+                <span>동일한 날짜에 동일 거래처로 동일 금액이 이중 등록된 전표나 부가세 오차를 자동으로 찾아낼 수 있나요?</span>
+              </h4>
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed break-keep">
+                네, 완벽하게 전수 적발합니다! File to Sheet의 <strong className="text-indigo-700 font-bold">‘AI 전사 일일 데이터 감사’</strong> 엔진은 사용자의 모든 프로젝트와 시트를 대상으로, <span className="bg-indigo-100 text-indigo-800 px-1.5 py-0.5 rounded font-bold">동일 일자 + 동일 거래처 + 동일 금액</span>으로 5분 간격 이중 등록된 전표, 공급가액 대비 부가세 10% 단수 계산 불일치, 합계 수식 오류 등을 매일 밤 백엔드 AI가 자동으로 감사하여 일일 무결성 리포트로 브리핑해 드립니다.
+              </p>
+            </div>
+
+            {/* 2. No-Code CRUD 웹앱 빌더 Q&A */}
+            <div className="p-5 sm:p-6 rounded-2xl bg-purple-50/60 border border-purple-200 shadow-2xs">
+              <h4 className="text-sm font-bold text-slate-900 mb-2 flex items-center gap-2">
+                <span className="text-purple-600 font-black">Q.</span>
+                <span>보유한 엑셀 시트들을 가지고 실무자나 외부 직원이 쓸 수 있는 독립 CRUD 웹앱을 코딩 없이 만들 수 있나요?</span>
+              </h4>
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed break-keep">
+                네, 3초 만에 완성됩니다! <strong className="text-purple-700 font-bold">‘AI 대화형 CRUD 웹앱 빌더’</strong>는 자연어로 &quot;고객 발주 및 미수금 관리 웹앱 만들어줘&quot;라고 요청하면, 현재 시트 구조를 분석해 부족한 보조 시트(예: 발주서, 배송현황)를 현실적인 샘플 3행과 함께 자동 생성해 제안합니다. 사용자는 3대 추천 유스케이스(실무자 포털, 경영 대시보드, 고객 뷰)를 레고 블록처럼 조합하여 실시간 검색, 등록·수정·삭제 모달, 마스터-디테일 조인이 완비된 독립 웹앱을 즉시 가동할 수 있습니다.
+              </p>
+            </div>
+
+            {/* 3. 전문개발자(FDE) SOS 협업 Q&A */}
+            <div className="p-5 sm:p-6 rounded-2xl bg-amber-50/60 border border-amber-200 shadow-2xs">
+              <h4 className="text-sm font-bold text-slate-900 mb-2 flex items-center gap-2">
+                <span className="text-amber-700 font-black">Q.</span>
+                <span>비전문가라 복잡한 계산 수식이나 국세청·외부 API 연동이 막힐 때 개발자의 도움을 받을 수 있나요?</span>
+              </h4>
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed break-keep">
+                네, 전담 FDE가 든든하게 받쳐줍니다! 상단 메뉴의 <span className="bg-amber-100 text-amber-900 px-1.5 py-0.5 rounded font-bold">[🆘 FDE 개발자 지원]</span>을 누르면, 고객사의 전화번호나 계좌번호 등 민감정보를 <strong className="text-amber-800 font-bold">100% 자동 마스킹</strong>한 후 AI가 FDE용 기술 명세서(Tech Spec)로 변환해 티켓을 전송합니다. 전진 배치 엔지니어(FDE)가 가상 샌드박스에서 검증한 맞춤형 수식이나 Apps Script 패치를 보내오면, 사용자는 <span className="text-emerald-700 font-bold font-mono">[내 프로젝트에 패치 적용]</span> 클릭 한 번으로 안전하게 병합하실 수 있습니다.
+              </p>
+            </div>
+
             <div className="p-5 sm:p-6 rounded-2xl bg-slate-50/70 border border-slate-200 shadow-2xs">
               <h4 className="text-sm font-bold text-slate-900 mb-2 flex items-center gap-2">
                 <span className="text-purple-600 font-black">Q.</span>
