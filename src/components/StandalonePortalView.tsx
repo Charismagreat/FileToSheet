@@ -19,8 +19,8 @@ import {
   ExternalLink,
   SlidersHorizontal,
   FileSpreadsheet,
-  AlertCircle,
   Sparkles,
+  Wrench,
 } from 'lucide-react';
 import { ParsedSheet } from '@/lib/parser';
 import { UseCaseOption } from '@/app/api/portal/generate-ideas/route';
@@ -32,6 +32,7 @@ interface StandalonePortalViewProps {
   sheets: ParsedSheet[];
   onClose: () => void;
   onUpdateSheetRows?: (sheetName: string, rows: Record<string, any>[]) => void;
+  onOpenFdeModal?: () => void;
 }
 
 export const StandalonePortalView: React.FC<StandalonePortalViewProps> = ({
@@ -40,6 +41,7 @@ export const StandalonePortalView: React.FC<StandalonePortalViewProps> = ({
   sheets,
   onClose,
   onUpdateSheetRows,
+  onOpenFdeModal,
 }) => {
   const [activeTab, setActiveTab] = useState<string>('DASHBOARD');
   const [roleMode, setRoleMode] = useState<'ADMIN' | 'STAFF'>('ADMIN');
@@ -242,6 +244,17 @@ export const StandalonePortalView: React.FC<StandalonePortalViewProps> = ({
             {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Share2 className="w-3.5 h-3.5" />}
             <span>{copiedLink ? '포털 링크 복사됨!' : '직원 공유 링크'}</span>
           </button>
+
+          {onOpenFdeModal && (
+            <button
+              onClick={onOpenFdeModal}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-xs font-bold text-white shadow-xs transition active:scale-95"
+              title="전문 엔지니어에게 커스텀 기능 또는 수식 수정을 요청합니다"
+            >
+              <Wrench className="w-3.5 h-3.5 text-amber-200" />
+              <span>FDE 개발자 지원</span>
+            </button>
+          )}
         </div>
       </header>
 

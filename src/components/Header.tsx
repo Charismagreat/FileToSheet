@@ -5,7 +5,8 @@ import Link from 'next/link';
 import {
   FileSpreadsheet, Download, Share2, RefreshCw, Smartphone, LogOut,
   User, Database, Crown, UploadCloud, Zap, ChevronDown, Building2, BarChart3,
-  Send, Inbox, Globe, Sparkles, Link as LinkIcon, ShieldCheck, Lightbulb, Clock
+  Send, Inbox, Globe, Sparkles, Link as LinkIcon, ShieldCheck, Lightbulb, Clock,
+  LifeBuoy, Wrench
 } from 'lucide-react';
 import { UserSession, ProjectWorkspace } from '@/types/workspace';
 import { UserUsagePopover } from './UserUsagePopover';
@@ -32,6 +33,7 @@ interface HeaderProps {
   onOpenShareManagementModal?: () => void;
   onOpenDailyAuditModal?: () => void;
   onOpenAppBuilderModal?: () => void;
+  onOpenFdeModal?: () => void;
   onOpenAiChat?: () => void;
   onExportGoogleSheets: () => void;
   onOpenOriginalModal: () => void;
@@ -61,6 +63,7 @@ export function Header({
   onOpenShareManagementModal,
   onOpenDailyAuditModal,
   onOpenAppBuilderModal,
+  onOpenFdeModal,
   onOpenAiChat,
   onExportGoogleSheets,
   onOpenShareModal,
@@ -222,6 +225,20 @@ export function Header({
             <span>CRUD 웹앱 빌더</span>
             <span className="text-[9px] font-bold bg-white/20 text-white px-1.5 py-0.2 rounded-full leading-none hidden xl:inline-block">
               No-Code
+            </span>
+          </button>
+        )}
+
+        {onOpenFdeModal && (
+          <button
+            onClick={onOpenFdeModal}
+            className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white shadow-xs transition active:scale-95"
+            title="스스로 해결하기 어려운 복잡한 수식, 외부 연동을 전문 FDE 개발자에게 SOS 요청합니다"
+          >
+            <Wrench className="w-3.5 h-3.5 text-amber-200" />
+            <span>FDE 개발자 지원</span>
+            <span className="text-[9px] font-bold bg-white/20 text-white px-1.5 py-0.2 rounded-full leading-none hidden xl:inline-block">
+              SOS
             </span>
           </button>
         )}

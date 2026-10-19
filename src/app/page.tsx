@@ -24,6 +24,7 @@ import { BatchUploadMonitor } from '@/components/BatchUploadMonitor';
 import { DailyAuditReportModal } from '@/components/DailyAuditReportModal';
 import { InteractiveAppBuilderModal } from '@/components/InteractiveAppBuilderModal';
 import { StandalonePortalView } from '@/components/StandalonePortalView';
+import FdeSupportModal from '@/components/FdeSupportModal';
 import { Sparkles, Upload } from 'lucide-react';
 import { ExportTargetType } from '@/components/ExportScopeModal';
 import { FilterState } from '@/components/DataFilterPopover';
@@ -50,6 +51,7 @@ export default function FileToSheetApp() {
   const [showShareManagementModal, setShowShareManagementModal] = useState<boolean>(false);
   const [showDailyAuditModal, setShowDailyAuditModal] = useState<boolean>(false);
   const [showAppBuilderModal, setShowAppBuilderModal] = useState<boolean>(false);
+  const [showFdeModal, setShowFdeModal] = useState<boolean>(false);
   const [activePortalConfig, setActivePortalConfig] = useState<any | null>(null);
   const [showAiChatDrawer, setShowAiChatDrawer] = useState<boolean>(false);
   const [aiChatInitialScope, setAiChatInitialScope] = useState<ChatScope>('current_sheet');
@@ -508,6 +510,51 @@ export default function FileToSheetApp() {
     });
   };
 
+  // 🌟 FDE 솔루션 패치 원클릭 병합 핸들러
+  const handleApplyFdePatch = (patch: {
+    targetSheetName: string;
+    newColumns: string[];
+    sampleRows: Record<string, any>[];
+    appsScriptSnippet?: string;
+    title: string;
+  }) => {
+    if (!currentProject) {
+      alert('적용할 프로젝트가 없습니다. 먼저 파일을 업로드하거나 프로젝트를 선택해 주세요.');
+      return;
+    }
+    const kstTime = new Intl.DateTimeFormat('ko-KR', {
+      dateStyle: 'short',
+      timeStyle: 'medium',
+    }).format(new Date());
+
+    const preparedRows = (patch.sampleRows || []).map((r, i) => ({
+      ...r,
+      일련번호: r['일련번호'] || i + 1,
+      등록일시: r['등록일시'] || kstTime,
+    }));
+
+    const newSheet = {
+      name: patch.targetSheetName,
+      headers: patch.newColumns && patch.newColumns.length > 0
+        ? patch.newColumns
+        : Object.keys(preparedRows[0] || {}),
+      rows: preparedRows,
+      rawRows: [],
+    };
+
+    ws.setProjects((prev) => {
+      const next = [...prev];
+      if (!next[ws.activeProjectIndex]) return prev;
+      const proj = { ...next[ws.activeProjectIndex] };
+      proj.sheets = [...proj.sheets, newSheet];
+      proj.activeSheetIndex = proj.sheets.length - 1;
+      next[ws.activeProjectIndex] = proj;
+      return next;
+    });
+
+    alert(`🎉 FDE 맞춤 솔루션 [${patch.title}]이(가) 프로젝트에 성공적으로 적용되었습니다! 새 시트 탭을 확인해 보세요.`);
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-slate-50 text-slate-800 font-sans selection:bg-blue-100 selection:text-blue-900">
       <Header
@@ -536,6 +583,7 @@ export default function FileToSheetApp() {
         onOpenShareManagementModal={() => setShowShareManagementModal(true)}
         onOpenDailyAuditModal={() => setShowDailyAuditModal(true)}
         onOpenAppBuilderModal={() => setShowAppBuilderModal(true)}
+        onOpenFdeModal={() => setShowFdeModal(true)}
         onOpenAiChat={() => setShowAiChatDrawer(true)}
         hasOriginalFile={Boolean(currentProject?.originalFileUrl)}
         hasSheetData={Boolean(currentSheet && currentSheet.rows.length > 0)}
@@ -1022,8 +1070,25 @@ export default function FileToSheetApp() {
           sheets={currentProject?.sheets || []}
           onClose={() => setActivePortalConfig(null)}
           onUpdateSheetRows={handleUpdateSheetRowsInPortal}
+          onOpenFdeModal={() => setShowFdeModal(true)}
         />
       )}
+
+      {/* 28. 전문개발자(FDE) SOS 협업 지원 모달 */}
+      <FdeSupportModal
+        isOpen={showFdeModal}
+        onClose={() => setShowFdeModal(false)}
+        projects={ws.projects.map((p) => ({
+          id: p.id ? String(p.id) : (p.name || 'default'),
+          name: p.name || '프로젝트',
+          tableData: {
+            headers: p.sheets?.[p.activeSheetIndex || 0]?.headers || [],
+            rows: p.sheets?.[p.activeSheetIndex || 0]?.rows || [],
+          },
+        }))}
+        activeProjectId={currentProject?.id ? String(currentProject.id) : undefined}
+        onApplyPatch={handleApplyFdePatch}
+      />
     </div>
   );
 }
