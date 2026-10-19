@@ -72,10 +72,14 @@ export function Header({
   exportLoading,
 }: HeaderProps) {
   const [isUsageOpen, setIsUsageOpen] = useState<boolean>(false);
+  const [isAiHubOpen, setIsAiHubOpen] = useState<boolean>(false);
+  const [isSyncHubOpen, setIsSyncHubOpen] = useState<boolean>(false);
   const [isExportOpen, setIsExportOpen] = useState<boolean>(false);
   const [isShareOpen, setIsShareOpen] = useState<boolean>(false);
   const [bonusCredits, setBonusCredits] = useState<{ bonusTokens: number; bonusDocs: number }>({ bonusTokens: 0, bonusDocs: 0 });
 
+  const aiHubRef = useRef<HTMLDivElement>(null);
+  const syncHubRef = useRef<HTMLDivElement>(null);
   const exportMenuRef = useRef<HTMLDivElement>(null);
   const shareMenuRef = useRef<HTMLDivElement>(null);
 
@@ -91,10 +95,17 @@ export function Header({
   // 외부 클릭 시 드롭다운 닫기
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
-      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (aiHubRef.current && !aiHubRef.current.contains(target)) {
+        setIsAiHubOpen(false);
+      }
+      if (syncHubRef.current && !syncHubRef.current.contains(target)) {
+        setIsSyncHubOpen(false);
+      }
+      if (exportMenuRef.current && !exportMenuRef.current.contains(target)) {
         setIsExportOpen(false);
       }
-      if (shareMenuRef.current && !shareMenuRef.current.contains(e.target as Node)) {
+      if (shareMenuRef.current && !shareMenuRef.current.contains(target)) {
         setIsShareOpen(false);
       }
     };
@@ -161,89 +172,199 @@ export function Header({
         )}
       </div>
 
-      {/* 2. 우측 정돈된 액션 바 (그룹화) */}
+      {/* 2. 우측 정돈된 액션 바 (컴팩트 그룹화) */}
       <div className="flex items-center gap-2">
-        {/* 🌟 그룹 A: 원격 My DB 연동 및 정기 스케줄 */}
-        {onOpenRemoteDbModal && (
+        {/* 🌟 그룹 1: AI 앱 & 솔루션 통합 드롭다운 (웹앱 빌더 / 데이터 감사 / FDE SOS) */}
+        <div className="relative" ref={aiHubRef}>
           <button
-            onClick={onOpenRemoteDbModal}
-            className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 text-slate-700 hover:text-indigo-700 transition active:scale-95"
-            title="원격지 이지데스크 터널링 My DB 연동 및 조회"
+            onClick={() => setIsAiHubOpen((prev) => !prev)}
+            className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl transition border active:scale-95 shadow-2xs ${
+              isAiHubOpen
+                ? 'bg-gradient-to-r from-purple-700 to-indigo-700 text-white border-transparent shadow-xs'
+                : 'bg-gradient-to-r from-purple-50 to-indigo-50 hover:from-purple-100 hover:to-indigo-100 text-indigo-900 border-indigo-200'
+            }`}
+            title="AI 웹앱 빌더, 데이터 감사 리포트, FDE 개발자 지원"
           >
-            <Globe className="w-3.5 h-3.5 text-indigo-600" />
-            <span>원격 My DB</span>
+            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+            <span>AI 앱 & 도구</span>
+            <span className="text-[9px] font-extrabold bg-indigo-600 text-white px-1.5 py-0.2 rounded-full leading-none hidden sm:inline-block">
+              AI
+            </span>
+            <ChevronDown className={`w-3 h-3 transition-transform ${isAiHubOpen ? 'rotate-180 text-white' : 'text-indigo-400'}`} />
+          </button>
+
+          {isAiHubOpen && (
+            <div className="absolute right-0 top-full mt-1.5 w-64 bg-white rounded-2xl border border-slate-200 shadow-xl py-1.5 z-50 text-xs animate-in fade-in zoom-in-95 duration-100 font-medium text-slate-700">
+              <div className="px-3 py-1.5 text-[11px] font-bold text-slate-400 border-b border-slate-100 flex items-center justify-between">
+                <span>AI 솔루션 & 앱 센터</span>
+                <span className="text-[10px] text-indigo-600 bg-indigo-50 px-1.5 py-0.2 rounded-md font-bold">Smart</span>
+              </div>
+
+              {/* 1. CRUD 웹앱 빌더 */}
+              {onOpenAppBuilderModal && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsAiHubOpen(false);
+                    onOpenAppBuilderModal();
+                  }}
+                  className="w-full px-3 py-2 text-left hover:bg-purple-50 hover:text-purple-900 flex items-center gap-2.5 transition"
+                >
+                  <div className="w-7 h-7 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center shrink-0">
+                    <Sparkles className="w-4 h-4 text-purple-600" />
+                  </div>
+                  <div>
+                    <div className="font-bold text-slate-900 flex items-center gap-1.5">
+                      <span>CRUD 웹앱 빌더</span>
+                      <span className="text-[9px] font-bold bg-purple-600 text-white px-1.5 py-0.1 rounded-full">No-Code</span>
+                    </div>
+                    <div className="text-[10px] text-slate-400">자연어로 맞춤형 관리 포털 1초 생성</div>
+                  </div>
+                </button>
+              )}
+
+              {/* 2. AI 데이터 감사 리포트 */}
+              {onOpenDailyAuditModal && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsAiHubOpen(false);
+                    onOpenDailyAuditModal();
+                  }}
+                  className="w-full px-3 py-2 text-left hover:bg-indigo-50 hover:text-indigo-900 flex items-center gap-2.5 transition"
+                >
+                  <div className="w-7 h-7 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0">
+                    <ShieldCheck className="w-4 h-4 text-indigo-600" />
+                  </div>
+                  <div>
+                    <div className="font-bold text-slate-900 flex items-center gap-1.5">
+                      <span>AI 데이터 감사</span>
+                      <span className="text-[9px] font-bold bg-indigo-100 text-indigo-700 px-1.5 py-0.1 rounded-full">Daily</span>
+                    </div>
+                    <div className="text-[10px] text-slate-400">전사 시트 이중전표·계산오차 전수 감사</div>
+                  </div>
+                </button>
+              )}
+
+              {/* 3. FDE 개발자 지원 */}
+              {onOpenFdeModal && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsAiHubOpen(false);
+                    onOpenFdeModal();
+                  }}
+                  className="w-full px-3 py-2 text-left hover:bg-orange-50 hover:text-orange-950 flex items-center gap-2.5 transition border-t border-slate-100 mt-1"
+                >
+                  <div className="w-7 h-7 rounded-xl bg-orange-100 text-orange-700 flex items-center justify-center shrink-0">
+                    <Wrench className="w-4 h-4 text-orange-600" />
+                  </div>
+                  <div>
+                    <div className="font-bold text-slate-900 flex items-center gap-1.5">
+                      <span>FDE 개발자 지원</span>
+                      <span className="text-[9px] font-bold bg-amber-500 text-white px-1.5 py-0.1 rounded-full">SOS</span>
+                    </div>
+                    <div className="text-[10px] text-slate-400">복잡한 수식·API 연동 1:1 맞춤 패치</div>
+                  </div>
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* 🌟 그룹 2: 연동 & 무인 자동화 통합 드롭다운 (원격 DB / 스케줄 / 모바일 연동) */}
+        <div className="relative" ref={syncHubRef}>
+          <button
+            onClick={() => setIsSyncHubOpen((prev) => !prev)}
+            className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl transition border active:scale-95 ${
+              isSyncHubOpen
+                ? 'bg-slate-800 text-white border-slate-800 shadow-xs'
+                : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
+            }`}
+            title="원격 DB 연동, 정기 스케줄, 모바일 시트봇"
+          >
+            <Zap className="w-3.5 h-3.5 text-amber-500" />
+            <span>연동·자동화</span>
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${isSyncHubOpen ? 'rotate-180' : ''}`} />
           </button>
-        )}
 
-        {onOpenScheduleModal && (
-          <button
-            onClick={onOpenScheduleModal}
-            className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-amber-50 border border-slate-200 hover:border-amber-300 text-slate-700 hover:text-amber-800 transition active:scale-95"
-            title="정기 스케줄 무인 자동화 파이프라인 설정 및 관리"
-          >
-            <Clock className="w-3.5 h-3.5 text-amber-600" />
-            <span>스케줄</span>
-          </button>
-        )}
+          {isSyncHubOpen && (
+            <div className="absolute right-0 top-full mt-1.5 w-60 bg-white rounded-2xl border border-slate-200 shadow-xl py-1.5 z-50 text-xs animate-in fade-in zoom-in-95 duration-100 font-medium text-slate-700">
+              <div className="px-3 py-1.5 text-[11px] font-bold text-slate-400 border-b border-slate-100">
+                연동 및 무인 자동화
+              </div>
 
-        {onOpenMobileIngestModal && (
-          <button
-            onClick={onOpenMobileIngestModal}
-            className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 hover:border-indigo-300 text-indigo-700 hover:text-indigo-900 transition active:scale-95 shadow-2xs"
-            title="시트봇 모바일앱 QR코드 및 수신 토큰 페어링"
-          >
-            <Smartphone className="w-3.5 h-3.5 text-indigo-600" />
-            <span>모바일 연동</span>
-            <span className="text-[9px] font-bold bg-indigo-600 text-white px-1 py-0.2 rounded-full leading-none hidden xl:inline-block">
-              App
-            </span>
-          </button>
-        )}
+              {/* 1. 원격 My DB */}
+              {onOpenRemoteDbModal && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSyncHubOpen(false);
+                    onOpenRemoteDbModal();
+                  }}
+                  className="w-full px-3 py-2 text-left hover:bg-indigo-50 hover:text-indigo-900 flex items-center gap-2.5 transition"
+                >
+                  <div className="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0">
+                    <Globe className="w-3.5 h-3.5" />
+                  </div>
+                  <div>
+                    <div className="font-bold text-slate-800 flex items-center gap-1">
+                      <span>원격 My DB</span>
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    </div>
+                    <div className="text-[10px] text-slate-400">이지데스크 터널링 원격 DB 조회</div>
+                  </div>
+                </button>
+              )}
 
-        {onOpenDailyAuditModal && (
-          <button
-            onClick={onOpenDailyAuditModal}
-            className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl bg-gradient-to-r from-indigo-50 to-blue-50 hover:from-indigo-100 hover:to-blue-100 border border-indigo-200 hover:border-indigo-300 text-indigo-700 hover:text-indigo-900 transition active:scale-95 shadow-2xs"
-            title="백엔드 AI가 전사 시트의 이중 전표, 계산 오차, 부가세 누락을 전수 감사한 일일 리포트를 확인합니다"
-          >
-            <ShieldCheck className="w-3.5 h-3.5 text-indigo-600" />
-            <span>AI 데이터 감사</span>
-            <span className="text-[9px] font-bold bg-indigo-600 text-white px-1.5 py-0.2 rounded-full leading-none hidden xl:inline-block">
-              Daily
-            </span>
-          </button>
-        )}
+              {/* 2. 정기 무인 스케줄 */}
+              {onOpenScheduleModal && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSyncHubOpen(false);
+                    onOpenScheduleModal();
+                  }}
+                  className="w-full px-3 py-2 text-left hover:bg-amber-50 hover:text-amber-900 flex items-center gap-2.5 transition"
+                >
+                  <div className="w-6 h-6 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                    <Clock className="w-3.5 h-3.5" />
+                  </div>
+                  <div>
+                    <div className="font-bold text-slate-800">무인 정기 스케줄</div>
+                    <div className="text-[10px] text-slate-400">자동 파이프라인 주기적 적재 관리</div>
+                  </div>
+                </button>
+              )}
 
-        {onOpenAppBuilderModal && (
-          <button
-            onClick={onOpenAppBuilderModal}
-            className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-xs transition active:scale-95"
-            title="자연어로 원하는 사내 관리 포털/웹앱을 1초 만에 자동 생성합니다"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-            <span>CRUD 웹앱 빌더</span>
-            <span className="text-[9px] font-bold bg-white/20 text-white px-1.5 py-0.2 rounded-full leading-none hidden xl:inline-block">
-              No-Code
-            </span>
-          </button>
-        )}
+              {/* 3. 모바일 시트봇 연동 */}
+              {onOpenMobileIngestModal && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSyncHubOpen(false);
+                    onOpenMobileIngestModal();
+                  }}
+                  className="w-full px-3 py-2 text-left hover:bg-blue-50 hover:text-blue-900 flex items-center gap-2.5 transition"
+                >
+                  <div className="w-6 h-6 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center shrink-0">
+                    <Smartphone className="w-3.5 h-3.5" />
+                  </div>
+                  <div>
+                    <div className="font-bold text-slate-800 flex items-center gap-1.5">
+                      <span>모바일 연동</span>
+                      <span className="text-[9px] font-bold bg-blue-100 text-blue-700 px-1 py-0.1 rounded-md">App</span>
+                    </div>
+                    <div className="text-[10px] text-slate-400">QR코드 및 실시간 모바일앱 페어링</div>
+                  </div>
+                </button>
+              )}
+            </div>
+          )}
+        </div>
 
-        {onOpenFdeModal && (
-          <button
-            onClick={onOpenFdeModal}
-            className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white shadow-xs transition active:scale-95"
-            title="스스로 해결하기 어려운 복잡한 수식, 외부 연동을 전문 FDE 개발자에게 SOS 요청합니다"
-          >
-            <Wrench className="w-3.5 h-3.5 text-amber-200" />
-            <span>FDE 개발자 지원</span>
-            <span className="text-[9px] font-bold bg-white/20 text-white px-1.5 py-0.2 rounded-full leading-none hidden xl:inline-block">
-              SOS
-            </span>
-          </button>
-        )}
-
-        <div className="h-4 w-px bg-slate-200 mx-0.5 hidden md:block" />
+        <div className="h-4 w-px bg-slate-200 mx-0.5" />
 
         {/* 🌟 그룹 B: 내보내기 통합 드롭다운 (Excel / SQLite / Google Sheets) */}
         <div className="relative" ref={exportMenuRef}>
