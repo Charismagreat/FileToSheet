@@ -154,6 +154,23 @@ export const InteractiveAppBuilderModal: React.FC<InteractiveAppBuilderModalProp
       onAddSheetsToWorkspace(newSheetsToAdd);
     }
 
+    // 🌟 백엔드 물리 데이터베이스(user_portal_apps)에 포털 설정 비동기 영구 저장
+    try {
+      fetch('/api/portal/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          portalName,
+          useCaseId: activeCase?.id,
+          useCaseTitle: activeCase?.title,
+          selectedModules: chosenModIds,
+          accessMode: 'ADMIN',
+        }),
+      }).catch((err) => console.warn('포털 DB 저장 예외 (런타임은 정상 가동):', err));
+    } catch (e) {
+      console.warn('포털 DB 저장 트리거 오류:', e);
+    }
+
     onLaunchPortal({
       portalName,
       useCase: activeCase,

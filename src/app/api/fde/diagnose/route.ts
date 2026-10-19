@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { insertRows, queryTable } from '@/egdesk-helpers';
+import { realtimeHub } from '@/lib/realtime-hub';
 
 interface SheetContextSummary {
   name: string;
@@ -12,6 +14,23 @@ interface DiagnoseRequestBody {
   category?: 'formula' | 'integration' | 'join' | 'performance' | 'other';
   sheets: SheetContextSummary[];
   supportType?: 'async_patch' | 'live_pairing';
+  userPhone?: string;
+}
+
+/**
+ * GET /api/fde/diagnose
+ * 최근 FDE 지원 티켓 및 패치 이력 조회
+ */
+export async function GET(req: NextRequest) {
+  try {
+    const res = await queryTable('fde_support_tickets', { limit: 20 });
+    return NextResponse.json({
+      success: true,
+      tickets: res.rows || [],
+    });
+  } catch (err: any) {
+    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -117,19 +136,62 @@ ${sheetContextText}
       }
 
       const parsed = JSON.parse(text);
-      return NextResponse.json({
+      const finalResult = {
         success: true,
         ticketId,
         supportType,
         ...parsed,
+      };
+
+      // 🌟 fde_support_tickets 물리 테이블 영구 저장
+      await saveTicketToDb({
+        ticket_no: ticketId,
+        user_phone: body.userPhone || '',
+        category,
+        support_type: supportType,
+        user_description: issueDescription,
+        tech_spec_json: JSON.stringify(finalResult.techSpec || {}),
+        proposed_patch_json: JSON.stringify(finalResult.proposedPatch || {}),
+        fde_comment: finalResult.fdeComment || '',
+        status: 'PATCH_READY',
       });
+
+      return NextResponse.json(finalResult);
     } catch (apiErr) {
       console.error('Gemini diagnose error:', apiErr);
-      return NextResponse.json(generateFallbackDiagnosis(ticketId, issueDescription, category, sheets));
+      const fallbackResult = generateFallbackDiagnosis(ticketId, issueDescription, category, sheets);
+      await saveTicketToDb({
+        ticket_no: ticketId,
+        user_phone: body.userPhone || '',
+        category,
+        support_type: supportType,
+        user_description: issueDescription,
+        tech_spec_json: JSON.stringify(fallbackResult.techSpec || {}),
+        proposed_patch_json: JSON.stringify(fallbackResult.proposedPatch || {}),
+        fde_comment: fallbackResult.fdeComment || '',
+        status: 'PATCH_READY',
+      });
+      return NextResponse.json(fallbackResult);
     }
   } catch (err: any) {
     console.error('FDE diagnose route error:', err);
     return NextResponse.json({ error: err.message || 'FDE 진단 중 오류가 발생했습니다.' }, { status: 500 });
+  }
+}
+
+async function saveTicketToDb(ticketData: any) {
+  try {
+    const nowIso = new Date().toISOString();
+    await insertRows('fde_support_tickets', [
+      {
+        ...ticketData,
+        created_at: nowIso,
+        resolved_at: null,
+      },
+    ]);
+    realtimeHub.notifyTableChange('fde_support_tickets', 'insert');
+  } catch (e) {
+    console.warn('fde_support_tickets 물리 테이블 저장 예외 (진단은 정상 응답됨):', e);
   }
 }
 

@@ -13,7 +13,21 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const userPhone = searchParams.get('phone') || req.headers.get('x-user-phone') || '';
 
-    // 최근 감사 로그 조회
+    // 1. daily_audit_reports 물리 테이블 우선 조회
+    try {
+      const reportsRes = await queryTable('daily_audit_reports', { limit: 15 });
+      if (reportsRes.rows && reportsRes.rows.length > 0) {
+        return NextResponse.json({
+          success: true,
+          lastAudit: reportsRes.rows[0],
+          history: reportsRes.rows,
+        });
+      }
+    } catch (e) {
+      console.warn('daily_audit_reports 테이블 조회 폴백:', e);
+    }
+
+    // 2. 폴백: sms_dispatch_logs 조회
     const logsRes = await queryTable('sms_dispatch_logs', { limit: 10 });
     const auditLogs = (logsRes.rows || []).filter(
       (l: any) => l.trigger_name === 'AI_일일감사_리포트'
@@ -190,9 +204,35 @@ export async function POST(req: NextRequest) {
       realtimeHub.notifyTableChange('sms_dispatch_logs', 'insert');
     }
 
+    // 🌟 daily_audit_reports 물리 데이터베이스 테이블에 감사 결과 영구 보존
+    let auditReportId = null;
+    try {
+      const nowIso = new Date().toISOString();
+      const insertRes = await insertRows('daily_audit_reports', [
+        {
+          user_phone: recipientPhone || '',
+          audit_date: todayStr,
+          total_sheets: targetSheets.length,
+          total_rows: totalRows,
+          overall_match_rate: overallMatchRate,
+          duplicate_count: duplicateCount,
+          vat_error_count: vatCount,
+          arithmetic_error_count: arithmeticCount,
+          critical_issues_json: JSON.stringify(criticalIssues),
+          report_body: reportBody,
+          created_at: nowIso,
+        },
+      ]);
+      auditReportId = insertRes?.ids?.[0] || null;
+      realtimeHub.notifyTableChange('daily_audit_reports', 'insert');
+    } catch (dbErr) {
+      console.warn('daily_audit_reports 물리 테이블 저장 예외 (감사는 정상 완료됨):', dbErr);
+    }
+
     return NextResponse.json({
       success: true,
       data: {
+        id: auditReportId,
         date: todayStr,
         totalSheets: targetSheets.length,
         totalRows,
