@@ -18,6 +18,7 @@ export const ValidationBanner: React.FC<ValidationBannerProps> = ({
   filterOnlyErrors,
   onToggleFilterOnlyErrors,
   onOpenRuleModal,
+  onOpenDailyAuditModal,
   activeRuleCount,
 }) => {
   if (activeRuleCount === 0) {
@@ -27,12 +28,23 @@ export const ValidationBanner: React.FC<ValidationBannerProps> = ({
           <SlidersHorizontal className="w-3.5 h-3.5 text-slate-400" />
           <span>활성화된 데이터 유효성 검증 규칙이 없습니다.</span>
         </span>
-        <button
-          onClick={onOpenRuleModal}
-          className="px-2.5 py-1 text-xs font-medium text-indigo-600 bg-white border border-indigo-200 rounded-md hover:bg-indigo-50 transition-colors shadow-sm"
-        >
-          검증 규칙 설정 (자연어 추가)
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onOpenRuleModal}
+            className="px-2.5 py-1 text-xs font-medium text-indigo-600 bg-white border border-indigo-200 rounded-md hover:bg-indigo-50 transition-colors shadow-sm"
+          >
+            검증 규칙 설정 (자연어 추가)
+          </button>
+          {onOpenDailyAuditModal && (
+            <button
+              onClick={onOpenDailyAuditModal}
+              className="flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-md hover:bg-indigo-100 transition-colors shadow-sm"
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-indigo-600" />
+              <span>AI 일일 감사 리포트</span>
+            </button>
+          )}
+        </div>
       </div>
     );
   }
