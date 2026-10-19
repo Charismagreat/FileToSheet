@@ -13,6 +13,8 @@ import {
   Edit2,
   Trash2,
   Check,
+  ArrowLeftRight,
+  RotateCcw,
 } from 'lucide-react';
 import { SheetRelation } from '@/lib/parser';
 
@@ -30,6 +32,10 @@ interface TableHeaderProps {
   sortDir?: 'asc' | 'desc' | null;
   onToggleColSort?: (header: string) => void;
   onSetColSort?: (header: string, dir: 'asc' | 'desc' | null) => void;
+  colWidths?: Record<string, number>;
+  onColWidthChange?: (header: string, width: number) => void;
+  onColAutoFit?: (header: string) => void;
+  onResetColWidth?: (header: string) => void;
 }
 
 function getColumnLetter(colIndex: number): string {
@@ -56,11 +62,44 @@ export function TableHeader({
   sortDir,
   onToggleColSort,
   onSetColSort,
+  colWidths,
+  onColWidthChange,
+  onColAutoFit,
+  onResetColWidth,
 }: TableHeaderProps) {
   const [draggedColIdx, setDraggedColIdx] = useState<number | null>(null);
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
   const [openMenuColIdx, setOpenMenuColIdx] = useState<number | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
+
+  // 열 너비 마우스 드래그 조절 핸들러
+  const handleResizeMouseDown = (header: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const startX = e.clientX;
+    const initialWidth = colWidths?.[header] || 120;
+
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      const deltaX = moveEvent.clientX - startX;
+      const nextWidth = Math.max(50, Math.min(800, initialWidth + deltaX));
+      if (onColWidthChange) {
+        onColWidthChange(header, nextWidth);
+      }
+    };
+
+    const onMouseUp = () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  };
 
   // 메뉴 외부 클릭 및 ESC 키 감지 시 닫기
   useEffect(() => {
@@ -141,10 +180,15 @@ export function TableHeader({
         <th className="w-10 py-1 border-r border-slate-200 bg-slate-200/50"></th>
         {headers.map((header, colIdx) => {
           const isDef = header === '일련번호' || header === '등록일시';
+          const w = colWidths?.[header];
           return (
             <th
               key={colIdx}
-              className={`py-1 px-2.5 text-center font-mono font-semibold border-r border-slate-200 tracking-wider transition-colors ${
+              style={{
+                width: w ? `${w}px` : undefined,
+                minWidth: w ? `${w}px` : '80px',
+              }}
+              className={`py-1 px-2.5 text-center font-mono font-semibold border-r border-slate-200 tracking-wider transition-colors relative group/alphacol ${
                 dragOverIdx === colIdx
                   ? 'bg-blue-100 text-blue-700 font-bold'
                   : isDef
@@ -153,6 +197,19 @@ export function TableHeader({
               }`}
             >
               {getColumnLetter(colIdx)}
+
+              {/* 1행 열 너비 리사이징 핸들 */}
+              <div
+                onMouseDown={(e) => handleResizeMouseDown(header, e)}
+                onDoubleClick={(e) => {
+                  e.stopPropagation();
+                  onColAutoFit && onColAutoFit(header);
+                }}
+                className="absolute right-0 top-0 bottom-0 w-2.5 cursor-col-resize hover:bg-indigo-400/40 z-20 group/resizer transition-colors"
+                title="드래그: 열 너비 조절 / 더블클릭: 자동 너비 맞춤"
+              >
+                <div className="w-0.5 h-full mx-auto bg-transparent group-hover/resizer:bg-indigo-500 transition-colors" />
+              </div>
             </th>
           );
         })}
@@ -171,11 +228,16 @@ export function TableHeader({
           const isTarget = dragOverIdx === colIdx;
           const isSorted = sortCol === header;
           const isMenuOpen = openMenuColIdx === colIdx;
+          const w = colWidths?.[header];
 
           return (
             <th
               key={colIdx}
               draggable={!isEditing}
+              style={{
+                width: w ? `${w}px` : undefined,
+                minWidth: w ? `${w}px` : '80px',
+              }}
               onDragStart={(e) => handleDragStart(colIdx, e)}
               onDragOver={(e) => {
                 e.preventDefault();
@@ -389,7 +451,37 @@ export function TableHeader({
 
                         <div className="h-px bg-slate-100 my-0.5" />
 
-                        {/* 3. 이름 수정 및 열 삭제 */}
+                        {/* 3. 열 너비 옵션 */}
+                        <div className="py-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onColAutoFit && onColAutoFit(header);
+                              setOpenMenuColIdx(null);
+                            }}
+                            className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-slate-100 text-slate-700 transition"
+                          >
+                            <ArrowLeftRight className="w-3.5 h-3.5 text-indigo-500" />
+                            <span>열 너비 자동 맞춤</span>
+                          </button>
+                          {colWidths?.[header] && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                onResetColWidth && onResetColWidth(header);
+                                setOpenMenuColIdx(null);
+                              }}
+                              className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-slate-100 text-slate-500 text-[11px] transition"
+                            >
+                              <RotateCcw className="w-3.5 h-3.5 text-slate-400" />
+                              <span>열 너비 기본값 복원</span>
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="h-px bg-slate-100 my-0.5" />
+
+                        {/* 4. 이름 수정 및 열 삭제 */}
                         <div className="py-1">
                           <button
                             type="button"
@@ -419,6 +511,19 @@ export function TableHeader({
                     )}
                   </div>
                 )}
+              </div>
+
+              {/* 2행 열 너비 리사이징 핸들 */}
+              <div
+                onMouseDown={(e) => handleResizeMouseDown(header, e)}
+                onDoubleClick={(e) => {
+                  e.stopPropagation();
+                  onColAutoFit && onColAutoFit(header);
+                }}
+                className="absolute right-0 top-0 bottom-0 w-2.5 cursor-col-resize hover:bg-indigo-400/40 z-20 group/resizer transition-colors"
+                title="드래그: 열 너비 조절 / 더블클릭: 자동 너비 맞춤"
+              >
+                <div className="w-0.5 h-full mx-auto bg-transparent group-hover/resizer:bg-indigo-500 transition-colors" />
               </div>
             </th>
           );
