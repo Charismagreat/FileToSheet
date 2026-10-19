@@ -21,6 +21,7 @@ import { AiChatDrawer, ChatScope } from '@/components/AiChatDrawer';
 import { BillingHistoryModal } from '@/components/BillingHistoryModal';
 import { RemoteDbModal } from '@/components/RemoteDbModal';
 import { BatchUploadMonitor } from '@/components/BatchUploadMonitor';
+import { DailyAuditReportModal } from '@/components/DailyAuditReportModal';
 import { Sparkles, Upload } from 'lucide-react';
 import { ExportTargetType } from '@/components/ExportScopeModal';
 import { FilterState } from '@/components/DataFilterPopover';
@@ -45,6 +46,7 @@ export default function FileToSheetApp() {
   const [showConsolidatedModal, setShowConsolidatedModal] = useState<boolean>(false);
   const [showEmergencyRecoveryModal, setShowEmergencyRecoveryModal] = useState<boolean>(false);
   const [showShareManagementModal, setShowShareManagementModal] = useState<boolean>(false);
+  const [showDailyAuditModal, setShowDailyAuditModal] = useState<boolean>(false);
   const [showAiChatDrawer, setShowAiChatDrawer] = useState<boolean>(false);
   const [aiChatInitialScope, setAiChatInitialScope] = useState<ChatScope>('current_sheet');
   const [ruleModalSheetIdx, setRuleModalSheetIdx] = useState<number | null>(null);
@@ -502,6 +504,7 @@ export default function FileToSheetApp() {
         onOpenOriginalModal={() => setShowOriginalModal(true)}
         onOpenShareModal={() => setShowShareModal(true)}
         onOpenShareManagementModal={() => setShowShareManagementModal(true)}
+        onOpenDailyAuditModal={() => setShowDailyAuditModal(true)}
         onOpenAiChat={() => setShowAiChatDrawer(true)}
         hasOriginalFile={Boolean(currentProject?.originalFileUrl)}
         hasSheetData={Boolean(currentSheet && currentSheet.rows.length > 0)}
@@ -957,6 +960,16 @@ export default function FileToSheetApp() {
         onClose={() => setShowMobileIngestModal(false)}
         project={currentProject}
         activeSheetName={currentSheet?.name || '기본 시트'}
+      />
+
+      {/* 25. AI 상시 데이터 감사 & 일일 리포트 모달 (전사/전체 프로젝트 시트 대상) */}
+      <DailyAuditReportModal
+        isOpen={showDailyAuditModal}
+        onClose={() => setShowDailyAuditModal(false)}
+        sheets={
+          ws.projects.flatMap((p) => p.sheets || [])
+        }
+        userPhone={auth.currentUser?.phoneNumber}
       />
     </div>
   );

@@ -30,6 +30,7 @@ interface HeaderProps {
   onOpenShareToManagerModal?: () => void;
   onOpenConsolidatedModal?: () => void;
   onOpenShareManagementModal?: () => void;
+  onOpenDailyAuditModal?: () => void;
   onOpenAiChat?: () => void;
   onExportGoogleSheets: () => void;
   onOpenOriginalModal: () => void;
@@ -57,6 +58,7 @@ export function Header({
   onOpenShareToManagerModal,
   onOpenConsolidatedModal,
   onOpenShareManagementModal,
+  onOpenDailyAuditModal,
   onOpenAiChat,
   onExportGoogleSheets,
   onOpenShareModal,
@@ -190,6 +192,20 @@ export function Header({
             <span>모바일 연동</span>
             <span className="text-[9px] font-bold bg-indigo-600 text-white px-1 py-0.2 rounded-full leading-none hidden xl:inline-block">
               App
+            </span>
+          </button>
+        )}
+
+        {onOpenDailyAuditModal && (
+          <button
+            onClick={onOpenDailyAuditModal}
+            className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl bg-gradient-to-r from-indigo-50 to-blue-50 hover:from-indigo-100 hover:to-blue-100 border border-indigo-200 hover:border-indigo-300 text-indigo-700 hover:text-indigo-900 transition active:scale-95 shadow-2xs"
+            title="백엔드 AI가 전사 시트의 이중 전표, 계산 오차, 부가세 누락을 전수 감사한 일일 리포트를 확인합니다"
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-indigo-600" />
+            <span>AI 데이터 감사</span>
+            <span className="text-[9px] font-bold bg-indigo-600 text-white px-1.5 py-0.2 rounded-full leading-none hidden xl:inline-block">
+              Daily
             </span>
           </button>
         )}

@@ -8,7 +8,6 @@ import { TableEmptyDropzone } from './TableEmptyDropzone';
 import { TablePagination } from './TablePagination';
 import { ValidationBanner } from './ValidationBanner';
 import { ValidationRuleModal } from './ValidationRuleModal';
-import { DailyAuditReportModal } from './DailyAuditReportModal';
 import {
   ValidationRule,
   generateDefaultRules,
@@ -87,7 +86,6 @@ export function TableView({
   // 🌟 유효성 검증 규칙 상태 (시트별 localStorage 연동 및 지능형 기본 규칙 생성)
   const [rules, setRules] = useState<ValidationRule[]>([]);
   const [isRuleModalOpen, setIsRuleModalOpen] = useState<boolean>(false);
-  const [isDailyAuditModalOpen, setIsDailyAuditModalOpen] = useState<boolean>(false);
   const [filterOnlyErrors, setFilterOnlyErrors] = useState<boolean>(false);
 
   // 시트 변경 시 유효성 검증 규칙 로드
@@ -284,7 +282,6 @@ export function TableView({
         filterOnlyErrors={filterOnlyErrors}
         onToggleFilterOnlyErrors={() => setFilterOnlyErrors((prev) => !prev)}
         onOpenRuleModal={() => setIsRuleModalOpen(true)}
-        onOpenDailyAuditModal={() => setIsDailyAuditModalOpen(true)}
         activeRuleCount={rules.filter((r) => r.enabled).length}
       />
 
@@ -599,13 +596,6 @@ export function TableView({
         headers={sheet.headers || []}
         rules={rules}
         onUpdateRules={handleUpdateRules}
-      />
-
-      {/* AI 상시 데이터 감사 & 일일 리포트 모달 */}
-      <DailyAuditReportModal
-        isOpen={isDailyAuditModalOpen}
-        onClose={() => setIsDailyAuditModalOpen(false)}
-        sheets={projectSheets && projectSheets.length > 0 ? projectSheets : [sheet]}
       />
     </>
   );
