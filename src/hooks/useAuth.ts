@@ -20,7 +20,11 @@ export function useAuth() {
     try {
       const savedUser = localStorage.getItem('filetosheet_user');
       if (savedUser) {
-        setCurrentUser(JSON.parse(savedUser));
+        const parsed = JSON.parse(savedUser);
+        setCurrentUser(parsed);
+        if (parsed?.phoneNumber) {
+          document.cookie = `fts_user_phone=${parsed.phoneNumber}; path=/; max-age=2592000; SameSite=Lax`;
+        }
       }
     } catch (e) {
       console.error('세션 복원 실패:', e);
@@ -97,6 +101,9 @@ export function useAuth() {
 
       setCurrentUser(data.user);
       localStorage.setItem('filetosheet_user', JSON.stringify(data.user));
+      if (data.user?.phoneNumber) {
+        document.cookie = `fts_user_phone=${data.user.phoneNumber}; path=/; max-age=2592000; SameSite=Lax`;
+      }
       setShowPhoneAuthModal(false);
       setAuthPhoneNumber('');
       setAuthCode('');
@@ -115,6 +122,7 @@ export function useAuth() {
     if (confirm('로그아웃 하시겠습니까?')) {
       setCurrentUser(null);
       localStorage.removeItem('filetosheet_user');
+      document.cookie = 'fts_user_phone=; path=/; max-age=0; SameSite=Lax';
     }
   };
 
@@ -123,8 +131,12 @@ export function useAuth() {
     setCurrentUser(newUser);
     if (newUser) {
       localStorage.setItem('filetosheet_user', JSON.stringify(newUser));
+      if (newUser.phoneNumber) {
+        document.cookie = `fts_user_phone=${newUser.phoneNumber}; path=/; max-age=2592000; SameSite=Lax`;
+      }
     } else {
       localStorage.removeItem('filetosheet_user');
+      document.cookie = 'fts_user_phone=; path=/; max-age=0; SameSite=Lax';
     }
   };
 

@@ -1,5 +1,6 @@
 'use client';
 
+import { apiFetch } from '@/lib/api';
 import React, { useState, useEffect } from 'react';
 import {
   Globe, X, Copy, Check, ExternalLink, Trash2, Lock, Unlock,
@@ -39,7 +40,7 @@ export function ShareManagementModal({
     setLoading(true);
     try {
       const phoneParam = currentUser?.phoneNumber ? `?userPhone=${currentUser.phoneNumber}` : '';
-      const res = await fetch(`/api/share/manage${phoneParam}`);
+      const res = await apiFetch(`/api/share/manage${phoneParam}`);
       const data = await res.json();
       if (data.success) {
         setWebLinks(data.webLinks || []);
@@ -64,7 +65,7 @@ export function ShareManagementModal({
     }
 
     try {
-      const res = await fetch(`/api/share/manage?id=${id}`, { method: 'DELETE' });
+      const res = await apiFetch(`/api/share/manage?id=${id}`, { method: 'DELETE' });
       const data = await res.json();
       if (data.success) {
         setWebLinks((prev) => prev.filter((item) => item.id !== id));

@@ -91,11 +91,9 @@ function buildServerEgdeskHeaders(): Record<string, string> {
     (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_EGDESK_API_KEY) ||
     EGDESK_CONFIG.apiKey;
   const projectId =
-    (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_EGDESK_PROJECT_ID) ||
-    '0ffc6d11-e290-4b54-bf04-0a7f17fe7c7b';
+    typeof process !== 'undefined' ? process.env?.NEXT_PUBLIC_EGDESK_PROJECT_ID : undefined;
   const egdeskEnv =
-    (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_EGDESK_ENV) ||
-    'production';
+    typeof process !== 'undefined' ? process.env?.NEXT_PUBLIC_EGDESK_ENV : undefined;
   if (apiKey) headers['X-Api-Key'] = apiKey;
   if (projectId) headers['X-EGDesk-Project-Id'] = projectId;
   if (egdeskEnv) headers['X-EGDesk-Env'] = egdeskEnv;

@@ -25,20 +25,23 @@ export function isPhoneNumberAdmin(phone?: string | null): boolean {
 export function checkAdminAuth(req: NextRequest): boolean {
   // 1. 요청 헤더 x-admin-phone 또는 x-user-phone 확인
   const phoneHeader = req.headers.get('x-admin-phone') || req.headers.get('x-user-phone');
-  if (phoneHeader && isPhoneNumberAdmin(phoneHeader)) {
-    return true;
+  if (phoneHeader) {
+    return isPhoneNumberAdmin(phoneHeader);
   }
 
   // 2. 쿠키 확인
   const phoneCookie = req.cookies.get('fts_user_phone')?.value || req.cookies.get('fts_admin_phone')?.value;
-  if (phoneCookie && isPhoneNumberAdmin(phoneCookie)) {
-    return true;
+  if (phoneCookie) {
+    return isPhoneNumberAdmin(phoneCookie);
   }
 
-  // 3. 로컬 개발 환경(localhost / 127.0.0.1)에서는 관리자 테스트 접근 허용
-  const host = req.headers.get('host') || '';
-  if (host.includes('localhost') || host.includes('127.0.0.1')) {
-    return true;
+  // 3. Authorization Bearer 토큰 또는 특수 헤더 확인 (내부 시스템/터널링 연동용)
+  const authHeader = req.headers.get('authorization');
+  if (authHeader && authHeader.includes('Bearer ')) {
+    const token = authHeader.replace('Bearer ', '').trim();
+    if (process.env.ADMIN_SECRET_KEY && token === process.env.ADMIN_SECRET_KEY) {
+      return true;
+    }
   }
 
   return false;

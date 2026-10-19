@@ -115,10 +115,19 @@ export function useFileUpload({
   ) => {
     setPendingUploadFile(null);
 
-    // 1. 동일 내용 파일(SHA-256 지문) 중복 감지 인터셉트
+    // 1. 동일 내용 파일(SHA-256 지문 또는 파일명+용량) 중복 감지 인터셉트
     if (!bypassDup && currentProject) {
       const fileHash = await computeFileHash(file);
-      const existing = (currentProject.originalFiles || []).find((f) => f.hash === fileHash);
+      const allOriginalDocs: OriginalDocFile[] = [
+        ...(currentProject.originalFiles || []),
+        ...(currentProject.sheets || []).flatMap((s) => s.originalFiles || []),
+      ];
+      const existing = allOriginalDocs.find(
+        (f) =>
+          (f.hash && f.hash === fileHash) ||
+          ((f as any).fileHash && (f as any).fileHash === fileHash) ||
+          (f.name === file.name && f.size === file.size)
+      );
       if (existing) {
         setDuplicateWarning({
           existingFile: existing,

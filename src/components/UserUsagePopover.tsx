@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Sparkles, Check, Database, Zap, ArrowRight, ShieldCheck, X, Smartphone, CreditCard } from 'lucide-react';
+import { Sparkles, Check, Database, Zap, ArrowRight, ShieldCheck, X, Smartphone, CreditCard, LogOut } from 'lucide-react';
 import { UserSession, ProjectWorkspace } from '@/types/workspace';
 import { getPlanLimits } from '@/lib/plan-limits';
 import { getBonusCredits } from '@/lib/coupon-helpers';
@@ -15,6 +15,7 @@ interface UserUsagePopoverProps {
   onOpenPricingModal?: () => void;
   onOpenTransferModal?: () => void;
   onOpenBillingHistory?: () => void;
+  onLogout?: () => void;
 }
 
 export function UserUsagePopover({
@@ -26,6 +27,7 @@ export function UserUsagePopover({
   onOpenPricingModal,
   onOpenTransferModal,
   onOpenBillingHistory,
+  onLogout,
 }: UserUsagePopoverProps) {
   const [bonusCredits, setBonusCredits] = useState<{ bonusTokens: number; bonusDocs: number }>({ bonusTokens: 0, bonusDocs: 0 });
 
@@ -272,6 +274,21 @@ export function UserUsagePopover({
               <span>담당자 인수인계 (휴대폰 승계)</span>
             </div>
             <span className="text-[10px] text-slate-400">데이터 이전 ➔</span>
+          </button>
+        </div>
+      )}
+
+      {onLogout && (
+        <div className="mt-3 pt-2.5 border-t border-slate-100">
+          <button
+            onClick={() => {
+              onClose();
+              onLogout();
+            }}
+            className="w-full py-2 px-3 rounded-xl bg-slate-50 hover:bg-rose-50 hover:text-rose-600 text-slate-600 font-bold text-xs flex items-center justify-center gap-1.5 border border-slate-200 hover:border-rose-200 transition active:scale-98 cursor-pointer"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            <span>로그아웃</span>
           </button>
         </div>
       )}

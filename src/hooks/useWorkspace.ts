@@ -1,5 +1,6 @@
 'use client';
 
+import { apiFetch } from '@/lib/api';
 import { useState, useEffect, useRef } from 'react';
 import { ProjectWorkspace, OriginalDocFile } from '@/types/workspace';
 import { deleteUploadedFile } from '@/lib/egdesk-db';
@@ -38,7 +39,35 @@ export function useWorkspace({ phoneNumber, plan, onPlanLimit }: UseWorkspaceOpt
     isLoadedRef.current = false;
     fetchUserProjectsFromDb(phoneNumber).then((dbProjects) => {
       if (dbProjects && dbProjects.length > 0) {
-        setProjects(dbProjects);
+        // 기존 데이터 중 등록일시가 누락된 행이 있을 경우 자동 보정
+        const sanitized = dbProjects.map((proj) => ({
+          ...proj,
+          sheets: proj.sheets.map((sh) => ({
+            ...sh,
+            rows: (sh.rows || []).map((row) => {
+              if (row['등록일시'] && String(row['등록일시']).trim() !== '') return row;
+              const matchedDoc =
+                (sh.originalFiles || []).find(
+                  (f) =>
+                    (row._fileUid && f.id === row._fileUid) ||
+                    (row._fileId && f.id === row._fileId) ||
+                    (row._fileName && f.name === row._fileName)
+                ) ||
+                (proj.originalFiles || []).find(
+                  (f) =>
+                    (row._fileUid && f.id === row._fileUid) ||
+                    (row._fileId && f.id === row._fileId) ||
+                    (row._fileName && f.name === row._fileName)
+                );
+              const fallbackDate = matchedDoc?.uploadedAt || proj.uploadedAt || '26. 10. 19. 오전 10:20:00';
+              return {
+                ...row,
+                등록일시: fallbackDate,
+              };
+            }),
+          })),
+        }));
+        setProjects(sanitized);
         setActiveProjectIndex(0);
       }
       isLoadedRef.current = true;
@@ -67,7 +96,7 @@ export function useWorkspace({ phoneNumber, plan, onPlanLimit }: UseWorkspaceOpt
           });
         }
         if (plan === 'pro') {
-          fetch('/api/sync-sqlite', {
+          apiFetch('/api/sync-sqlite', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ project: { ...currentProject, id: savedId || currentProject.id } }),

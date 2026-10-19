@@ -1,5 +1,6 @@
 'use client';
 
+import { apiFetch } from '@/lib/api';
 import React, { useState, useEffect } from 'react';
 import {
   Clock,
@@ -79,7 +80,7 @@ export function ScheduleModal({ isOpen, onClose, project }: ScheduleModalProps) 
   const fetchTasks = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/scheduler?projectId=${encodeURIComponent(projectId)}`);
+      const res = await apiFetch(`/api/scheduler?projectId=${encodeURIComponent(projectId)}`);
       const data = await res.json();
       if (data.success && Array.isArray(data.tasks)) {
         setTasks(data.tasks);
@@ -128,7 +129,7 @@ export function ScheduleModal({ isOpen, onClose, project }: ScheduleModalProps) 
     if (!title.trim() || !cronExpression.trim()) return;
 
     try {
-      const res = await fetch('/api/scheduler', {
+      const res = await apiFetch('/api/scheduler', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -157,7 +158,7 @@ export function ScheduleModal({ isOpen, onClose, project }: ScheduleModalProps) 
   const handleRunNow = async (id: number) => {
     setRunningId(id);
     try {
-      const res = await fetch('/api/scheduler', {
+      const res = await apiFetch('/api/scheduler', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, action: 'run_now' }),
@@ -176,7 +177,7 @@ export function ScheduleModal({ isOpen, onClose, project }: ScheduleModalProps) 
   // 활성/비활성 토글
   const handleToggleActive = async (id: number, currentActive: number) => {
     try {
-      const res = await fetch('/api/scheduler', {
+      const res = await apiFetch('/api/scheduler', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, isActive: currentActive === 1 ? false : true }),
@@ -194,7 +195,7 @@ export function ScheduleModal({ isOpen, onClose, project }: ScheduleModalProps) 
   const handleDeleteTask = async (id: number) => {
     if (!confirm('이 스케줄을 삭제하시겠습니까?')) return;
     try {
-      const res = await fetch(`/api/scheduler?id=${id}`, { method: 'DELETE' });
+      const res = await apiFetch(`/api/scheduler?id=${id}`, { method: 'DELETE' });
       const data = await res.json();
       if (data.success) {
         await fetchTasks();

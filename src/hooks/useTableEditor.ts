@@ -14,6 +14,20 @@ interface UseTableEditorOptions {
   onPlanLimit?: (title: string, reason: string) => void;
 }
 
+export interface DuplicateRowItem {
+  row: Record<string, any>;
+  originIdx: number;
+  fileUid?: string;
+  fileName?: string;
+  uploadedAt?: string;
+}
+
+export interface DuplicateGroup {
+  groupId: string;
+  primaryRow: DuplicateRowItem;
+  duplicateRows: DuplicateRowItem[];
+}
+
 export function useTableEditor({ projects, setProjects, activeProjectIndex, plan, onPlanLimit }: UseTableEditorOptions) {
   const [editingCell, setEditingCell] = useState<{ rowIdx: number; colKey: string } | null>(null);
   const [editValue, setEditValue] = useState<string>('');
@@ -22,6 +36,8 @@ export function useTableEditor({ projects, setProjects, activeProjectIndex, plan
   const [isAddingColumn, setIsAddingColumn] = useState<boolean>(false);
   const [newColumnName, setNewColumnName] = useState<string>('');
   const [isJoinViewActive, setIsJoinViewActive] = useState<boolean>(false);
+  const [isDeduplicateModalOpen, setIsDeduplicateModalOpen] = useState<boolean>(false);
+  const [duplicateGroups, setDuplicateGroups] = useState<DuplicateGroup[]>([]);
 
   const currentProject = projects[activeProjectIndex] || null;
   const currentSheet = currentProject ? currentProject.sheets[currentProject.activeSheetIndex] : null;
@@ -195,11 +211,102 @@ export function useTableEditor({ projects, setProjects, activeProjectIndex, plan
     setEditingCell(null);
   };
 
+  /**
+   * 중복 행 정리 모달 열기: 일련번호 및 등록일시를 제외한 비즈니스 데이터가 일치하는 중복 행 감지 및 그룹화
+   */
+  const handleOpenDeduplicateModal = () => {
+    if (!currentSheet || currentSheet.rows.length <= 1) {
+      alert('정리할 데이터 행이 부족합니다.');
+      return;
+    }
+
+    const groupMap = new Map<string, DuplicateGroup>();
+
+    currentSheet.rows.forEach((row, idx) => {
+      // 비즈니스 데이터(일련번호, 등록일시, _로 시작하는 내부 메타데이터 제외) 키 생성
+      const businessContent = Object.entries(row)
+        .filter(([k]) => !k.startsWith('_') && k !== '일련번호' && k !== '등록일시')
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([k, v]) => `${k}:${String(v ?? '').trim()}`)
+        .join('|');
+
+      const key = businessContent || row._fileUid || JSON.stringify(row);
+      const rowItem: DuplicateRowItem = {
+        row,
+        originIdx: idx,
+        fileUid: row._fileUid,
+        fileName: row._fileName,
+        uploadedAt: row.등록일시 || row._uploadedAt,
+      };
+
+      if (!groupMap.has(key)) {
+        groupMap.set(key, {
+          groupId: `group-${idx}`,
+          primaryRow: rowItem,
+          duplicateRows: [],
+        });
+      } else {
+        groupMap.get(key)!.duplicateRows.push(rowItem);
+      }
+    });
+
+    const groupsWithDupes = Array.from(groupMap.values()).filter((g) => g.duplicateRows.length > 0);
+    const totalDuplicates = groupsWithDupes.reduce((sum, g) => sum + g.duplicateRows.length, 0);
+
+    if (totalDuplicates === 0) {
+      alert('현재 시트에 내용이 동일한 중복 행이 없습니다. 깨끗한 상태입니다.');
+      return;
+    }
+
+    setDuplicateGroups(groupsWithDupes);
+    setIsDeduplicateModalOpen(true);
+  };
+
+  /**
+   * 중복 행 정리 확인 실행: 사용자가 선택한 중복 행 index들을 시트에서 제거하고 일련번호 재부여
+   */
+  const handleConfirmDeduplicate = (selectedIndices: number[]) => {
+    if (!currentSheet || selectedIndices.length === 0) return;
+
+    const selectedSet = new Set(selectedIndices);
+    const remainingRows = currentSheet.rows.filter((_, idx) => !selectedSet.has(idx));
+    const reindexedRows = remainingRows.map((r, i) => ({
+      ...r,
+      일련번호: i + 1,
+    }));
+
+    updateActiveSheet((sheet) => ({
+      ...sheet,
+      rows: reindexedRows,
+    }));
+
+    if (plan === 'pro') {
+      insertRows('data_change_logs', [
+        {
+          project_id: currentProject?.id || 'local',
+          sheet_name: currentSheet.name,
+          change_type: 'deduplicate_rows',
+          details: JSON.stringify({ removed_count: selectedIndices.length }),
+          created_at: new Date().toISOString(),
+        },
+      ]).catch((e) => console.warn('data_change_logs 기록 실패:', e));
+    }
+
+    setIsDeduplicateModalOpen(false);
+  };
+
+  const handleCloseDeduplicateModal = () => {
+    setIsDeduplicateModalOpen(false);
+  };
+
   return {
     editingCell, setEditingCell, editValue, setEditValue, saveCellEdit,
     editingHeaderIdx, setEditingHeaderIdx, editingHeaderValue, setEditingHeaderValue, saveHeaderEdit,
     isAddingColumn, setIsAddingColumn, newColumnName, setNewColumnName,
     isJoinViewActive, setIsJoinViewActive,
     handleAddColumn, handleDeleteColumn, handleReorderColumns, handleAddRow, handleDeleteRow,
+    isDeduplicateModalOpen, duplicateGroups,
+    handleOpenDeduplicateModal, handleConfirmDeduplicate, handleCloseDeduplicateModal,
+    handleDeduplicateRows: handleOpenDeduplicateModal,
   };
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Table as TableIcon, Eye, BarChart3, Search, Plus, Columns, ArrowUpDown, RotateCcw } from 'lucide-react';
+import { Table as TableIcon, Eye, BarChart3, Search, Plus, Columns, ArrowUpDown, RotateCcw, Sparkles } from 'lucide-react';
 import { DataFilterPopover, FilterState } from './DataFilterPopover';
 
 interface SubTabBarProps {
@@ -24,6 +24,7 @@ interface SubTabBarProps {
   onResetFilter?: () => void;
   isFilterActive?: boolean;
   activeFilterCount?: number;
+  onDeduplicateRows?: () => void;
 }
 
 export function SubTabBar({
@@ -46,6 +47,7 @@ export function SubTabBar({
   onResetFilter,
   isFilterActive = false,
   activeFilterCount = 0,
+  onDeduplicateRows,
 }: SubTabBarProps) {
   const isFiltered = (totalRowsCount !== undefined && rowsCount !== totalRowsCount) || Boolean(searchQuery.trim()) || isFilterActive;
 
@@ -153,6 +155,19 @@ export function SubTabBar({
             <Columns className="w-3.5 h-3.5 text-indigo-600" />
             <span>열 추가</span>
           </button>
+
+          {/* 중복 데이터 행 정리 버튼 */}
+          {onDeduplicateRows && (
+            <button
+              type="button"
+              onClick={onDeduplicateRows}
+              className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 bg-white hover:bg-purple-50 text-purple-700 hover:text-purple-800 border border-purple-200 hover:border-purple-300 rounded-lg transition shadow-2xs cursor-pointer"
+              title="동일한 내용의 중복 데이터 행들을 검사하여 원클릭으로 정리합니다"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+              <span>중복 정리</span>
+            </button>
+          )}
         </div>
       )}
     </div>

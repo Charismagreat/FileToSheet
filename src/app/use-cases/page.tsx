@@ -37,6 +37,7 @@ import {
   Send,
   MessageSquare,
   Bell,
+  Download,
 } from 'lucide-react';
 
 export default function UseCasesPage() {
@@ -1067,12 +1068,25 @@ export default function UseCasesPage() {
                 </p>
               </div>
             </div>
-            <Link
-              href="/"
-              className="shrink-0 px-4 py-2 rounded-xl bg-indigo-400 hover:bg-indigo-300 text-slate-900 font-black text-xs transition shadow-sm cursor-pointer"
-            >
-              모바일 직결 체험하기 →
-            </Link>
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              <a
+                href="https://github.com/Charismagreat/SheetBot/releases/latest/download/SheetBotAgent.apk"
+                download="SheetBotAgent.apk"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs transition shadow-sm cursor-pointer flex items-center gap-1.5"
+                title="시트봇 모바일 에이전트 APK 직접 다운로드"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>앱 다운로드 (APK)</span>
+              </a>
+              <Link
+                href="/"
+                className="px-4 py-2 rounded-xl bg-indigo-400 hover:bg-indigo-300 text-slate-900 font-black text-xs transition shadow-sm cursor-pointer"
+              >
+                모바일 직결 체험하기 →
+              </Link>
+            </div>
           </div>
         </div>
       </section>

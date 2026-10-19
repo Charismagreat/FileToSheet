@@ -1,5 +1,6 @@
 'use client';
 
+import { apiFetch } from '@/lib/api';
 import React, { useState, useEffect } from 'react';
 import {
   Building2, X, Send, CheckCircle, AlertCircle, Smartphone, Layers,
@@ -50,7 +51,7 @@ export function ShareToManagerModal({
     if (!currentUser?.phoneNumber) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/share/manage?userPhone=${currentUser.phoneNumber}`);
+      const res = await apiFetch(`/api/share/manage?userPhone=${currentUser.phoneNumber}`);
       const data = await res.json();
       if (data.success && Array.isArray(data.sentSheets)) {
         setSentList(data.sentSheets);
@@ -81,7 +82,7 @@ export function ShareToManagerModal({
       return;
     }
     try {
-      const res = await fetch(`/api/share/manage?id=${id}`, { method: 'DELETE' });
+      const res = await apiFetch(`/api/share/manage?id=${id}`, { method: 'DELETE' });
       const data = await res.json();
       if (data.success) {
         setSentList((prev) => prev.filter((item) => item.id !== id));
@@ -117,7 +118,7 @@ export function ShareToManagerModal({
 
     setIsSubmitting(true);
     try {
-      const res = await fetch('/api/share/to-manager', {
+      const res = await apiFetch('/api/share/to-manager', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

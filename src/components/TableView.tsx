@@ -33,6 +33,7 @@ interface TableViewProps {
   sortCol?: string | null;
   sortDir?: 'asc' | 'desc' | null;
   onToggleColSort?: (header: string) => void;
+  onSetColSort?: (header: string, dir: 'asc' | 'desc' | null) => void;
   projectSheets?: ParsedSheet[];
   isJoinViewActive?: boolean;
   setIsJoinViewActive?: (v: boolean) => void;
@@ -64,6 +65,7 @@ export function TableView({
   sortCol,
   sortDir,
   onToggleColSort,
+  onSetColSort,
   projectSheets,
   isJoinViewActive = false,
   setIsJoinViewActive,
@@ -224,6 +226,7 @@ export function TableView({
             sortCol={sortCol}
             sortDir={sortDir}
             onToggleColSort={onToggleColSort}
+            onSetColSort={onSetColSort}
           />
 
           <tbody className="divide-y divide-slate-100 font-sans">
@@ -264,7 +267,18 @@ export function TableView({
                   {/* 기본 시트 컬럼 렌더링 */}
                   {sheet.headers.map((header, colIdx) => {
                     const isEditing = editingCell?.rowIdx === actualIdx && editingCell?.colKey === header;
-                    const cellVal = row[header] ?? '';
+                    let cellVal = row[header] ?? '';
+                    if (header === '등록일시' && (!cellVal || String(cellVal).trim() === '')) {
+                      const matchedDoc = (sheet.originalFiles || []).find(
+                        (f) =>
+                          (row._fileUid && f.id === row._fileUid) ||
+                          (row._fileId && f.id === row._fileId) ||
+                          (row._fileName && f.name === row._fileName)
+                      );
+                      if (matchedDoc?.uploadedAt) {
+                        cellVal = matchedDoc.uploadedAt;
+                      }
+                    }
                     const isFkCol = relations.some((r) => r.foreignKey === header);
 
                     return (
