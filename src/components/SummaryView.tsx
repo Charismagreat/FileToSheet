@@ -1363,72 +1363,68 @@ export function SummaryView({
                                 <span className="text-xs font-normal text-slate-400 ml-1">{unit}</span>
                               </div>
 
-                              {/* 🌟 증감 수치 & 증감률 뱃지 영역 (3개 이상 기간 완벽 다중 대비) */}
+                              {/* 🌟 증감 수치 & 증감률 뱃지 영역 (한 줄 정렬로 깔끔하게 노출) */}
                               {!isBase ? (
-                                <div className="mt-2.5 flex flex-col gap-2">
-                                  {/* ① 최초 기준 기간(기준 1) 대비 증감 */}
-                                  <div className="flex flex-col gap-0.5">
-                                    <span className="text-[10px] text-slate-500 font-medium">
+                                <div className="mt-2.5 flex flex-col gap-1.5">
+                                  {/* ① 최초 기준 기간(기준 1) 대비 증감 (한 줄) */}
+                                  <div className="flex items-center justify-between gap-1 text-[11px] whitespace-nowrap">
+                                    <span className="text-[10px] text-slate-500 font-medium truncate shrink-0">
                                       vs {baseResult?.period.label || '기준 1'}:
                                     </span>
-                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span
+                                      className={`inline-flex items-center gap-1 text-xs font-black px-2 py-0.5 rounded-lg border shadow-2xs shrink-0 whitespace-nowrap ${
+                                        diffRateType === 'up'
+                                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200/80'
+                                          : diffRateType === 'down'
+                                          ? 'bg-rose-50 text-rose-700 border-rose-200/80'
+                                          : 'bg-slate-50 text-slate-600 border-slate-200'
+                                      }`}
+                                    >
+                                      {diffRateType === 'up' ? (
+                                        <ArrowUpRight className="w-3.5 h-3.5 text-emerald-600 stroke-[2.5]" />
+                                      ) : diffRateType === 'down' ? (
+                                        <ArrowDownRight className="w-3.5 h-3.5 text-rose-600 stroke-[2.5]" />
+                                      ) : null}
+
+                                      {/* 증감률 */}
+                                      <span className="font-mono">{diffRateText}</span>
+
+                                      {/* 증감 수치 */}
+                                      <span className="font-mono font-bold text-[11px] opacity-90 pl-1 border-l border-current/25">
+                                        {diffVal > 0 ? '+' : ''}{diffVal.toLocaleString('ko-KR')}{unit}
+                                      </span>
+                                    </span>
+                                  </div>
+
+                                  {/* ② 직전 기간(기준 2 등) 대비 증감 (한 줄) */}
+                                  {periods.length >= 3 && prevResult && prevResult.period.id !== effectiveBasePeriodId && (
+                                    <div className="flex items-center justify-between gap-1 text-[11px] pt-1 border-t border-slate-200/60 whitespace-nowrap">
+                                      <span className="text-[10px] text-slate-500 font-medium truncate shrink-0">
+                                        vs 직전({prevResult.period.label}):
+                                      </span>
                                       <span
-                                        className={`inline-flex items-center gap-1 text-xs font-black px-2.5 py-1 rounded-lg border shadow-2xs ${
-                                          diffRateType === 'up'
+                                        className={`inline-flex items-center gap-1 text-xs font-black px-2 py-0.5 rounded-lg border shadow-2xs shrink-0 whitespace-nowrap ${
+                                          diffFromPrevType === 'up'
                                             ? 'bg-emerald-50 text-emerald-700 border-emerald-200/80'
-                                            : diffRateType === 'down'
+                                            : diffFromPrevType === 'down'
                                             ? 'bg-rose-50 text-rose-700 border-rose-200/80'
                                             : 'bg-slate-50 text-slate-600 border-slate-200'
                                         }`}
                                       >
-                                        {diffRateType === 'up' ? (
+                                        {diffFromPrevType === 'up' ? (
                                           <ArrowUpRight className="w-3.5 h-3.5 text-emerald-600 stroke-[2.5]" />
-                                        ) : diffRateType === 'down' ? (
+                                        ) : diffFromPrevType === 'down' ? (
                                           <ArrowDownRight className="w-3.5 h-3.5 text-rose-600 stroke-[2.5]" />
                                         ) : null}
 
-                                        {/* 증감률 */}
-                                        <span className="font-mono">{diffRateText}</span>
+                                        {/* 직전 증감률 */}
+                                        <span className="font-mono">{diffFromPrevRateText}</span>
 
-                                        {/* 증감 수치 */}
+                                        {/* 직전 증감 수치 */}
                                         <span className="font-mono font-bold text-[11px] opacity-90 pl-1 border-l border-current/25">
-                                          {diffVal > 0 ? '+' : ''}{diffVal.toLocaleString('ko-KR')}{unit}
+                                          {diffFromPrevVal > 0 ? '+' : ''}{diffFromPrevVal.toLocaleString('ko-KR')}{unit}
                                         </span>
                                       </span>
-                                    </div>
-                                  </div>
-
-                                  {/* ② 직전 기간(기준 2 등) 대비 증감 (3개 이상 기간일 때 기준3, 기준4 등에 모두 표시) */}
-                                  {periods.length >= 3 && prevResult && prevResult.period.id !== effectiveBasePeriodId && (
-                                    <div className="flex flex-col gap-0.5 pt-1.5 border-t border-slate-200/60">
-                                      <span className="text-[10px] text-slate-500 font-medium">
-                                        vs 직전({prevResult.period.label}):
-                                      </span>
-                                      <div className="flex items-center gap-1.5 flex-wrap">
-                                        <span
-                                          className={`inline-flex items-center gap-1 text-xs font-black px-2.5 py-1 rounded-lg border shadow-2xs ${
-                                            diffFromPrevType === 'up'
-                                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200/80'
-                                              : diffFromPrevType === 'down'
-                                              ? 'bg-rose-50 text-rose-700 border-rose-200/80'
-                                              : 'bg-slate-50 text-slate-600 border-slate-200'
-                                          }`}
-                                        >
-                                          {diffFromPrevType === 'up' ? (
-                                            <ArrowUpRight className="w-3.5 h-3.5 text-emerald-600 stroke-[2.5]" />
-                                          ) : diffFromPrevType === 'down' ? (
-                                            <ArrowDownRight className="w-3.5 h-3.5 text-rose-600 stroke-[2.5]" />
-                                          ) : null}
-
-                                          {/* 직전 증감률 */}
-                                          <span className="font-mono">{diffFromPrevRateText}</span>
-
-                                          {/* 직전 증감 수치 */}
-                                          <span className="font-mono font-bold text-[11px] opacity-90 pl-1 border-l border-current/25">
-                                            {diffFromPrevVal > 0 ? '+' : ''}{diffFromPrevVal.toLocaleString('ko-KR')}{unit}
-                                          </span>
-                                        </span>
-                                      </div>
                                     </div>
                                   )}
                                 </div>
