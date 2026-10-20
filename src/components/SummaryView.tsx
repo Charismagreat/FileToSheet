@@ -540,9 +540,9 @@ export function SummaryView({
     return calculateSheetSummary({ ...sheet, rows: singleEffectiveRows });
   }, [sheet, singleEffectiveRows]);
 
-  // 8. 비교 모드: 각 기간별 집계 계산
+  // 8. 비교 모드: 각 기간별 집계 계산 (표 데이터 탭의 필터링 결과와 연동)
   const periodResults = useMemo(() => {
-    const srcRows = sheet.rows || [];
+    const srcRows = filteredRows !== undefined ? filteredRows : (sheet.rows || []);
     return periods.map((p) => {
       const pRows = srcRows.filter((row) => {
         if (!selectedDateCol) return true;
@@ -560,7 +560,7 @@ export function SummaryView({
         summary,
       };
     });
-  }, [periods, sheet, selectedDateCol]);
+  }, [periods, sheet, selectedDateCol, filteredRows]);
 
   // 9. 기간 동적 조작 함수
   const handleAddPeriod = () => {
