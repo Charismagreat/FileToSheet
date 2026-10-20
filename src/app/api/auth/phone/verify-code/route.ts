@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { queryTable, insertRows, updateRows } from '@/egdesk-helpers';
+import { CORE_2_SHEETS, getOrCreateInboxToken } from '@/lib/inbox-templates';
 
 export async function POST(request: NextRequest) {
   try {
@@ -94,6 +95,73 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // 5. 기본 프로젝트 및 2대 핵심 시트(영수증대장, 명함관리) 자동 프로비저닝
+    let projectRow: any = null;
+    const pRes = await queryTable('user_projects', {
+      filters: { phone_number: cleanNumber },
+      orderBy: 'id',
+      orderDirection: 'ASC',
+      limit: 1,
+    });
+    projectRow = pRes?.rows?.[0];
+
+    const todayDateStr = new Intl.DateTimeFormat('ko-KR', { dateStyle: 'short', timeStyle: 'medium' }).format(new Date());
+
+    if (!projectRow) {
+      // 🌟 신규 회원 기본 프로젝트 및 2대 핵심 시트(영수증대장, 명함관리) 자동 생성
+      const initialSheets = CORE_2_SHEETS.map((t) => ({
+        name: t.sheetName,
+        headers: t.headers,
+        rows: [],
+        rawRows: [],
+      }));
+
+      const newProjName = '내 비즈니스 장부';
+      const insertRes = await insertRows('user_projects', [
+        {
+          phone_number: cleanNumber,
+          project_name: newProjName,
+          category: '기본',
+          sheets_data: JSON.stringify(initialSheets),
+          original_files: JSON.stringify({ files: [] }),
+          created_at: todayDateStr,
+          updated_at: todayDateStr,
+        },
+      ]);
+
+      const newId = insertRes?.ids?.[0] || 1;
+      projectRow = {
+        id: newId,
+        phone_number: cleanNumber,
+        project_name: newProjName,
+        sheets_data: JSON.stringify(initialSheets),
+      };
+    }
+
+    // 2대 기본 시트에 대한 모바일 수신 토큰 조회/발급
+    const defaultSheetsTokens: any[] = [];
+    if (projectRow) {
+      for (const sheetDef of CORE_2_SHEETS) {
+        try {
+          const tInfo = await getOrCreateInboxToken(
+            projectRow.id,
+            projectRow.project_name || '내 비즈니스 장부',
+            sheetDef.sheetName,
+            cleanNumber
+          );
+          defaultSheetsTokens.push({
+            type: sheetDef.type,
+            sheetName: sheetDef.sheetName,
+            headers: sheetDef.headers,
+            token: tInfo.token,
+            webhookUrl: tInfo.webhookUrl,
+          });
+        } catch (tErr) {
+          console.warn(`Failed to resolve token for ${sheetDef.sheetName}:`, tErr);
+        }
+      }
+    }
+
     return NextResponse.json({
       success: true,
       message: isNewUser ? '환영합니다! 회원가입이 완료되었습니다.' : '성공적으로 로그인되었습니다.',
@@ -104,6 +172,9 @@ export async function POST(request: NextRequest) {
         nickname: user.nickname,
         plan: user.plan || 'free',
       },
+      projectId: projectRow?.id,
+      projectName: projectRow?.project_name,
+      defaultSheets: defaultSheetsTokens,
     });
   } catch (error: any) {
     console.error('인증번호 검증 오류:', error);
