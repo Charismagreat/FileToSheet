@@ -1,6 +1,6 @@
 // c:\dev\FileToSheet\src\app\api\inbox\[token]\route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { queryTable, insertRows } from '@/egdesk-helpers';
+import { queryTable, insertRows, updateRows } from '@/egdesk-helpers';
 
 /**
  * GET /api/inbox/[token]
@@ -138,7 +138,62 @@ export async function POST(
       );
     }
 
-    // 3. 감사 로그 테이블(data_change_logs)에 수신 이력 적재
+    // 3. user_projects 테이블의 대상 시트에 실제 행 적재 (물리 DB 영구 반영)
+    let projectUpdated = false;
+    if (projectId && projectId !== 'default') {
+      try {
+        const projRes = await queryTable('user_projects', {
+          filters: { id: String(projectId) },
+          limit: 1,
+        });
+
+        if (projRes?.rows && projRes.rows.length > 0) {
+          const projRow = projRes.rows[0];
+          let sheets: any[] = [];
+          try {
+            sheets = typeof projRow.sheets_data === 'string' ? JSON.parse(projRow.sheets_data) : (projRow.sheets_data || []);
+          } catch {
+            sheets = [];
+          }
+
+          let targetSheet = sheets.find((s: any) => s.name === targetSheetName);
+          if (!targetSheet) {
+            targetSheet = {
+              name: targetSheetName,
+              headers: Object.keys(insertedRowData),
+              rows: [],
+              rawRows: [],
+            };
+            sheets.push(targetSheet);
+          }
+
+          // 헤더에 없는 키는 자동 추가 (동적 헤더 확장)
+          for (const key of Object.keys(insertedRowData)) {
+            if (!targetSheet.headers.includes(key)) {
+              targetSheet.headers.push(key);
+            }
+          }
+
+          // 신규 행 추가
+          targetSheet.rows.push(insertedRowData);
+
+          const updatedNow = new Intl.DateTimeFormat('ko-KR', { dateStyle: 'short', timeStyle: 'medium' }).format(new Date());
+          await updateRows(
+            'user_projects',
+            {
+              sheets_data: JSON.stringify(sheets),
+              updated_at: updatedNow,
+            },
+            { ids: [Number(projRow.id)] }
+          );
+          projectUpdated = true;
+        }
+      } catch (dbErr) {
+        console.error('Failed to append row into user_projects:', dbErr);
+      }
+    }
+
+    // 4. 감사 로그 테이블(data_change_logs)에 수신 이력 적재
     try {
       await insertRows('data_change_logs', [
         {

@@ -13,6 +13,8 @@ export async function POST(request: NextRequest) {
     }
 
     const cleanNumber = phoneNumber.replace(/[^0-9]/g, '');
+    const now = new Date();
+    const nowIso = now.toISOString();
 
     // 1. 최근 발송된 인증번호 조회
     const verificationRes = await queryTable('phone_verifications', {
@@ -35,7 +37,6 @@ export async function POST(request: NextRequest) {
       }
 
       // 2. 만료 시간 체크
-      const now = new Date();
       const expiresAt = new Date(verificationRecord.expires_at);
 
       if (now > expiresAt) {
@@ -61,7 +62,6 @@ export async function POST(request: NextRequest) {
 
     let user = userRes?.rows?.[0];
     let isNewUser = false;
-    const nowIso = now.toISOString();
 
     if (!user) {
       // 신규 회원 자동 가입
