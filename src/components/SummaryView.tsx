@@ -107,6 +107,60 @@ function normalizeDateValue(val: any): string | null {
 /**
  * 날짜 포맷팅 헬퍼 (YYYY-MM-DD)
  */
+
+/**
+ * 🌟 컬럼명에 따른 스마트 단위(Unit) 판별 헬퍼
+ * - 수량/개수: '개', 'EA', '건', '명', '박스' 등
+ * - 금액/단가: '원'
+ * - 비율: '%p'
+ */
+function getColumnUnit(colName: string): string {
+  const lower = colName.toLowerCase();
+
+  // 1. 괄호 안에 명시된 단위 우선 추출 (예: "수량(EA)", "중량(kg)", "인원(명)")
+  const parenMatch = colName.match(/\(([^)]+)\)/);
+  if (parenMatch) {
+    const inside = parenMatch[1].trim();
+    if (inside) return inside;
+  }
+
+  // 2. 키워드 기반 수량/건수 단위 판별
+  if (lower.includes('건수') || lower.includes('접수건')) return '건';
+  if (lower.includes('인원') || lower.includes('명수') || lower.includes('고객수') || lower.includes('회원수')) return '명';
+  if (lower.includes('대수') || lower.includes('차량')) return '대';
+  if (lower.includes('박스') || lower.includes('box')) return '박스';
+  if (lower.includes('매수') || lower.includes('장수')) return '장';
+  if (lower.includes('세트') || lower.includes('set')) return '세트';
+  if (lower.includes('권')) return '권';
+  if (lower.includes('수량') || lower.includes('개수') || lower.includes('qty')) return '개';
+
+  // 3. 비율
+  if (lower.includes('율') || lower.includes('비율') || lower.includes('%')) return '%p';
+
+  // 4. 금액 관련 키워드
+  if (
+    lower.includes('금액') ||
+    lower.includes('가액') ||
+    lower.includes('단가') ||
+    lower.includes('세액') ||
+    lower.includes('합계') ||
+    lower.includes('잔액') ||
+    lower.includes('매출') ||
+    lower.includes('매입') ||
+    lower.includes('비용') ||
+    lower.includes('입금') ||
+    lower.includes('출금') ||
+    lower.includes('원') ||
+    lower.includes('price') ||
+    lower.includes('cost') ||
+    lower.includes('amount')
+  ) {
+    return '원';
+  }
+
+  return '개';
+}
+
 function formatDate(d: Date): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -1114,6 +1168,7 @@ export function SummaryView({
                               count > 0 ? 'text-blue-700' : 'text-slate-400'
                             }`}>
                               {sum.toLocaleString('ko-KR')}
+                              <span className="text-xs font-normal text-slate-400 ml-1">{getColumnUnit(colName)}</span>
                             </div>
                           </div>
 
@@ -1180,6 +1235,8 @@ export function SummaryView({
           ) : (
             <div className="flex flex-col gap-4">
               {selectedMetricCols.map((colName) => {
+                const unit = getColumnUnit(colName);
+
                 // 🌟 기준 기간(Base Period)의 통계 수치
                 const baseResult = periodResults.find((r) => r.period.id === effectiveBasePeriodId) || periodResults[0];
                 const baseStat = baseResult?.summary?.numericStats[colName];
@@ -1201,11 +1258,11 @@ export function SummaryView({
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-extrabold text-slate-900">{colName}</span>
                         <span className="text-[11px] text-slate-400">
-                          (기준: {baseResult?.period.label || '기준 기간'})
+                          (기준: {baseResult?.period.label || '기준 기간'}, 단위: {unit})
                         </span>
                       </div>
                       <div className="text-[11px] text-slate-400 font-medium">
-                        {periods.length}개 기간 증감률 & 금액 비교
+                        {periods.length}개 기간 증감률 & {unit} 수치 비교
                       </div>
                     </div>
 
@@ -1241,7 +1298,7 @@ export function SummaryView({
                           diffRateText = `${rate > 0 ? '+' : ''}${rate.toFixed(1)}%`;
                           diffRateType = rate > 0 ? 'up' : rate < 0 ? 'down' : 'neutral';
                         } else {
-                          // 기준 금액이 0원인 경우 스마트 특수 처리
+                          // 기준 금액이 0인 경우 스마트 특수 처리
                           if (currentSum > 0) {
                             diffRateText = '신규 (+100%)';
                             diffRateType = 'up';
@@ -1254,16 +1311,25 @@ export function SummaryView({
                           }
                         }
 
-                        // 2. 직전 기간 대비 증감률 산출 (3개 이상 기간)
+                        // 2. 직전 기간(기준2 등) 대비 증감률 산출
                         let diffFromPrevRateText = '';
+                        let diffFromPrevType: 'up' | 'down' | 'neutral' = 'neutral';
                         if (prevResult) {
                           if (prevSum !== 0) {
                             const pRate = ((currentSum - prevSum) / Math.abs(prevSum)) * 100;
                             diffFromPrevRateText = `${pRate > 0 ? '+' : ''}${pRate.toFixed(1)}%`;
-                          } else if (currentSum > 0) {
-                            diffFromPrevRateText = '신규 (+100%)';
+                            diffFromPrevType = pRate > 0 ? 'up' : pRate < 0 ? 'down' : 'neutral';
                           } else {
-                            diffFromPrevRateText = '0.0%';
+                            if (currentSum > 0) {
+                              diffFromPrevRateText = '신규 (+100%)';
+                              diffFromPrevType = 'up';
+                            } else if (currentSum === 0) {
+                              diffFromPrevRateText = '0.0%';
+                              diffFromPrevType = 'neutral';
+                            } else {
+                              diffFromPrevRateText = '-100%';
+                              diffFromPrevType = 'down';
+                            }
                           }
                         }
 
@@ -1294,53 +1360,75 @@ export function SummaryView({
                               <div className="text-[11px] text-slate-400 font-medium">총합계</div>
                               <div className={`text-xl font-black font-mono mt-0.5 ${theme.text}`}>
                                 {currentSum.toLocaleString('ko-KR')}
+                                <span className="text-xs font-normal text-slate-400 ml-1">{unit}</span>
                               </div>
 
-                              {/* 🌟 증감 수치 & 증감률 뱃지 동시 노출 영역 */}
+                              {/* 🌟 증감 수치 & 증감률 뱃지 영역 (3개 이상 기간 완벽 다중 대비) */}
                               {!isBase ? (
-                                <div className="mt-2.5 flex flex-col gap-1.5">
-                                  {/* 기준 기간 대비 증감 뱃지 */}
-                                  <div className="flex items-center gap-1.5 flex-wrap">
-                                    <span
-                                      className={`inline-flex items-center gap-1 text-xs font-black px-2.5 py-1 rounded-lg border shadow-2xs ${
-                                        diffRateType === 'up'
-                                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200/80'
-                                          : diffRateType === 'down'
-                                          ? 'bg-rose-50 text-rose-700 border-rose-200/80'
-                                          : 'bg-slate-50 text-slate-600 border-slate-200'
-                                      }`}
-                                    >
-                                      {diffRateType === 'up' ? (
-                                        <ArrowUpRight className="w-4 h-4 text-emerald-600 stroke-[2.5]" />
-                                      ) : diffRateType === 'down' ? (
-                                        <ArrowDownRight className="w-4 h-4 text-rose-600 stroke-[2.5]" />
-                                      ) : null}
-
-                                      {/* 증감률 */}
-                                      <span className="font-mono">{diffRateText}</span>
-
-                                      {/* 증감 수치 (원 단위 금액) */}
-                                      <span className="font-mono font-bold text-[11px] opacity-90 pl-1 border-l border-current/25">
-                                        {diffVal > 0 ? '+' : ''}{diffVal.toLocaleString('ko-KR')}원
-                                      </span>
+                                <div className="mt-2.5 flex flex-col gap-2">
+                                  {/* ① 최초 기준 기간(기준 1) 대비 증감 */}
+                                  <div className="flex flex-col gap-0.5">
+                                    <span className="text-[10px] text-slate-500 font-medium">
+                                      vs {baseResult?.period.label || '기준 1'}:
                                     </span>
-                                  </div>
-
-                                  {/* 3개 이상 기간일 때 직전 기간 대비 추이 보조 표기 */}
-                                  {periods.length >= 3 && prevResult && prevResult.period.id !== effectiveBasePeriodId && (
-                                    <div className="text-[10px] text-slate-500 flex items-center gap-1 pt-0.5">
-                                      <span className="text-slate-400">직전({prevResult.period.label}) 대비:</span>
+                                    <div className="flex items-center gap-1.5 flex-wrap">
                                       <span
-                                        className={`font-mono font-bold ${
-                                          diffFromPrevVal > 0
-                                            ? 'text-emerald-600'
-                                            : diffFromPrevVal < 0
-                                            ? 'text-rose-600'
-                                            : 'text-slate-500'
+                                        className={`inline-flex items-center gap-1 text-xs font-black px-2.5 py-1 rounded-lg border shadow-2xs ${
+                                          diffRateType === 'up'
+                                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200/80'
+                                            : diffRateType === 'down'
+                                            ? 'bg-rose-50 text-rose-700 border-rose-200/80'
+                                            : 'bg-slate-50 text-slate-600 border-slate-200'
                                         }`}
                                       >
-                                        {diffFromPrevVal > 0 ? '+' : ''}{diffFromPrevVal.toLocaleString('ko-KR')}원 ({diffFromPrevRateText})
+                                        {diffRateType === 'up' ? (
+                                          <ArrowUpRight className="w-3.5 h-3.5 text-emerald-600 stroke-[2.5]" />
+                                        ) : diffRateType === 'down' ? (
+                                          <ArrowDownRight className="w-3.5 h-3.5 text-rose-600 stroke-[2.5]" />
+                                        ) : null}
+
+                                        {/* 증감률 */}
+                                        <span className="font-mono">{diffRateText}</span>
+
+                                        {/* 증감 수치 */}
+                                        <span className="font-mono font-bold text-[11px] opacity-90 pl-1 border-l border-current/25">
+                                          {diffVal > 0 ? '+' : ''}{diffVal.toLocaleString('ko-KR')}{unit}
+                                        </span>
                                       </span>
+                                    </div>
+                                  </div>
+
+                                  {/* ② 직전 기간(기준 2 등) 대비 증감 (3개 이상 기간일 때 기준3, 기준4 등에 모두 표시) */}
+                                  {periods.length >= 3 && prevResult && prevResult.period.id !== effectiveBasePeriodId && (
+                                    <div className="flex flex-col gap-0.5 pt-1.5 border-t border-slate-200/60">
+                                      <span className="text-[10px] text-slate-500 font-medium">
+                                        vs 직전({prevResult.period.label}):
+                                      </span>
+                                      <div className="flex items-center gap-1.5 flex-wrap">
+                                        <span
+                                          className={`inline-flex items-center gap-1 text-xs font-black px-2.5 py-1 rounded-lg border shadow-2xs ${
+                                            diffFromPrevType === 'up'
+                                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200/80'
+                                              : diffFromPrevType === 'down'
+                                              ? 'bg-rose-50 text-rose-700 border-rose-200/80'
+                                              : 'bg-slate-50 text-slate-600 border-slate-200'
+                                          }`}
+                                        >
+                                          {diffFromPrevType === 'up' ? (
+                                            <ArrowUpRight className="w-3.5 h-3.5 text-emerald-600 stroke-[2.5]" />
+                                          ) : diffFromPrevType === 'down' ? (
+                                            <ArrowDownRight className="w-3.5 h-3.5 text-rose-600 stroke-[2.5]" />
+                                          ) : null}
+
+                                          {/* 직전 증감률 */}
+                                          <span className="font-mono">{diffFromPrevRateText}</span>
+
+                                          {/* 직전 증감 수치 */}
+                                          <span className="font-mono font-bold text-[11px] opacity-90 pl-1 border-l border-current/25">
+                                            {diffFromPrevVal > 0 ? '+' : ''}{diffFromPrevVal.toLocaleString('ko-KR')}{unit}
+                                          </span>
+                                        </span>
+                                      </div>
                                     </div>
                                   )}
                                 </div>
@@ -1363,7 +1451,7 @@ export function SummaryView({
                               <div className="flex items-center justify-between text-[11px]">
                                 <span className="text-slate-400">평균값</span>
                                 <span className="font-mono font-bold text-slate-700">
-                                  {stat ? stat.avg.toLocaleString('ko-KR') : '-'}
+                                  {stat ? `${stat.avg.toLocaleString('ko-KR')} ${unit}` : '-'}
                                 </span>
                               </div>
                             </div>
