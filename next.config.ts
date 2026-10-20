@@ -28,10 +28,6 @@ const getLocalIPs = () => {
 };
 
 const nextConfig: NextConfig = {
-  eslint: {
-    // Always skip ESLint errors to prevent blocking on auto-generated files
-    ignoreDuringBuilds: true,
-  },
   // Only use basePath in production mode, not in dev mode
   basePath: process.env.NODE_ENV === 'development' ? '' : (process.env.EGDESK_BASE_PATH || ''),
   assetPrefix: process.env.NODE_ENV === 'development' ? '' : (process.env.EGDESK_BASE_PATH || ''),
@@ -41,6 +37,10 @@ const nextConfig: NextConfig = {
     // Always skip TypeScript errors to prevent blocking on auto-generated files
     ignoreBuildErrors: true,
   },
+  eslint: {
+    // Always skip ESLint errors to prevent blocking on auto-generated files
+    ignoreDuringBuilds: true,
+  },
   experimental: {
     serverActions: {
       bodySizeLimit: '10mb',
@@ -49,18 +49,6 @@ const nextConfig: NextConfig = {
         '127.0.0.1:3000',
         'localhost:4000',
         '127.0.0.1:4000',
-        'localhost:4001',
-        '127.0.0.1:4001',
-        'localhost:4002',
-        '127.0.0.1:4002',
-        'localhost:4003',
-        '127.0.0.1:4003',
-        'localhost:4004',
-        '127.0.0.1:4004',
-        'localhost:4005',
-        '127.0.0.1:4005',
-        'localhost:*',
-        '127.0.0.1:*',
         '*.loca.lt',
         '*.ngrok.io',
         '*.ngrok-free.app',

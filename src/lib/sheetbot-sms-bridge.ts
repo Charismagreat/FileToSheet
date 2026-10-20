@@ -34,8 +34,9 @@ function buildCallbackUrl(explicit?: string): string {
   let url = explicit;
   if (!url) {
     const base = process.env.NEXTAUTH_URL;
-    // 브릿지는 https callbackUrl만 허용
-    const origin = base && base.startsWith('https://') ? base : PUBLIC_DOMAIN;
+    // 브릿지는 https 또는 로컬 개발 환경(localhost/127.0.0.1) callbackUrl 허용
+    const isLocal = base && (base.includes('localhost') || base.includes('127.0.0.1'));
+    const origin = base && (base.startsWith('https://') || isLocal) ? base : PUBLIC_DOMAIN;
     url = `${origin.replace(/\/$/, '')}/api/sms/callback`;
     const secret = process.env.SMS_CALLBACK_SECRET;
     if (secret) url += `?token=${encodeURIComponent(secret)}`;

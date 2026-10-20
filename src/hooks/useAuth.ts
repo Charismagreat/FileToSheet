@@ -7,7 +7,7 @@ import { UserSession } from '@/types/workspace';
 export function useAuth() {
   const [currentUser, setCurrentUser] = useState<UserSession | null>(null);
   const [showPhoneAuthModal, setShowPhoneAuthModal] = useState<boolean>(false);
-  const [authPhoneNumber, setAuthPhoneNumber] = useState<string>('');
+  const [authPhoneNumber, setAuthPhoneNumber] = useState<string>(process.env.NODE_ENV === 'development' ? '010-7216-5884' : '');
   const [authCode, setAuthCode] = useState<string>('');
   const [authStep, setAuthStep] = useState<'phone' | 'code'>('phone');
   const [authLoading, setAuthLoading] = useState<boolean>(false);
@@ -21,13 +21,27 @@ export function useAuth() {
       const savedUser = localStorage.getItem('filetosheet_user');
       if (savedUser) {
         const parsed = JSON.parse(savedUser);
-        setCurrentUser(parsed);
         if (parsed?.phoneNumber) {
+          setCurrentUser(parsed);
           document.cookie = `fts_user_phone=${parsed.phoneNumber}; path=/; max-age=2592000; SameSite=Lax`;
+          return;
         }
       }
     } catch (e) {
       console.error('세션 복원 실패:', e);
+    }
+
+    // ⚡ 개발 환경 예외: 010-7216-5884 최고관리자로 별도 로그인 없이 자동 로그인
+    if (process.env.NODE_ENV === 'development') {
+      const devSuperAdmin: UserSession = {
+        id: 1,
+        phoneNumber: '010-7216-5884',
+        nickname: '최고관리자 (010-7216-5884)',
+        plan: 'enterprise',
+      };
+      setCurrentUser(devSuperAdmin);
+      localStorage.setItem('filetosheet_user', JSON.stringify(devSuperAdmin));
+      document.cookie = `fts_user_phone=${devSuperAdmin.phoneNumber}; path=/; max-age=2592000; SameSite=Lax`;
     }
   }, []);
 

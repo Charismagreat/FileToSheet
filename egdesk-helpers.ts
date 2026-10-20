@@ -1,7 +1,7 @@
 /**
  * EGDesk Helper Functions for Next.js
  *
- * Generation version: 3 (EGDesk regenerates when stale)
+ * Generation version: 4 (EGDesk regenerates when stale)
  *
  * Type-safe helpers for EGDesk user data, Google Workspace (Sheets / Drive / Docs / Slides MCP + sync, Gmail, Apps Script),
  * FinanceHub (banks, cards, Hometax, promissory notes),
@@ -26,7 +26,7 @@
 import { EGDESK_CONFIG } from './egdesk.config';
 
 /** @internal Used by EGDesk to detect stale generated helpers. */
-export const EGDESK_HELPERS_GENERATION_VERSION = '3';
+export const EGDESK_HELPERS_GENERATION_VERSION = '4';
 
 /**
  * Resolve EGDesk tunnel basePath for client-side fetch.
@@ -73,6 +73,8 @@ export function getNextAuthBasePath(): string {
   return root ? `${root}/api/auth` : '/api/auth';
 }
 
+const VISITOR_SESSION_KEY = 'egdesk_visitor_session';
+
 /**
  * Fetch wrapper that prepends EGDesk basePath to relative URLs.
  * Use for /api/* routes and /__*_proxy paths in client components.
@@ -81,7 +83,30 @@ export async function apiFetch(path: string, options?: RequestInit): Promise<Res
   const basePath = getEgdeskBasePath();
   const url =
     path.startsWith('/') && !path.startsWith('//') ? `${basePath}${path}` : path;
-  return fetch(url, options);
+
+  const headers = new Headers(options?.headers);
+  if (typeof window !== 'undefined') {
+    const sessId = window.localStorage.getItem(VISITOR_SESSION_KEY);
+    if (
+      sessId &&
+      !headers.has('x-visitor-session-id') &&
+      !headers.has('x-egdesk-visitor-session')
+    ) {
+      headers.set('x-visitor-session-id', sessId);
+    }
+    if (sessId && !document.cookie.includes(`${VISITOR_SESSION_KEY}=`)) {
+      const isSecure = window.location.protocol === 'https:';
+      document.cookie = `${VISITOR_SESSION_KEY}=${encodeURIComponent(sessId)}; path=/; max-age=2592000; SameSite=Lax${
+        isSecure ? '; Secure' : ''
+      }`;
+    }
+  }
+
+  return fetch(url, {
+    ...options,
+    headers,
+    credentials: options?.credentials ?? 'same-origin',
+  });
 }
 
 /** Build EGDesk routing headers (project-id + env) for server-side direct calls. */
@@ -116,11 +141,73 @@ function resolveServerEgdeskApiUrl(): string {
     if (pub && String(pub).trim()) {
       return String(pub).replace(/\/$/, '');
     }
+    const tunnelEnv = process.env?.NEXT_PUBLIC_EGDESK_TUNNEL_URL;
+    if (tunnelEnv && String(tunnelEnv).trim()) {
+      return String(tunnelEnv).replace(/\/$/, '');
+    }
+  }
+  const tunnelConfig = (EGDESK_CONFIG as { tunnelUrl?: string }).tunnelUrl;
+  if (tunnelConfig && String(tunnelConfig).trim()) {
+    return String(tunnelConfig).replace(/\/$/, '');
   }
   return String(EGDESK_CONFIG.apiUrl || '').replace(/\/$/, '');
 }
 
-const VISITOR_SESSION_KEY = 'egdesk_visitor_session';
+/** Server MCP root for SSE upstream (realtime hub, etc.). */
+export function resolveServerEgdeskMcpApiUrlForSse(): string {
+  return resolveServerEgdeskApiUrl();
+}
+
+function trimMcpRoot(url: string): string {
+  return url.replace(/\/$/, '');
+}
+
+function isLocalMcpUrl(url: string): boolean {
+  if (!url) return false;
+  try {
+    const host = new URL(url).hostname;
+    return host === 'localhost' || host === '127.0.0.1' || host === '[::1]';
+  } catch {
+    return url.includes('localhost') || url.includes('127.0.0.1');
+  }
+}
+
+function remoteMcpRootFromEnvAndConfig(): string {
+  const configured = trimMcpRoot(
+    (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_EGDESK_API_URL) || '',
+  );
+  const tunnelEnv = trimMcpRoot(
+    (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_EGDESK_TUNNEL_URL) || '',
+  );
+  const tunnelConfig = trimMcpRoot((EGDESK_CONFIG as { tunnelUrl?: string }).tunnelUrl || '');
+  if (tunnelEnv && !isLocalMcpUrl(tunnelEnv)) return tunnelEnv;
+  if (configured && !isLocalMcpUrl(configured)) return configured;
+  if (tunnelConfig && !isLocalMcpUrl(tunnelConfig)) return tunnelConfig;
+  return '';
+}
+
+/**
+ * Browser MCP root for `/user-data/sse` EventSource.
+ * Published sites must not use EGDESK_CONFIG.apiUrl when it points at localhost.
+ */
+export function resolveBrowserEgdeskMcpApiUrl(): string {
+  if (typeof window === 'undefined') {
+    return resolveServerEgdeskMcpApiUrlForSse();
+  }
+  if (isLoopbackDevHost(window.location.hostname)) {
+    const fromEnv = trimMcpRoot(
+      (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_EGDESK_API_URL) || '',
+    );
+    if (fromEnv) return fromEnv;
+    return trimMcpRoot(EGDESK_CONFIG.apiUrl || 'http://localhost:8080');
+  }
+  const remote = remoteMcpRootFromEnvAndConfig();
+  if (remote) return remote;
+  console.error(
+    '[EGDesk] No remote MCP URL for user-data SSE on this host. Set NEXT_PUBLIC_EGDESK_API_URL or egdesk.config tunnelUrl.',
+  );
+  return '';
+}
 
 export type WorkspaceVisitorCallOptions = {
   asVisitor?: boolean;
@@ -1494,12 +1581,18 @@ export function onUserDataChanged(
     return () => {};
   }
 
-  const apiUrl = EGDESK_CONFIG.apiUrl || '';
+  const apiUrl = resolveBrowserEgdeskMcpApiUrl();
   const apiKey = EGDESK_CONFIG.apiKey || '';
   const projectId =
     (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_EGDESK_PROJECT_ID) || '';
   const egdeskEnv =
     (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_EGDESK_ENV) || '';
+  if (!apiUrl) {
+    console.warn(
+      '[EGDesk] User-data SSE skipped: no MCP URL for this host (check NEXT_PUBLIC_EGDESK_API_URL or tunnelUrl).',
+    );
+    return () => {};
+  }
   const sseParams = new URLSearchParams();
   if (apiKey) sseParams.set('key', apiKey);
   if (projectId) sseParams.set('egdeskId', projectId);
@@ -3514,7 +3607,7 @@ export async function callAiCallerTool(
 }
 
 /** Known API key names discovered at setup time from EGDesk AI Keys Manager */
-export const AI_KEY_NAMES = ['wonconductor'] as const;
+export const AI_KEY_NAMES = ['wonconduct'] as const;
 
 export type AiCallerCallOptions = {
   systemPrompt?: string;
@@ -3543,7 +3636,7 @@ export type AiCallerCallOptions = {
     mimeType?: string;
   }>;
   /** Select a specific Google API key by name (as saved in EGDesk AI Keys Manager). Leave empty to use the default key. */
-  keyName?: 'wonconductor' | (string & {});
+  keyName?: 'wonconduct' | (string & {});
   /** standard = default. flex = 50% cheaper, slower/sheddable. priority = more expensive. */
   serviceTier?: 'standard' | 'flex' | 'priority';
   /** Explicit cache name from createAiCallerCache (cachedContents/...). */
@@ -3629,7 +3722,7 @@ export type AiCallerGenerateImageOptions = {
   fallbackModel?: string;
   caller?: string;
   /** Select a specific Google API key by name (as saved in EGDesk AI Keys Manager). Leave empty to use the default key. */
-  keyName?: 'wonconductor' | (string & {});
+  keyName?: 'wonconduct' | (string & {});
   /** standard = default. flex = 50% cheaper, slower/sheddable. */
   serviceTier?: 'standard' | 'flex' | 'priority';
 };
@@ -3728,7 +3821,7 @@ export type AiCallerBatchSubmitOptions = {
   model?: string;
   displayName?: string;
   caller?: string;
-  keyName?: 'wonconductor' | (string & {});
+  keyName?: 'wonconduct' | (string & {});
 };
 
 /** Submit an async Gemini Batch job (50% of standard price). Poll with getAiCallerBatch. */
@@ -3765,7 +3858,7 @@ export type AiCallerCacheCreateOptions = {
   filePaths?: string[];
   files?: AiCallerCallOptions['files'];
   caller?: string;
-  keyName?: 'wonconductor' | (string & {});
+  keyName?: 'wonconduct' | (string & {});
 };
 
 /** Create an explicit Gemini context cache. Pass the returned name as cachedContent on later calls. */

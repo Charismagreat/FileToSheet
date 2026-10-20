@@ -46,7 +46,10 @@ export async function POST(request: NextRequest) {
       message: `[FileToSheet] 인증번호 ${code} (5분 이내 입력)`,
       triggerName: '[FileToSheet] 휴대폰 인증번호',
     });
-    if (failure) return failure;
+    // ⚡ 개발 환경에서 010-7216-5884 최고관리자는 브릿지 오프라인 실패와 무관하게 즉시 통과
+    if (failure && !(isDevEnv() && cleanNumber === '01072165884')) {
+      return failure;
+    }
 
     return NextResponse.json({
       success: true,

@@ -198,6 +198,15 @@ export default function AdminPage() {
     } catch (e) {
       console.error('관리자 권한 확인 오류:', e);
     }
+
+    // ⚡ 개발 환경 예외: 010-7216-5884 최고관리자로 별도 로그인 없이 즉시 권한 통과
+    if (process.env.NODE_ENV === 'development') {
+      setIsAuthorized(true);
+      setAdminPhone('010-7216-5884');
+      setAuthChecked(true);
+      return;
+    }
+
     setIsAuthorized(false);
     setAuthChecked(true);
   }, []);

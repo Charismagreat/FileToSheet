@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { ProjectWorkspace, OriginalDocFile } from '@/types/workspace';
 import { parseFileOnClient } from '@/lib/file-parser-client';
 import {
@@ -16,6 +16,7 @@ import {
   validateUploadFile,
 } from '@/lib/plan-limits';
 import { generateFileUid, getUniqueFileName, computeFileHash } from '@/lib/sheet-helpers';
+import { saveUserProjectToDb } from '@/lib/project-db';
 
 export interface LastUploadAction {
   fileUid: string;
@@ -31,6 +32,7 @@ interface UseFileUploadOptions {
   setProjects: React.Dispatch<React.SetStateAction<ProjectWorkspace[]>>;
   activeProjectIndex: number;
   setActiveProjectIndex: (idx: number) => void;
+  phoneNumber?: string;
   plan?: string;
   onPlanLimit?: (title: string, reason: string) => void;
 }
@@ -40,6 +42,7 @@ export function useFileUpload({
   setProjects,
   activeProjectIndex,
   setActiveProjectIndex,
+  phoneNumber,
   plan,
   onPlanLimit,
 }: UseFileUploadOptions) {
@@ -250,156 +253,183 @@ export function useFileUpload({
       let recordedRowCount = 0;
       let recordedSheetName = '';
 
-      // 5. 프로젝트 및 시트 상태 업데이트 (모드별 분기)
-      setProjects((prev) => {
-        const next = [...prev];
+      // 5. 대상 프로젝트 업데이트 객체 사전 계산 (비동기 상태 클로저 이슈 완전 해결)
+      let projectToSave: ProjectWorkspace;
+      let newActiveIndex = activeProjectIndex;
 
-        // [모드 A] 지정된 시트(또는 현재 시트) 끝에 행 추가 (append_rows)
-        if (mode === 'append_rows' && next[activeProjectIndex]) {
-          const proj = { ...next[activeProjectIndex] };
-          const s = [...proj.sheets];
-          const destIdx = targetSheetIndex !== undefined ? targetSheetIndex : proj.activeSheetIndex;
-          const target = s[destIdx] || s[0];
-          const fixedHeaders =
-            target.headers?.length ? target.headers : (parsedSheets[0]?.headers || []);
+      if (mode === 'append_rows' && projects[activeProjectIndex]) {
+        const proj = JSON.parse(JSON.stringify(projects[activeProjectIndex])) as ProjectWorkspace;
+        const s = [...proj.sheets];
+        const destIdx = targetSheetIndex !== undefined ? targetSheetIndex : proj.activeSheetIndex;
+        const target = s[destIdx] || s[0];
+        const fixedHeaders = target.headers?.length ? target.headers : (parsedSheets[0]?.headers || []);
 
-          if (!target.rows?.length) {
-            const tr = truncateRowsToLimit(plan, 0, parsedSheets[0]?.rows || []);
-            recordedRowCount = tr.rows.length;
-            recordedSheetName = target.name;
-            s[destIdx] = {
-              ...target,
-              headers: fixedHeaders,
-              originalFiles: [...(target.originalFiles || []), docItem],
-              rows: tr.rows.map((r) => ({
-                ...r,
-                _fileId: fileId,
-                _fileUid: fileUid,
-                _fileName: resolvedFileName,
-              })),
-            };
-          } else {
-            const rawIncoming = parsedSheets.flatMap((sh) => sh.rows);
-            const tr = truncateRowsToLimit(plan, target.rows.length, rawIncoming);
-            recordedRowCount = tr.rows.length;
-            recordedSheetName = target.name;
-
-            const mappedRows = tr.rows.map((row, i) => {
-              const cleanRow: Record<string, any> = {};
-              for (const h of fixedHeaders) {
-                cleanRow[h] = row[h] !== undefined && row[h] !== null ? row[h] : '';
-              }
-
-              // 기존 열 스키마에 없는 추가 필드는 '비고'에 보존
-              const extra = Object.entries(row)
-                .filter(([k]) => !fixedHeaders.includes(k) && !k.startsWith('_'))
-                .map(([k, v]) => `[${k}] ${v}`)
-                .join(' | ');
-
-              if (extra && fixedHeaders.includes('비고')) {
-                cleanRow['비고'] = cleanRow['비고'] ? `${cleanRow['비고']} | ${extra}` : extra;
-              }
-
-              cleanRow['일련번호'] = target.rows.length + i + 1;
-              cleanRow['등록일시'] = cleanRow['등록일시'] || row.등록일시 || nowKst;
-              cleanRow._fileId = fileId;
-              cleanRow._fileUid = fileUid;
-              cleanRow._fileName = resolvedFileName;
-              return cleanRow;
-            });
-
-            s[destIdx] = {
-              ...target,
-              headers: fixedHeaders,
-              rows: [...target.rows, ...mappedRows],
-              originalFiles: [...(target.originalFiles || []), docItem],
-            };
-          }
-
-          const prevDocs = proj.originalFiles || (proj.originalFileUrl ? [{
-            uid: generateFileUid(),
-            name: proj.name || '기존 문서',
-            url: proj.originalFileUrl,
-            type: proj.originalFileType,
-            size: proj.originalFileSize,
-            uploadedAt: proj.uploadedAt,
-          }] : []);
-
-          proj.originalFiles = [...prevDocs, docItem];
-          proj.originalFileUrl = permanentUrl;
-          proj.originalFileType = file.type;
-          proj.originalFileSize = file.size;
-          proj.sheets = s;
-          proj.activeSheetIndex = destIdx; // 병합된 시트로 화면 즉시 전환
-          next[activeProjectIndex] = proj;
-
-        // [모드 B] 현재 프로젝트 내 새 시트로 생성 (new_sheet)
-        } else if (mode === 'new_sheet' && next[activeProjectIndex]) {
-          const proj = { ...next[activeProjectIndex] };
-          const check = checkSheetLimit(plan, proj.sheets.length);
-
-          if (!check.allowed) {
-            if (onPlanLimit) onPlanLimit('시트 생성 한도 도달', check.message);
-            else alert(check.message);
-            return prev;
-          }
-
-          const incomingSheets = parsedSheets.map((sh) => ({
-            ...sh,
-            originalFiles: [docItem],
-            rows: truncateRowsToLimit(plan, 0, sh.rows).rows.map((r) => ({
+        if (!target.rows?.length) {
+          const tr = truncateRowsToLimit(plan, 0, parsedSheets[0]?.rows || []);
+          recordedRowCount = tr.rows.length;
+          recordedSheetName = target.name;
+          s[destIdx] = {
+            ...target,
+            headers: fixedHeaders,
+            originalFiles: [...(target.originalFiles || []), docItem],
+            rows: tr.rows.map((r) => ({
               ...r,
               _fileId: fileId,
               _fileUid: fileUid,
               _fileName: resolvedFileName,
             })),
-          }));
-
-          recordedRowCount = incomingSheets.reduce((sum, s) => sum + s.rows.length, 0);
-          recordedSheetName = incomingSheets[0]?.name || '새 시트';
-
-          proj.sheets = [...proj.sheets, ...incomingSheets];
-          proj.activeSheetIndex = proj.sheets.length - 1;
-          proj.originalFiles = [...(proj.originalFiles || []), docItem];
-          proj.originalFileUrl = permanentUrl;
-          next[activeProjectIndex] = proj;
-
-        // [모드 C] 새 프로젝트로 생성 (new_document)
-        } else {
-          const enrichedSheets = parsedSheets.map((sh) => ({
-            ...sh,
-            originalFiles: [docItem],
-            rows: truncateRowsToLimit(plan, 0, sh.rows).rows.map((r) => ({
-              ...r,
-              _fileId: fileId,
-              _fileUid: fileUid,
-              _fileName: resolvedFileName,
-            })),
-          }));
-
-          recordedRowCount = enrichedSheets.reduce((sum, s) => sum + s.rows.length, 0);
-          recordedSheetName = enrichedSheets[0]?.name || 'Sheet1';
-
-          const newProj: ProjectWorkspace = {
-            id: null,
-            filename: resolvedFileName,
-            name: resolvedFileName.replace(/\.[^/.]+$/, ''),
-            category,
-            sheets: enrichedSheets,
-            activeSheetIndex: 0,
-            originalFileUrl: permanentUrl,
-            originalFileType: file.type,
-            originalFileSize: file.size,
-            originalFiles: [docItem],
-            uploadedAt: nowKst,
           };
+        } else {
+          const rawIncoming = parsedSheets.flatMap((sh) => sh.rows);
+          const tr = truncateRowsToLimit(plan, target.rows.length, rawIncoming);
+          recordedRowCount = tr.rows.length;
+          recordedSheetName = target.name;
 
-          next.push(newProj);
-          setActiveProjectIndex(next.length - 1);
+          const mappedRows = tr.rows.map((row, i) => {
+            const cleanRow: Record<string, any> = {};
+            for (const h of fixedHeaders) {
+              cleanRow[h] = row[h] !== undefined && row[h] !== null ? row[h] : '';
+            }
+            const extra = Object.entries(row)
+              .filter(([k]) => !fixedHeaders.includes(k) && !k.startsWith('_'))
+              .map(([k, v]) => `[${k}] ${v}`)
+              .join(' | ');
+
+            if (extra && fixedHeaders.includes('비고')) {
+              cleanRow['비고'] = cleanRow['비고'] ? `${cleanRow['비고']} | ${extra}` : extra;
+            }
+            cleanRow['일련번호'] = target.rows.length + i + 1;
+            cleanRow['등록일시'] = cleanRow['등록일시'] || row.등록일시 || nowKst;
+            cleanRow._fileId = fileId;
+            cleanRow._fileUid = fileUid;
+            cleanRow._fileName = resolvedFileName;
+            return cleanRow;
+          });
+
+          s[destIdx] = {
+            ...target,
+            headers: fixedHeaders,
+            rows: [...target.rows, ...mappedRows],
+            originalFiles: [...(target.originalFiles || []), docItem],
+          };
         }
 
+        const prevDocs = proj.originalFiles || (proj.originalFileUrl ? [{
+          uid: generateFileUid(),
+          name: proj.name || '기존 문서',
+          url: proj.originalFileUrl,
+          type: proj.originalFileType,
+          size: proj.originalFileSize,
+          uploadedAt: proj.uploadedAt,
+        }] : []);
+
+        proj.originalFiles = [...prevDocs, docItem];
+        proj.originalFileUrl = permanentUrl;
+        proj.originalFileType = file.type;
+        proj.originalFileSize = file.size;
+        proj.sheets = s;
+        proj.activeSheetIndex = destIdx;
+        projectToSave = proj;
+
+      } else if (mode === 'new_sheet' && projects[activeProjectIndex]) {
+        const proj = JSON.parse(JSON.stringify(projects[activeProjectIndex])) as ProjectWorkspace;
+        const check = checkSheetLimit(plan, proj.sheets.length);
+        if (!check.allowed) {
+          if (onPlanLimit) onPlanLimit('시트 생성 한도 도달', check.message);
+          else alert(check.message);
+          return;
+        }
+
+        const incomingSheets = parsedSheets.map((sh) => ({
+          ...sh,
+          originalFiles: [docItem],
+          rows: truncateRowsToLimit(plan, 0, sh.rows).rows.map((r) => ({
+            ...r,
+            _fileId: fileId,
+            _fileUid: fileUid,
+            _fileName: resolvedFileName,
+          })),
+        }));
+
+        recordedRowCount = incomingSheets.reduce((sum, s) => sum + s.rows.length, 0);
+        recordedSheetName = incomingSheets[0]?.name || '새 시트';
+
+        proj.sheets = [...proj.sheets, ...incomingSheets];
+        proj.activeSheetIndex = proj.sheets.length - 1;
+        proj.originalFiles = [...(proj.originalFiles || []), docItem];
+        proj.originalFileUrl = permanentUrl;
+        projectToSave = proj;
+
+      } else {
+        const enrichedSheets = parsedSheets.map((sh) => ({
+          ...sh,
+          originalFiles: [docItem],
+          rows: truncateRowsToLimit(plan, 0, sh.rows).rows.map((r) => ({
+            ...r,
+            _fileId: fileId,
+            _fileUid: fileUid,
+            _fileName: resolvedFileName,
+          })),
+        }));
+
+        recordedRowCount = enrichedSheets.reduce((sum, s) => sum + s.rows.length, 0);
+        recordedSheetName = enrichedSheets[0]?.name || 'Sheet1';
+
+        projectToSave = {
+          id: null,
+          filename: resolvedFileName,
+          name: resolvedFileName.replace(/\.[^/.]+$/, ''),
+          category,
+          sheets: enrichedSheets,
+          activeSheetIndex: 0,
+          originalFileUrl: permanentUrl,
+          originalFileType: file.type,
+          originalFileSize: file.size,
+          originalFiles: [docItem],
+          uploadedAt: nowKst,
+        };
+        newActiveIndex = projects.length;
+      }
+
+      // 5-1. 실제 물리 DB에 즉시 영구 저장 실행 (새로고침 시 데이터 증발 원천 차단)
+      const targetPhone = phoneNumber || (process.env.NODE_ENV === 'development' ? '010-7216-5884' : '');
+      if (targetPhone) {
+        setProcessStatus('물리 DB에 데이터 영구 커밋 중...');
+        try {
+          const savedId = await saveUserProjectToDb(targetPhone, projectToSave);
+          if (savedId) {
+            projectToSave.id = savedId;
+          }
+        } catch (err) {
+          console.error('[useFileUpload] 즉시 저장 실패:', err);
+        }
+      }
+
+      // 5-2. 화면 React 상태 및 로컬 스토리지에 동기화
+      setProjects((prev) => {
+        const next = [...prev];
+        if (mode === 'append_rows' || mode === 'new_sheet') {
+          if (next[activeProjectIndex]) {
+            next[activeProjectIndex] = projectToSave;
+          } else {
+            next.push(projectToSave);
+          }
+        } else {
+          next.push(projectToSave);
+        }
+        try {
+          const sanitized = next.map((p) => ({
+            ...p,
+            originalFiles: (p.originalFiles || []).map(({ dataUrl, ...rest }) => rest),
+          }));
+          localStorage.setItem('filetosheet_guest_projects', JSON.stringify(sanitized));
+        } catch {}
         return next;
       });
+
+      if (mode === 'new_document') {
+        setActiveProjectIndex(newActiveIndex);
+      }
 
       // 6. 업로드 직후 실행 취소(Undo) 토스트 활성화
       setLastUploadAction({
@@ -429,9 +459,9 @@ export function useFileUpload({
     alert(`방금 업로드된 '${fname}' 파일 데이터가 성공적으로 실행 취소(롤백)되었습니다.`);
   };
 
-  const dismissUndoToast = () => {
+  const dismissUndoToast = useCallback(() => {
     setLastUploadAction(null);
-  };
+  }, []);
 
   const confirmProceedDuplicate = () => {
     if (!duplicateWarning) return;

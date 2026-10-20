@@ -15,16 +15,28 @@ export interface UserProjectRow {
 }
 
 /**
- * 1. 실제 DB에서 사용자의 전체 프로젝트 목록 조회
+ * 1. 실제 DB에서 사용자의 전체 프로젝트 목록 조회 (하이픈 유무 무관 일원화)
  */
 export async function fetchUserProjectsFromDb(phoneNumber: string): Promise<ProjectWorkspace[]> {
   if (!phoneNumber) return [];
 
-  const res = await queryTable('user_projects', {
-    filters: { phone_number: phoneNumber },
+  const cleanNumber = phoneNumber.replace(/[^0-9]/g, '');
+
+  // 1차: 정규화된 숫자 11자리로 조회
+  let res = await queryTable('user_projects', {
+    filters: { phone_number: cleanNumber },
     orderBy: 'id',
     orderDirection: 'ASC',
   });
+
+  // 2차: 혹시 과거 하이픈 포맷으로 등록된 레코드가 있을 경우 폴백 조회
+  if ((!res || !res.rows || res.rows.length === 0) && phoneNumber !== cleanNumber) {
+    res = await queryTable('user_projects', {
+      filters: { phone_number: phoneNumber },
+      orderBy: 'id',
+      orderDirection: 'ASC',
+    });
+  }
 
   const rows = res?.rows || [];
   return rows.map((row: any) => {
@@ -72,7 +84,7 @@ export async function fetchUserProjectsFromDb(phoneNumber: string): Promise<Proj
 }
 
 /**
- * 2. 실제 DB에 사용자 프로젝트 생성 또는 업데이트
+ * 2. 실제 DB에 사용자 프로젝트 생성 또는 업데이트 (Base64 페이로드 다이어트 및 하이픈 일원화)
  */
 export async function saveUserProjectToDb(
   phoneNumber: string,
@@ -80,10 +92,18 @@ export async function saveUserProjectToDb(
 ): Promise<number | null> {
   if (!phoneNumber) return null;
 
+  const cleanNumber = phoneNumber.replace(/[^0-9]/g, '');
   const now = new Intl.DateTimeFormat('ko-KR', { dateStyle: 'short', timeStyle: 'medium' }).format(new Date());
   const sheetsJson = JSON.stringify(project.sheets || []);
+
+  // 🌟 DB 페이로드 다이어트: 4MB 거대 Base64 dataUrl은 DB에 중복 저장하지 않고 경량 메타데이터만 보존
+  const sanitizedFiles = (project.originalFiles || []).map((f) => {
+    const { dataUrl, ...rest } = f;
+    return rest;
+  });
+
   const originalFilesJson = JSON.stringify({
-    files: project.originalFiles || [],
+    files: sanitizedFiles,
     googleSpreadsheetId: project.googleSpreadsheetId,
     googleSpreadsheetUrl: project.googleSpreadsheetUrl,
   });
@@ -91,17 +111,19 @@ export async function saveUserProjectToDb(
   if (project.id) {
     // 기존 프로젝트 업데이트 시도
     try {
-      const updateRes = await updateRows('user_projects', {
-        filters: { id: String(project.id) },
-        updates: {
+      const updateRes = await updateRows(
+        'user_projects',
+        {
+          phone_number: cleanNumber,
           project_name: project.name,
           category: project.category || '기본',
           sheets_data: sheetsJson,
           original_files: originalFilesJson,
           updated_at: now,
         },
-      });
-      if (updateRes && (updateRes.updatedCount > 0 || updateRes.success !== false)) {
+        { ids: [Number(project.id)] }
+      );
+      if (updateRes && updateRes.success !== false) {
         return project.id;
       }
     } catch (err) {
@@ -112,7 +134,7 @@ export async function saveUserProjectToDb(
   // 신규 프로젝트 DB 생성
   const res = await insertRows('user_projects', [
     {
-      phone_number: phoneNumber,
+      phone_number: cleanNumber,
       project_name: project.name,
       category: project.category || '기본',
       sheets_data: sheetsJson,
@@ -131,10 +153,12 @@ export async function saveUserProjectToDb(
 export async function deleteUserProjectFromDb(projectId: number): Promise<boolean> {
   if (!projectId) return false;
   try {
-    await deleteRows('user_projects', { ids: [projectId] });
-    return true;
+    const res = await deleteRows('user_projects', {
+      filters: { id: String(projectId) },
+    });
+    return res && res.success !== false;
   } catch (err) {
-    console.error('DB 프로젝트 삭제 실패:', err);
+    console.error('user_projects delete 실패:', err);
     return false;
   }
 }

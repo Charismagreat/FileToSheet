@@ -87,7 +87,7 @@ export async function updateFileParseResult(
       row_count: rowCount,
       ...(category ? { category } : {}),
     },
-    { id: String(fileId) }
+    { ids: [fileId] }
   );
 }
 

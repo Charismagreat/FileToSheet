@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { RotateCcw, X, CheckCircle2, FileSpreadsheet } from 'lucide-react';
+import React, { useEffect, useState, useRef } from 'react';
+import { RotateCcw, X, CheckCircle2 } from 'lucide-react';
 
 export interface LastUploadInfo {
   fileUid: string;
@@ -19,24 +19,29 @@ interface UploadUndoToastProps {
 
 export function UploadUndoToast({ uploadInfo, onUndo, onDismiss }: UploadUndoToastProps) {
   const [timeLeft, setTimeLeft] = useState<number>(10);
+  const onDismissRef = useRef(onDismiss);
+
+  useEffect(() => {
+    onDismissRef.current = onDismiss;
+  }, [onDismiss]);
 
   useEffect(() => {
     if (!uploadInfo) return;
     setTimeLeft(10);
 
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          onDismiss();
-          return 0;
-        }
-        return prev - 1;
-      });
+    const interval = setInterval(() => {
+      setTimeLeft((prev) => Math.max(0, prev - 1));
     }, 1000);
 
-    return () => clearInterval(timer);
-  }, [uploadInfo, onDismiss]);
+    const dismissTimeout = setTimeout(() => {
+      onDismissRef.current();
+    }, 10000);
+
+    return () => {
+      clearInterval(interval);
+      clearTimeout(dismissTimeout);
+    };
+  }, [uploadInfo]);
 
   if (!uploadInfo) return null;
 

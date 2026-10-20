@@ -115,9 +115,16 @@ export function useWorkspace({ phoneNumber, plan, onPlanLimit }: UseWorkspaceOpt
   useEffect(() => {
     if (!isLoadedRef.current || !currentProject) return;
 
-    // 모든 상태(게스트 및 로그인 공통)에 대해 로컬 스토리지에 즉시 안전 보존 (새로고침 시 증발 방지)
+    // 모든 상태(게스트 및 로그인 공통)에 대해 로컬 스토리지에 즉시 안전 보존 (Base64 제거로 5MB 한도 초과 방지)
     try {
-      localStorage.setItem('filetosheet_guest_projects', JSON.stringify(projects));
+      const sanitized = projects.map((proj) => ({
+        ...proj,
+        originalFiles: (proj.originalFiles || []).map((f) => {
+          const { dataUrl, ...rest } = f;
+          return rest;
+        }),
+      }));
+      localStorage.setItem('filetosheet_guest_projects', JSON.stringify(sanitized));
     } catch (e) {
       console.warn('로컬 프로젝트 캐시 저장 실패:', e);
     }

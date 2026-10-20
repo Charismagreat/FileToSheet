@@ -66,6 +66,7 @@ export default function FileToSheetApp() {
   const upload = useFileUpload({
     projects: ws.projects, setProjects: ws.setProjects,
     activeProjectIndex: ws.activeProjectIndex, setActiveProjectIndex: ws.setActiveProjectIndex,
+    phoneNumber: auth.currentUser?.phoneNumber,
     plan: auth.currentUser?.plan, onPlanLimit: handlePlanLimit,
   });
   const fileExport = useFileExport({
