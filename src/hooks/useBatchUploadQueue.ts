@@ -102,21 +102,25 @@ export function useBatchUploadQueue({
             ...(project?.sheets || []).flatMap((s) => s.originalFiles || []),
           ];
 
-          const existingDoc = allOriginalDocs.find(
-            (f) =>
-              (f.hash && f.hash === fileHash) ||
-              ((f as any).fileHash && (f as any).fileHash === fileHash) ||
-              (f.name === fileName && f.size === file.size)
-          );
+          const existingDoc = allOriginalDocs.find((f) => {
+            const existingHash = f.hash || (f as any).fileHash;
+            if (existingHash && fileHash) {
+              return existingHash === fileHash;
+            }
+            return f.name === fileName && f.size === file.size;
+          });
 
           // 현재 큐 내에서 이미 앞서 성공했거나 처리 중인 동일 파일 검사
-          const duplicateInQueue = queueRef.current.find(
-            (q) =>
-              q.id !== id &&
-              (q.status === 'success' || q.status === 'uploading' || q.status === 'analyzing') &&
-              q.file.size === file.size &&
-              (q.file.name === file.name || (q as any).fileHash === fileHash)
-          );
+          const duplicateInQueue = queueRef.current.find((q) => {
+            if (q.id === id) return false;
+            const isProcessingOrSuccess = q.status === 'success' || q.status === 'uploading' || q.status === 'analyzing';
+            if (!isProcessingOrSuccess) return false;
+            const qHash = (q as any).fileHash;
+            if (qHash && fileHash) {
+              return qHash === fileHash;
+            }
+            return q.file.size === file.size && q.file.name === file.name;
+          });
 
           if (existingDoc || duplicateInQueue) {
             const matchedName = existingDoc?.name || duplicateInQueue?.fileName || fileName;
@@ -202,7 +206,8 @@ export function useBatchUploadQueue({
           id: fileUid,
           uid: fileUid,
           name: fileName,
-          url: fileBlobUrl,
+          url: fileBase64 || fileBlobUrl,
+          dataUrl: fileBase64,
           size: file.size,
           type: file.type,
           uploadedAt: nowKst,

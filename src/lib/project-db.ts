@@ -89,18 +89,24 @@ export async function saveUserProjectToDb(
   });
 
   if (project.id) {
-    // 기존 프로젝트 업데이트
-    await updateRows('user_projects', {
-      filters: { id: String(project.id) },
-      updates: {
-        project_name: project.name,
-        category: project.category || '기본',
-        sheets_data: sheetsJson,
-        original_files: originalFilesJson,
-        updated_at: now,
-      },
-    });
-    return project.id;
+    // 기존 프로젝트 업데이트 시도
+    try {
+      const updateRes = await updateRows('user_projects', {
+        filters: { id: String(project.id) },
+        updates: {
+          project_name: project.name,
+          category: project.category || '기본',
+          sheets_data: sheetsJson,
+          original_files: originalFilesJson,
+          updated_at: now,
+        },
+      });
+      if (updateRes && (updateRes.updatedCount > 0 || updateRes.success !== false)) {
+        return project.id;
+      }
+    } catch (err) {
+      console.warn('user_projects update 실패, 신규 인서트로 진행:', err);
+    }
   }
 
   // 신규 프로젝트 DB 생성

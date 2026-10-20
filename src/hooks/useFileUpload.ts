@@ -122,12 +122,13 @@ export function useFileUpload({
         ...(currentProject.originalFiles || []),
         ...(currentProject.sheets || []).flatMap((s) => s.originalFiles || []),
       ];
-      const existing = allOriginalDocs.find(
-        (f) =>
-          (f.hash && f.hash === fileHash) ||
-          ((f as any).fileHash && (f as any).fileHash === fileHash) ||
-          (f.name === file.name && f.size === file.size)
-      );
+      const existing = allOriginalDocs.find((f) => {
+        const existingHash = f.hash || (f as any).fileHash;
+        if (existingHash && fileHash) {
+          return existingHash === fileHash;
+        }
+        return f.name === file.name && f.size === file.size;
+      });
       if (existing) {
         setDuplicateWarning({
           existingFile: existing,
@@ -152,6 +153,19 @@ export function useFileUpload({
     }).format(new Date());
 
     try {
+      // 🌟 Base64 데이터 URL 사전 캐싱 (브라우저 세션 만료 및 F5 새로고침 영구 방어)
+      let fileBase64 = '';
+      try {
+        const reader = new FileReader();
+        fileBase64 = await new Promise<string>((resolve) => {
+          reader.onload = () => resolve((reader.result as string) || '');
+          reader.onerror = () => resolve('');
+          reader.readAsDataURL(file);
+        });
+      } catch (e) {
+        console.warn('Base64 캐싱 실패:', e);
+      }
+
       const effectiveDestSheet =
         currentProject && targetSheetIndex !== undefined
           ? currentProject.sheets[targetSheetIndex]
@@ -190,9 +204,9 @@ export function useFileUpload({
         sampleRows
       );
 
-      // 3. 이지데스크 영구 스토리지 및 DB 연동
+      // 3. 이지데스크 영구 스토리지 및 DB 연동 (file_data 컬럼에 Base64 영구 적재)
       setProcessStatus('이지데스크 My DB에 레코드 생성 중...');
-      const fileId = await createUploadedFileRecord(file, category);
+      const fileId = await createUploadedFileRecord(file, category, fileBase64 || undefined);
 
       if (fileId) {
         setProcessStatus('sheet_rows 테이블에 데이터 영구 적재 중...');
@@ -212,18 +226,22 @@ export function useFileUpload({
         }
       }
 
-      // 4. 고유 UID 발급, 중복 파일명 자동 넘버링 및 SHA-256 지문 저장
+      // 4. 고유 UID 발급, 중복 파일명 자동 넘버링 및 영구 URL 바인딩
       const fileHash = await computeFileHash(file);
       const existingDocNames = (currentProject?.originalFiles || []).map((f) => f.name);
       const resolvedFileName = getUniqueFileName(existingDocNames, file.name);
       const fileUid = generateFileUid();
+
+      // 영구 접근 URL: DB ID가 있으면 /api/files/:id 우선, 없으면 Base64, 마지막이 blob URL
+      const permanentUrl = fileId ? `/api/files/${fileId}` : (fileBase64 || fileBlobUrl);
 
       const docItem: OriginalDocFile = {
         id: fileId || undefined,
         uid: fileUid,
         hash: fileHash,
         name: resolvedFileName,
-        url: fileBlobUrl,
+        url: permanentUrl,
+        dataUrl: fileBase64 || undefined,
         type: file.type,
         size: file.size,
         uploadedAt: nowKst,
@@ -308,7 +326,7 @@ export function useFileUpload({
           }] : []);
 
           proj.originalFiles = [...prevDocs, docItem];
-          proj.originalFileUrl = fileBlobUrl;
+          proj.originalFileUrl = permanentUrl;
           proj.originalFileType = file.type;
           proj.originalFileSize = file.size;
           proj.sheets = s;
@@ -343,6 +361,7 @@ export function useFileUpload({
           proj.sheets = [...proj.sheets, ...incomingSheets];
           proj.activeSheetIndex = proj.sheets.length - 1;
           proj.originalFiles = [...(proj.originalFiles || []), docItem];
+          proj.originalFileUrl = permanentUrl;
           next[activeProjectIndex] = proj;
 
         // [모드 C] 새 프로젝트로 생성 (new_document)
@@ -362,12 +381,13 @@ export function useFileUpload({
           recordedSheetName = enrichedSheets[0]?.name || 'Sheet1';
 
           const newProj: ProjectWorkspace = {
-            id: fileId ? String(fileId) : Date.now().toString(),
+            id: null,
+            filename: resolvedFileName,
             name: resolvedFileName.replace(/\.[^/.]+$/, ''),
             category,
             sheets: enrichedSheets,
             activeSheetIndex: 0,
-            originalFileUrl: fileBlobUrl,
+            originalFileUrl: permanentUrl,
             originalFileType: file.type,
             originalFileSize: file.size,
             originalFiles: [docItem],

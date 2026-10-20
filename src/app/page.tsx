@@ -894,6 +894,7 @@ export default function FileToSheetApp() {
         isOpen={ws.isDeduplicateModalOpen}
         onClose={ws.handleCloseDeduplicateModal}
         duplicateGroups={ws.duplicateGroups}
+        rows={currentSheet?.rows || []}
         headers={currentSheet?.headers || []}
         totalSheetRows={currentSheet?.rows.length || 0}
         onConfirmDeduplicate={ws.handleConfirmDeduplicate}

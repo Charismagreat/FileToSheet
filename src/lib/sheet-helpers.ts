@@ -45,7 +45,7 @@ export function getSheetOriginalFiles(
   if (fileUidsInSheet.size > 0 || fileNamesInSheet.size > 0 || fileIdsInSheet.size > 0) {
     const matched = allProjectFiles.filter((f) => {
       if (f.uid && fileUidsInSheet.has(f.uid)) return true;
-      if (f.id && fileIdsInSheet.has(f.id)) return true;
+      if (f.id && fileIdsInSheet.has(Number(f.id))) return true;
       if (f.name && fileNamesInSheet.has(f.name.trim())) return true;
       return false;
     });

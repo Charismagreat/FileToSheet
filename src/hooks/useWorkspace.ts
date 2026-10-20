@@ -31,6 +31,20 @@ export function useWorkspace({ phoneNumber, plan, onPlanLimit }: UseWorkspaceOpt
   // 1. 실제 DB 또는 로컬 스토리지에서 프로젝트 목록 자동 복원
   useEffect(() => {
     isLoadedRef.current = false;
+
+    // 새로고침(F5) 시 즉시 로컬 캐시에서 프로젝트를 복원하여 화면 깜빡임 및 증발 방지
+    try {
+      const guestSaved = localStorage.getItem('filetosheet_guest_projects');
+      if (guestSaved) {
+        const parsed = JSON.parse(guestSaved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setProjects(parsed);
+          setActiveProjectIndex(0);
+        }
+      }
+    } catch (e) {
+      console.warn('로컬 프로젝트 캐시 복원 실패:', e);
+    }
     if (phoneNumber) {
       fetchUserProjectsFromDb(phoneNumber).then((dbProjects) => {
         if (dbProjects && dbProjects.length > 0) {
@@ -101,13 +115,13 @@ export function useWorkspace({ phoneNumber, plan, onPlanLimit }: UseWorkspaceOpt
   useEffect(() => {
     if (!isLoadedRef.current || !currentProject) return;
 
-    // 게스트 상태인 경우 로컬 스토리지에 즉시 안전 보존 (새로고침 시 증발 방지)
-    if (!phoneNumber) {
-      try {
-        localStorage.setItem('filetosheet_guest_projects', JSON.stringify(projects));
-      } catch {}
-      return;
+    // 모든 상태(게스트 및 로그인 공통)에 대해 로컬 스토리지에 즉시 안전 보존 (새로고침 시 증발 방지)
+    try {
+      localStorage.setItem('filetosheet_guest_projects', JSON.stringify(projects));
+    } catch (e) {
+      console.warn('로컬 프로젝트 캐시 저장 실패:', e);
     }
+    if (!phoneNumber) return;
 
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
 
@@ -153,6 +167,7 @@ export function useWorkspace({ phoneNumber, plan, onPlanLimit }: UseWorkspaceOpt
     const newProj: ProjectWorkspace = {
       id: null,
       name: `새 프로젝트 ${projects.length + 1}`,
+      filename: `새 프로젝트 ${projects.length + 1}`,
       category: '신규 프로젝트',
       sheets: [{ name: 'Sheet1', headers: ['일련번호', '등록일시', '항목', '금액', '비고'], rows: [], rawRows: [] }],
       activeSheetIndex: 0,
@@ -230,7 +245,7 @@ export function useWorkspace({ phoneNumber, plan, onPlanLimit }: UseWorkspaceOpt
       const nextFiles = files.filter((f) => !isTargetFile(f));
       return { ...proj, sheets, originalFiles: nextFiles, originalFileUrl: nextFiles[0]?.url, originalFileType: nextFiles[0]?.type, originalFileSize: nextFiles[0]?.size };
     }));
-    if (target.id) deleteUploadedFile(target.id).catch((e) => console.warn('스토리지 파일 삭제 무시:', e));
+    if (target.id && !isNaN(Number(target.id))) deleteUploadedFile(Number(target.id)).catch((e) => console.warn('스토리지 파일 삭제 무시:', e));
   };
 
   const tableEditor = useTableEditor({ projects, setProjects, activeProjectIndex, plan, onPlanLimit });

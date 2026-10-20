@@ -111,13 +111,28 @@ export async function POST(req: NextRequest) {
       let sheetVat = 0;
 
       valRes.errorMap.forEach((err) => {
-        if (err.ruleName.includes('이중') || err.ruleName.includes('중복')) {
+        const isDuplicate =
+          err.ruleType === 'DUPLICATE_ENTRY' ||
+          err.ruleType === 'UNIQUE_COLUMN' ||
+          err.ruleType === 'COMPOSITE_UNIQUE' ||
+          err.ruleName.includes('이중') ||
+          err.ruleName.includes('중복') ||
+          err.ruleName.toLowerCase().includes('duplicate') ||
+          err.ruleName.toLowerCase().includes('unique');
+
+        const isVat =
+          err.ruleType === 'PERCENTAGE' ||
+          err.ruleName.includes('부가세') ||
+          err.ruleName.includes('세액') ||
+          err.ruleName.toLowerCase().includes('vat');
+
+        if (isDuplicate) {
           duplicateCount++;
           sheetDup++;
           if (criticalIssues.length < 5) {
             criticalIssues.push(`[${sheet.name}] ${err.message}`);
           }
-        } else if (err.ruleName.includes('부가세') || err.ruleName.includes('세액')) {
+        } else if (isVat) {
           vatCount++;
           sheetVat++;
           if (criticalIssues.length < 5) {

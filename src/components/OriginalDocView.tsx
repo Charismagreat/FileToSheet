@@ -35,6 +35,13 @@ export function OriginalDocView({ project, onDeleteFile, onGoToTableTab, filtere
   const isImage = Boolean(currentFile?.type?.includes('image')) || ['png', 'jpg', 'jpeg', 'webp', 'gif'].some((ext) => filename.toLowerCase().endsWith(ext));
   const isPdf = Boolean(currentFile?.type?.includes('pdf')) || filename.toLowerCase().endsWith('.pdf');
 
+  // 🌟 파일 영구 접근 URL 결정 (Base64 캐시 -> 이지데스크 영구 서빙 API -> 세션 blob URL 순서)
+  const resolvedFileUrl =
+    currentFile?.dataUrl ||
+    (currentFile?.id && !isNaN(Number(currentFile.id)) && Number(currentFile.id) > 0 ? `/api/files/${currentFile.id}` : null) ||
+    currentFile?.url ||
+    '';
+
   // 현재 선택된 파일에서 적재된 데이터 행 필터링
   const loadedRows = currentSheet?.rows.filter((r) => {
     if (r._fileName && currentFile?.name) return r._fileName === currentFile.name;
@@ -149,10 +156,10 @@ export function OriginalDocView({ project, onDeleteFile, onGoToTableTab, filtere
                 {isZoomFit ? <Maximize2 className="w-3.5 h-3.5" /> : <Minimize2 className="w-3.5 h-3.5" />}
               </button>
             )}
-            <a href={currentFile.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-medium transition shadow-2xs">
+            <a href={resolvedFileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-medium transition shadow-2xs">
               <ExternalLink className="w-3.5 h-3.5" /><span className="hidden sm:inline">새 탭</span>
             </a>
-            <a href={currentFile.url} download={filename} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition shadow-2xs">
+            <a href={resolvedFileUrl} download={filename} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition shadow-2xs">
               <Download className="w-3.5 h-3.5" /><span>다운로드</span>
             </a>
             {onDeleteFile && (
@@ -167,16 +174,28 @@ export function OriginalDocView({ project, onDeleteFile, onGoToTableTab, filtere
           {isImage ? (
             <div className={`flex items-center justify-center ${isZoomFit ? 'w-full h-full' : 'min-w-full min-h-full'}`}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={currentFile.url} alt="원본 증빙" className={`rounded-lg shadow-sm transition-all duration-150 ${isZoomFit ? 'max-w-full max-h-full object-contain' : 'max-w-none w-auto h-auto'}`} />
+              <img
+                src={resolvedFileUrl}
+                alt="원본 증빙"
+                onError={(e) => {
+                  const target = e.currentTarget;
+                  if (currentFile?.id && !target.src.includes(`/api/files/${currentFile.id}`)) {
+                    target.src = `/api/files/${currentFile.id}`;
+                  } else if (currentFile?.dataUrl && target.src !== currentFile.dataUrl) {
+                    target.src = currentFile.dataUrl;
+                  }
+                }}
+                className={`rounded-lg shadow-sm transition-all duration-150 ${isZoomFit ? 'max-w-full max-h-full object-contain' : 'max-w-none w-auto h-auto'}`}
+              />
             </div>
           ) : isPdf ? (
-            <iframe src={currentFile.url} className="w-full h-full border-none rounded-lg bg-white shadow-xs" title="PDF 증빙 뷰어" />
+            <iframe src={resolvedFileUrl} className="w-full h-full border-none rounded-lg bg-white shadow-xs" title="PDF 증빙 뷰어" />
           ) : (
             <div className="border border-slate-200 bg-white rounded-2xl p-8 text-center shadow-xs max-w-md mx-auto my-auto">
               <FileSpreadsheet className="w-12 h-12 text-emerald-600 mx-auto mb-3" />
               <h4 className="font-bold text-slate-800 text-sm mb-1">{filename}</h4>
               <p className="text-xs text-slate-500 mb-4">스프레드시트 원본 파일이 보관되어 있습니다.</p>
-              <a href={currentFile.url} download={filename} className="inline-flex items-center gap-1.5 text-xs font-semibold px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-xs transition">
+              <a href={resolvedFileUrl} download={filename} className="inline-flex items-center gap-1.5 text-xs font-semibold px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-xs transition">
                 <Download className="w-3.5 h-3.5" /> 원본 파일 다운로드
               </a>
             </div>

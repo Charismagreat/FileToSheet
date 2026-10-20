@@ -6,20 +6,25 @@
 export interface ValidationRule {
   id: string;
   name: string;
-  targetCol: string; // 검증 대상 컬럼 (예: '금액', '합계금액', '세액')
-  type: 'ARITHMETIC_MULTIPLY' | 'ARITHMETIC_SUM' | 'PERCENTAGE' | 'REGEX' | 'DUPLICATE_ENTRY' | 'CUSTOM';
+  targetCol: string; // 검증 대상 컬럼 (예: '금액', '합계금액', '세액', '주문번호')
+  type: 'ARITHMETIC_MULTIPLY' | 'ARITHMETIC_SUM' | 'PERCENTAGE' | 'REGEX' | 'DUPLICATE_ENTRY' | 'UNIQUE_COLUMN' | 'COMPOSITE_UNIQUE' | 'CUSTOM';
   operandCols?: string[]; // 피연산자 컬럼 (예: ['수량', '단가'] 또는 ['공급가액', '세액'] 또는 ['거래일자', '거래처명'])
+  compositeCols?: string[]; // 복합 고유 키 컬럼들 (예: ['주문일자', '고객ID', '상품코드'])
   percentage?: number; // 퍼센트 검증용 (예: 0.1)
   tolerance?: number; // 허용 오차 (원 단위 절사/반올림용, 기본 1)
   pattern?: string; // 정규식 패턴 (예: YYYY-MM-DD)
   errorMessage?: string;
   enabled: boolean;
   naturalPrompt?: string; // 자연어 프롬프트 원문
+  caseSensitive?: boolean;
+  trimWhitespace?: boolean;
 }
 
 export interface CellValidationError {
   rowIdx: number;
   colKey: string;
+  ruleId?: string;
+  ruleType?: ValidationRule['type'];
   ruleName: string;
   expectedValue: string | number;
   actualValue: string | number;
@@ -109,33 +114,8 @@ export function generateDefaultRules(headers: string[]): ValidationRule[] {
     });
   }
 
-  // 4. 동일자 + 동일 거래처 + 동일 금액 이중 등록 검출 규칙 (회계/세무 실무 감사 핵심)
+  // 4. 날짜 포맷 검증 규칙
   const dateCol = headers.find((h) => h.includes('일자') || h.includes('날짜'));
-  const partnerCol = headers.find(
-    (h) =>
-      h.includes('거래처') ||
-      h.includes('상호') ||
-      h.includes('공급자') ||
-      h.includes('고객') ||
-      h.includes('업체') ||
-      h.includes('회사')
-  );
-  const targetAmountCol = totalCol || amountCol || supplyCol;
-
-  if (dateCol && partnerCol && targetAmountCol) {
-    rules.push({
-      id: 'default_duplicate_entry',
-      name: `동일 거래일자 + 동일 거래처 + 동일 금액 이중 전표 검출`,
-      targetCol: targetAmountCol,
-      type: 'DUPLICATE_ENTRY',
-      operandCols: [dateCol, partnerCol],
-      errorMessage: `동일한 거래일자(${dateCol})와 거래처(${partnerCol})에 동일한 금액(${targetAmountCol})이 이중 등록된 전표입니다.`,
-      enabled: true,
-      naturalPrompt: `동일한 날짜에 동일 거래처 동일 금액으로 이중 등록된 전표 감지해줘`,
-    });
-  }
-
-  // 5. 날짜 포맷 검증 규칙
   if (dateCol) {
     rules.push({
       id: 'default_date_format',
@@ -199,6 +179,8 @@ export function validateSheetRows(
             errorMap.set(errorKey, {
               rowIdx,
               colKey: rule.targetCol,
+              ruleId: rule.id,
+              ruleType: rule.type,
               ruleName: rule.name,
               expectedValue: expected,
               actualValue: actual,
@@ -228,6 +210,8 @@ export function validateSheetRows(
             errorMap.set(errorKey, {
               rowIdx,
               colKey: rule.targetCol,
+              ruleId: rule.id,
+              ruleType: rule.type,
               ruleName: rule.name,
               expectedValue: expected,
               actualValue: actual,
@@ -257,6 +241,8 @@ export function validateSheetRows(
             errorMap.set(errorKey, {
               rowIdx,
               colKey: rule.targetCol,
+              ruleId: rule.id,
+              ruleType: rule.type,
               ruleName: rule.name,
               expectedValue: expected,
               actualValue: actual,
@@ -278,6 +264,8 @@ export function validateSheetRows(
             errorMap.set(errorKey, {
               rowIdx,
               colKey: rule.targetCol,
+              ruleId: rule.id,
+              ruleType: rule.type,
               ruleName: rule.name,
               expectedValue: rule.pattern,
               actualValue: strVal,
@@ -290,41 +278,101 @@ export function validateSheetRows(
     });
   });
 
-  // 5. 실무 핵심: 동일자 + 동일 거래처 + 동일 금액 이중 전표(중복) 검출
-  const duplicateRules = activeRules.filter((r) => r.type === 'DUPLICATE_ENTRY');
-  duplicateRules.forEach((rule) => {
-    const dateCol = rule.operandCols?.[0];
-    const partnerCol = rule.operandCols?.[1];
-    const amountCol = rule.targetCol;
-    if (!dateCol || !partnerCol || !amountCol) return;
+  // 5. 단일 열 고유값(중복 금지) 검증 (사용자 지정: 주문번호, 송장번호, 이메일, 식별자 등)
+  const uniqueRules = activeRules.filter((r) => r.type === 'UNIQUE_COLUMN');
+  uniqueRules.forEach((rule) => {
+    const col = rule.targetCol;
+    if (!col) return;
+    const groupMap = new Map<string, number[]>();
+
+    rows.forEach((row, rowIdx) => {
+      const raw = row[col];
+      if (raw === undefined || raw === null || String(raw).trim() === '') return;
+      let key = String(raw);
+      if (rule.trimWhitespace !== false) key = key.trim();
+      if (!rule.caseSensitive) key = key.toLowerCase();
+
+      const list = groupMap.get(key) || [];
+      list.push(rowIdx);
+      groupMap.set(key, list);
+    });
+
+    groupMap.forEach((indices) => {
+      if (indices.length > 1) {
+        indices.forEach((idx) => {
+          const errorKey = `${idx}_${col}`;
+          const otherRows = indices.filter((i) => i !== idx).map((i) => `${i + 1}행`).join(', ');
+          const val = String(rows[idx][col] ?? '');
+          errorMap.set(errorKey, {
+            rowIdx: idx,
+            colKey: col,
+            ruleId: rule.id,
+            ruleType: rule.type,
+            ruleName: rule.name,
+            expectedValue: '고유값 (중복 없음)',
+            actualValue: `${indices.length}회 중복`,
+            message: rule.errorMessage || `[고유값 위반] '${col}' 열에 동일한 값('${val}')이 ${indices.length}건 중복되었습니다. (동일 행: ${otherRows})`,
+          });
+          errorRowIndices.add(idx);
+        });
+      }
+    });
+  });
+
+  // 6. 복합 열 조합 중복 검출 (사용자가 직접 선택한 복합 키 또는 기본 회계 전표 조합)
+  const compositeRules = activeRules.filter((r) => r.type === 'COMPOSITE_UNIQUE' || r.type === 'DUPLICATE_ENTRY');
+  compositeRules.forEach((rule) => {
+    // 사용자가 지정한 복합 컬럼 목록 추출
+    const cols: string[] = [];
+    if (rule.compositeCols && rule.compositeCols.length > 0) {
+      cols.push(...rule.compositeCols);
+    } else if (rule.operandCols && rule.operandCols.length > 0) {
+      cols.push(...rule.operandCols);
+      if (rule.targetCol && !cols.includes(rule.targetCol)) {
+        cols.push(rule.targetCol);
+      }
+    } else if (rule.targetCol) {
+      cols.push(rule.targetCol);
+    }
+
+    if (cols.length === 0) return;
 
     const groupMap = new Map<string, number[]>();
     rows.forEach((row, rowIdx) => {
-      const dVal = String(row[dateCol] ?? '').trim();
-      const pVal = String(row[partnerCol] ?? '').trim();
-      const aVal = parseNumericValue(row[amountCol]);
-      if (dVal && pVal && aVal !== null) {
-        const key = `${dVal}__${pVal}__${aVal}`;
+      const parts = cols.map((c) => {
+        let v = row[c];
+        if (v === null || v === undefined) return '';
+        let s = String(v);
+        if (rule.trimWhitespace !== false) s = s.trim();
+        if (!rule.caseSensitive) s = s.toLowerCase();
+        return s;
+      });
+
+      // 적어도 하나 이상의 키가 채워져 있는 경우에만 검사
+      if (parts.some((p) => p !== '')) {
+        const key = parts.join(':::');
         const list = groupMap.get(key) || [];
         list.push(rowIdx);
         groupMap.set(key, list);
       }
     });
 
-    groupMap.forEach((indices, key) => {
+    const highlightCol = rule.targetCol || cols[0];
+    groupMap.forEach((indices) => {
       if (indices.length > 1) {
-        const [dVal, pVal, aVal] = key.split('__');
-        const formattedAmount = Number(aVal).toLocaleString('ko-KR');
         indices.forEach((idx) => {
-          const errorKey = `${idx}_${amountCol}`;
+          const errorKey = `${idx}_${highlightCol}`;
           const otherRows = indices.filter((i) => i !== idx).map((i) => `${i + 1}행`).join(', ');
+          const colSummary = cols.map((c) => `${c}: ${rows[idx][c] ?? ''}`).join(', ');
           errorMap.set(errorKey, {
             rowIdx: idx,
-            colKey: amountCol,
+            colKey: highlightCol,
+            ruleId: rule.id,
+            ruleType: rule.type,
             ruleName: rule.name,
-            expectedValue: '단일 등록',
+            expectedValue: '단일 등록 (조합 고유값)',
             actualValue: `${indices.length}회 중복`,
-            message: `[이중 전표 의심] 동일 일자(${dVal}), 거래처(${pVal}), 금액(${formattedAmount}원) 전표가 ${indices.length}건 등록되었습니다. (동일 전표: ${otherRows})`,
+            message: rule.errorMessage || `[중복 데이터 감지] 조합 (${colSummary})이(가) ${indices.length}건 중복 등록되었습니다. (동일 행: ${otherRows})`,
           });
           errorRowIndices.add(idx);
         });
@@ -351,7 +399,35 @@ export function parseNaturalLanguageRule(
   const p = prompt.trim();
   if (!p) return null;
 
-  // 1. 중복/이중 등록 패턴: "동일 날짜", "동일 거래처", "중복", "이중"
+  // 1-A. 사용자 정의 단일 열 고유값 검증 ("주문번호 고유값", "이메일 중복 금지", "사번 유일" 등)
+  if (p.includes('고유') || p.includes('유일') || p.includes('단일') || p.includes('중복')) {
+    const matchedHeaders = headers.filter((h) => p.includes(h));
+    if (matchedHeaders.length === 1) {
+      const col = matchedHeaders[0];
+      return {
+        id: `custom_unique_${Date.now()}`,
+        name: `${col} 고유값(중복 금지) 검증`,
+        targetCol: col,
+        type: 'UNIQUE_COLUMN',
+        errorMessage: `'${col}' 열에는 중복된 값이 존재하지 않아야 합니다.`,
+        enabled: true,
+        naturalPrompt: prompt,
+      };
+    } else if (matchedHeaders.length >= 2) {
+      return {
+        id: `custom_comp_dup_${Date.now()}`,
+        name: `${matchedHeaders.join(' + ')} 조합 중복 검출`,
+        targetCol: matchedHeaders[matchedHeaders.length - 1],
+        compositeCols: matchedHeaders,
+        type: 'COMPOSITE_UNIQUE',
+        errorMessage: `${matchedHeaders.join(', ')} 조합이 일치하는 중복 데이터가 등록되었습니다.`,
+        enabled: true,
+        naturalPrompt: prompt,
+      };
+    }
+  }
+
+  // 1-C. 실무 기본 회계 전표 중복/이중 등록 패턴: "동일 날짜", "동일 거래처", "중복", "이중"
   if (p.includes('중복') || p.includes('이중') || (p.includes('동일') && (p.includes('금액') || p.includes('거래처')))) {
     const dateCol = headers.find((h) => h.includes('일자') || h.includes('날짜'));
     const partnerCol = headers.find(

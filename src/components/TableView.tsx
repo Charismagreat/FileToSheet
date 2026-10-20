@@ -95,7 +95,10 @@ export function TableView({
       const storageKey = `fts_val_rules_${sheet.name}`;
       const saved = localStorage.getItem(storageKey);
       if (saved) {
-        setRules(JSON.parse(saved));
+        const parsed: ValidationRule[] = JSON.parse(saved);
+        // 시스템이 임의로 주입했던 레거시 중복 규칙 제거
+        const cleaned = parsed.filter((r) => r.id !== 'default_duplicate_entry');
+        setRules(cleaned);
         return;
       }
     } catch {}

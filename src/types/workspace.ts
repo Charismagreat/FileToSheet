@@ -2,11 +2,13 @@ import { ParsedSheet } from '@/lib/parser';
 
 // 원본 증빙 문서 파일 정보 (다중 파일 지원)
 export interface OriginalDocFile {
-  id?: number;
+  id?: number | string;
   uid?: string; // 클라이언트/세션 고유 식별자 (중복 파일명 격리용)
   hash?: string; // 파일 내용의 SHA-256 디지털 지문 (동일 내용 중복 방지용)
+  fileHash?: string;
   name: string;
   url: string;
+  dataUrl?: string; // Base64 영구 캐시 데이터 URL (세션 만료/새로고침 방어)
   type?: string;
   size?: number;
   uploadedAt?: string;

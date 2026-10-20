@@ -35,7 +35,8 @@ export interface SheetRowRecord {
  */
 export async function createUploadedFileRecord(
   file: File,
-  category: string = 'general'
+  category: string = 'general',
+  fileData?: string
 ): Promise<number | null> {
   const ext = file.name.split('.').pop()?.toLowerCase() || '';
   const now = new Date().toISOString();
@@ -48,6 +49,7 @@ export async function createUploadedFileRecord(
       status: 'uploaded',
       category,
       created_at: now,
+      ...(fileData ? { file_data: fileData } : {}),
     },
   ]);
 
@@ -187,5 +189,3 @@ export async function deleteUploadedFile(fileId: number) {
   }
   return deleteRows('uploaded_files', { ids: [fileId] });
 }
-
-
