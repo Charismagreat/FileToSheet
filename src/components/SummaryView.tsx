@@ -147,6 +147,7 @@ export interface SavedSummaryConfig {
   singleEndDate?: string;
   singlePreset?: SingleDatePreset; // 🌟 'all' | 'today' | 'week' | 'month' | 'quarter' | 'custom'
   comparePreset?: ComparePreset;   // 🌟 'mom' | 'wow' | '3months' | '4quarters' | 'custom'
+  basePeriodId?: string;           // 🌟 비교 기준 기간 ID
   periods?: PeriodConfig[];
   selectedMetricCols?: string[];
 }
@@ -357,6 +358,10 @@ export function SummaryView({
   }, [today]);
 
   const [periods, setPeriods] = useState<PeriodConfig[]>(initialPeriods);
+  const [basePeriodId, setBasePeriodId] = useState<string>('p1');
+  const effectiveBasePeriodId = useMemo(() => {
+    return periods.some((p) => p.id === basePeriodId) ? basePeriodId : (periods[0]?.id || 'p1');
+  }, [periods, basePeriodId]);
 
   // 5. 전체 기준 요약 (숫자 컬럼 목록 추출용)
   const baseSummary = useMemo(() => calculateSheetSummary(sheet), [sheet]);
@@ -414,6 +419,9 @@ export function SummaryView({
       // 🌟 비교 모드 템플릿 프리셋 동적 재계산 복원
       const cp = saved.comparePreset || 'custom';
       setComparePreset(cp);
+      if (saved.basePeriodId) {
+        setBasePeriodId(saved.basePeriodId);
+      }
       if (cp !== 'custom') {
         const computedPeriods = computeComparePresetPeriods(cp);
         if (computedPeriods) {
@@ -449,6 +457,7 @@ export function SummaryView({
         singleEndDate,
         singlePreset,
         comparePreset,
+        basePeriodId: effectiveBasePeriodId,
         periods,
         selectedMetricCols,
       };
@@ -456,7 +465,7 @@ export function SummaryView({
     } catch (e) {
       console.warn('통계 설정 자동 저장 실패:', e);
     }
-  }, [sheet.name, viewMode, selectedDateCol, singleStartDate, singleEndDate, singlePreset, comparePreset, periods, selectedMetricCols]);
+  }, [sheet.name, viewMode, selectedDateCol, singleStartDate, singleEndDate, singlePreset, comparePreset, effectiveBasePeriodId, periods, selectedMetricCols]);
 
   // 7. 단일 모드 집계 대상 행 계산
   const singleEffectiveRows = useMemo(() => {
@@ -826,18 +835,31 @@ export function SummaryView({
             {periods.map((p, idx) => {
               const theme = THEME_STYLES[p.colorTheme];
               const result = periodResults.find((r) => r.period.id === p.id);
-              const isBase = idx === 0;
+              const isBase = p.id === effectiveBasePeriodId;
 
               return (
                 <div
                   key={p.id}
-                  className={`border rounded-xl p-3 flex flex-col gap-2 transition ${theme.border} ${theme.bg}`}
+                  className={`border rounded-xl p-3 flex flex-col gap-2 transition ${theme.border} ${theme.bg} ${
+                    isBase ? 'ring-2 ring-blue-500/40' : ''
+                  }`}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5">
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${theme.badge}`}>
-                        {isBase ? '기준 기간' : `비교 기간 #${idx + 1}`}
-                      </span>
+                      {isBase ? (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-600 text-white shadow-2xs">
+                          ★ 기준 기간
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setBasePeriodId(p.id)}
+                          className="text-[10px] font-bold px-1.5 py-0.5 rounded-md border border-slate-300 hover:border-blue-400 bg-white text-slate-600 hover:text-blue-700 transition cursor-pointer"
+                          title="이 기간을 비교 기준으로 설정합니다"
+                        >
+                          기준 설정
+                        </button>
+                      )}
                       <input
                         type="text"
                         value={p.label}
@@ -1158,9 +1180,16 @@ export function SummaryView({
           ) : (
             <div className="flex flex-col gap-4">
               {selectedMetricCols.map((colName) => {
-                // 기준 기간(Period A)의 통계
-                const baseStat = periodResults[0]?.summary?.numericStats[colName];
+                // 🌟 기준 기간(Base Period)의 통계 수치
+                const baseResult = periodResults.find((r) => r.period.id === effectiveBasePeriodId) || periodResults[0];
+                const baseStat = baseResult?.summary?.numericStats[colName];
                 const baseSum = baseStat?.sum ?? 0;
+
+                // 카드 내 최대값 (미니 막대 게이지 비율 산출용)
+                const maxPeriodSum = Math.max(
+                  ...periodResults.map((r) => r.summary?.numericStats[colName]?.sum ?? 0),
+                  1
+                );
 
                 return (
                   <div
@@ -1172,8 +1201,11 @@ export function SummaryView({
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-extrabold text-slate-900">{colName}</span>
                         <span className="text-[11px] text-slate-400">
-                          ({periods.length}개 기간 증감률 비교)
+                          (기준: {baseResult?.period.label || '기준 기간'})
                         </span>
+                      </div>
+                      <div className="text-[11px] text-slate-400 font-medium">
+                        {periods.length}개 기간 증감률 & 금액 비교
                       </div>
                     </div>
 
@@ -1190,29 +1222,70 @@ export function SummaryView({
                       {periodResults.map((res, pIdx) => {
                         const stat = res.summary?.numericStats[colName];
                         const theme = THEME_STYLES[res.period.colorTheme];
-                        const isBase = pIdx === 0;
+                        const isBase = res.period.id === effectiveBasePeriodId;
+                        const currentSum = stat?.sum ?? 0;
+                        const diffVal = currentSum - baseSum;
 
-                        // 증감액 및 증감률(%) 계산 (기준 기간 대비)
-                        let diffVal = 0;
-                        let diffRate: number | null = null;
+                        // 직전 기간 수치 (연속 비교용)
+                        const prevResult = pIdx > 0 ? periodResults[pIdx - 1] : null;
+                        const prevStat = prevResult?.summary?.numericStats[colName];
+                        const prevSum = prevStat?.sum ?? 0;
+                        const diffFromPrevVal = currentSum - prevSum;
 
-                        if (!isBase && stat) {
-                          diffVal = stat.sum - baseSum;
-                          if (baseSum !== 0) {
-                            diffRate = ((stat.sum - baseSum) / Math.abs(baseSum)) * 100;
+                        // 1. 기준 기간 대비 증감률 텍스트 및 타입 산출
+                        let diffRateText = '';
+                        let diffRateType: 'up' | 'down' | 'neutral' = 'neutral';
+
+                        if (baseSum !== 0) {
+                          const rate = ((currentSum - baseSum) / Math.abs(baseSum)) * 100;
+                          diffRateText = `${rate > 0 ? '+' : ''}${rate.toFixed(1)}%`;
+                          diffRateType = rate > 0 ? 'up' : rate < 0 ? 'down' : 'neutral';
+                        } else {
+                          // 기준 금액이 0원인 경우 스마트 특수 처리
+                          if (currentSum > 0) {
+                            diffRateText = '신규 (+100%)';
+                            diffRateType = 'up';
+                          } else if (currentSum === 0) {
+                            diffRateText = '0.0%';
+                            diffRateType = 'neutral';
+                          } else {
+                            diffRateText = '-100%';
+                            diffRateType = 'down';
+                          }
+                        }
+
+                        // 2. 직전 기간 대비 증감률 산출 (3개 이상 기간)
+                        let diffFromPrevRateText = '';
+                        if (prevResult) {
+                          if (prevSum !== 0) {
+                            const pRate = ((currentSum - prevSum) / Math.abs(prevSum)) * 100;
+                            diffFromPrevRateText = `${pRate > 0 ? '+' : ''}${pRate.toFixed(1)}%`;
+                          } else if (currentSum > 0) {
+                            diffFromPrevRateText = '신규 (+100%)';
+                          } else {
+                            diffFromPrevRateText = '0.0%';
                           }
                         }
 
                         return (
                           <div
                             key={res.period.id}
-                            className={`border rounded-xl p-3.5 flex flex-col justify-between ${theme.border} ${theme.bg}`}
+                            className={`border rounded-xl p-3.5 flex flex-col justify-between ${theme.border} ${theme.bg} ${
+                              isBase ? 'ring-2 ring-blue-500/40 shadow-xs' : ''
+                            }`}
                           >
                             <div>
                               <div className="flex items-center justify-between mb-2">
-                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${theme.badge}`}>
-                                  {res.period.label}
-                                </span>
+                                <div className="flex items-center gap-1.5">
+                                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${theme.badge}`}>
+                                    {res.period.label}
+                                  </span>
+                                  {isBase && (
+                                    <span className="text-[9px] font-extrabold bg-blue-600 text-white px-1.5 py-0.5 rounded">
+                                      기준
+                                    </span>
+                                  )}
+                                </div>
                                 <span className="text-[10px] text-slate-500 font-mono">
                                   {stat?.count ?? 0}건
                                 </span>
@@ -1220,51 +1293,79 @@ export function SummaryView({
 
                               <div className="text-[11px] text-slate-400 font-medium">총합계</div>
                               <div className={`text-xl font-black font-mono mt-0.5 ${theme.text}`}>
-                                {stat ? stat.sum.toLocaleString('ko-KR') : '0'}
+                                {currentSum.toLocaleString('ko-KR')}
                               </div>
 
-                              {/* 증감 뱃지 (비교 대상 기간인 경우 표시) */}
-                              {!isBase && (
-                                <div className="mt-2 flex items-center gap-1.5 flex-wrap">
-                                  {diffRate !== null ? (
+                              {/* 🌟 증감 수치 & 증감률 뱃지 동시 노출 영역 */}
+                              {!isBase ? (
+                                <div className="mt-2.5 flex flex-col gap-1.5">
+                                  {/* 기준 기간 대비 증감 뱃지 */}
+                                  <div className="flex items-center gap-1.5 flex-wrap">
                                     <span
-                                      className={`inline-flex items-center gap-0.5 text-[11px] font-extrabold px-2 py-0.5 rounded-md ${
-                                        diffVal > 0
-                                          ? 'bg-emerald-100 text-emerald-800'
-                                          : diffVal < 0
-                                          ? 'bg-rose-100 text-rose-800'
-                                          : 'bg-slate-100 text-slate-600'
+                                      className={`inline-flex items-center gap-1 text-xs font-black px-2.5 py-1 rounded-lg border shadow-2xs ${
+                                        diffRateType === 'up'
+                                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200/80'
+                                          : diffRateType === 'down'
+                                          ? 'bg-rose-50 text-rose-700 border-rose-200/80'
+                                          : 'bg-slate-50 text-slate-600 border-slate-200'
                                       }`}
                                     >
-                                      {diffVal > 0 ? (
-                                        <ArrowUpRight className="w-3.5 h-3.5 text-emerald-600" />
-                                      ) : diffVal < 0 ? (
-                                        <ArrowDownRight className="w-3.5 h-3.5 text-rose-600" />
+                                      {diffRateType === 'up' ? (
+                                        <ArrowUpRight className="w-4 h-4 text-emerald-600 stroke-[2.5]" />
+                                      ) : diffRateType === 'down' ? (
+                                        <ArrowDownRight className="w-4 h-4 text-rose-600 stroke-[2.5]" />
                                       ) : null}
-                                      {diffVal > 0 ? '+' : ''}
-                                      {diffRate.toFixed(1)}%
-                                      <span className="text-[10px] font-normal opacity-80">
-                                        ({diffVal > 0 ? '+' : ''}
-                                        {diffVal.toLocaleString('ko-KR')})
+
+                                      {/* 증감률 */}
+                                      <span className="font-mono">{diffRateText}</span>
+
+                                      {/* 증감 수치 (원 단위 금액) */}
+                                      <span className="font-mono font-bold text-[11px] opacity-90 pl-1 border-l border-current/25">
+                                        {diffVal > 0 ? '+' : ''}{diffVal.toLocaleString('ko-KR')}원
                                       </span>
                                     </span>
-                                  ) : (
-                                    <span className="text-[10px] text-slate-400">기준금액 0원</span>
+                                  </div>
+
+                                  {/* 3개 이상 기간일 때 직전 기간 대비 추이 보조 표기 */}
+                                  {periods.length >= 3 && prevResult && prevResult.period.id !== effectiveBasePeriodId && (
+                                    <div className="text-[10px] text-slate-500 flex items-center gap-1 pt-0.5">
+                                      <span className="text-slate-400">직전({prevResult.period.label}) 대비:</span>
+                                      <span
+                                        className={`font-mono font-bold ${
+                                          diffFromPrevVal > 0
+                                            ? 'text-emerald-600'
+                                            : diffFromPrevVal < 0
+                                            ? 'text-rose-600'
+                                            : 'text-slate-500'
+                                        }`}
+                                      >
+                                        {diffFromPrevVal > 0 ? '+' : ''}{diffFromPrevVal.toLocaleString('ko-KR')}원 ({diffFromPrevRateText})
+                                      </span>
+                                    </div>
                                   )}
                                 </div>
-                              )}
-                              {isBase && (
-                                <div className="mt-2 text-[10px] text-slate-400 font-medium">
-                                  ★ 비교 기준 기간
+                              ) : (
+                                <div className="mt-2.5 flex items-center gap-1 text-[11px] font-bold text-blue-700 bg-blue-50/80 border border-blue-200/60 rounded-md px-2 py-0.5 w-fit">
+                                  <span>★ 비교 기준 기간</span>
                                 </div>
                               )}
                             </div>
 
-                            <div className="mt-3 pt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px]">
-                              <span className="text-slate-400">평균값</span>
-                              <span className="font-mono font-bold text-slate-700">
-                                {stat ? stat.avg.toLocaleString('ko-KR') : '-'}
-                              </span>
+                            <div className="mt-3 pt-2 border-t border-slate-200/60">
+                              {/* 📊 미니 비중 막대 게이지 */}
+                              <div className="w-full bg-slate-200/50 rounded-full h-1.5 overflow-hidden mb-2">
+                                <div
+                                  className={`h-full rounded-full transition-all duration-500 ${theme.accent}`}
+                                  style={{ width: `${Math.min(100, Math.max(0, (currentSum / maxPeriodSum) * 100))}%` }}
+                                />
+                              </div>
+
+                              <div className="flex items-center justify-between text-[11px]">
+                                <span className="text-slate-400">평균값</span>
+                                <span className="font-mono font-bold text-slate-700">
+                                  {stat ? stat.avg.toLocaleString('ko-KR') : '-'}
+                                </span>
+                              </div>
                             </div>
                           </div>
                         );
