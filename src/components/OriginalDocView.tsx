@@ -7,6 +7,7 @@ import { ReexamineModal } from './ReexamineModal';
 import { ProjectWorkspace, OriginalDocFile } from '@/types/workspace';
 import { getSheetOriginalFiles } from '@/lib/sheet-helpers';
 import { DeleteProofModal } from './DeleteProofModal';
+import { getSmartColumnWidth, renderFormattedNumber, isNumericColumn } from '@/lib/formatters';
 
 interface OriginalDocViewProps {
   project: ProjectWorkspace;
@@ -37,16 +38,7 @@ export function OriginalDocView({ project, onDeleteFile, onGoToTableTab, onApply
   const [deletingIdx, setDeletingIdx] = useState<number | null>(null);
   const [isDockCollapsed, setIsDockCollapsed] = useState<boolean>(false);
   const [dockSize, setDockSize] = useState<'sm' | 'md' | 'lg'>('md');
-  // 🌟 컬럼별 너비 조절 상태 (기본값: '비고'는 220px로 과도한 너비 제한)
-  const getDefaultColWidth = (header: string): number => {
-    if (['#', '일련번호', '순번', 'No', 'no'].includes(header)) return 55;
-    if (header === '비고') return 220; // 비고 열 과도한 확장 방지
-    if (['수량', '단가', '금액', '공급가액', '부가가치세', '부가세', '합계금액', '세액'].includes(header)) return 110;
-    if (['거래일자', '등록일시', '일자'].includes(header)) return 120;
-    if (['공급자', '공급받는자', '상호', '회사명'].includes(header)) return 140;
-    if (['품번', '품명', '규격'].includes(header)) return 140;
-    return 130;
-  };
+  const getDefaultColWidth = (header: string): number => getSmartColumnWidth(header);
 
   const [colWidths, setColWidths] = useState<Record<string, number>>({});
 
@@ -530,7 +522,7 @@ export function OriginalDocView({ project, onDeleteFile, onGoToTableTab, onApply
                             .filter((h) => !h.startsWith('_'))
                             .map((header, colIdx) => {
                               const val = row[header];
-                              const isNum = typeof val === 'number';
+                              const isNum = isNumericColumn(header, val);
                               const width = colWidths[header] || getDefaultColWidth(header);
                               const isEditing = editingCell?.rowIdx === rowIdx && editingCell?.colKey === header;
 
@@ -560,7 +552,7 @@ export function OriginalDocView({ project, onDeleteFile, onGoToTableTab, onApply
                                   ) : (
                                     <span className="truncate block">
                                       {val !== undefined && val !== null && String(val).trim() !== '' ? (
-                                        isNum ? Number(val).toLocaleString() : String(val)
+                                        isNum ? renderFormattedNumber(val) : String(val)
                                       ) : (
                                         <span className="text-slate-300">-</span>
                                       )}

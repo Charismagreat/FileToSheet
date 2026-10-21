@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Trash2, UploadCloud, RefreshCw, FileText, Link2, Check, ExternalLink, AlertCircle, Sparkles } from 'lucide-react';
 import { ParsedSheet, SheetRelation } from '@/lib/parser';
 import { TableHeader } from './TableHeader';
+import { getSmartColumnWidth, renderFormattedNumber, isNumericColumn } from '@/lib/formatters';
 import { TableEmptyDropzone } from './TableEmptyDropzone';
 import { TablePagination } from './TablePagination';
 import { ValidationBanner } from './ValidationBanner';
@@ -166,15 +167,10 @@ export function TableView({
       }
     } catch {}
 
-    // 기본 너비 초기값 지능형 설정
+    // 기본 너비 초기값 지능형 설정 (불필요하게 넓은 컬럼 슬림화)
     const initial: Record<string, number> = {};
     (sheet.headers || []).forEach((h) => {
-      if (h === '일련번호') initial[h] = 75;
-      else if (h === '등록일시') initial[h] = 150;
-      else if (h.includes('명') || h.includes('품목') || h.includes('내역') || h.includes('주소') || h.includes('비고') || h.includes('내용')) initial[h] = 220;
-      else if (h.includes('금액') || h.includes('단가') || h.includes('세액') || h.includes('합계') || h.includes('공급가액')) initial[h] = 130;
-      else if (h.includes('수량') || h.includes('규격') || h.includes('단위')) initial[h] = 95;
-      else initial[h] = 130;
+      initial[h] = getSmartColumnWidth(h);
     });
     setColWidths(initial);
   }, [sheet.name, sheet.headers]);
@@ -489,8 +485,12 @@ export function TableView({
                             )}
                           </div>
                         ) : (
-                          <div className="flex items-center justify-between gap-1.5 truncate">
-                            <span className="truncate">{String(cellVal)}</span>
+                          <div className={`flex items-center justify-between gap-1.5 truncate ${isNumericColumn(header, cellVal) ? 'justify-end font-mono' : ''}`}>
+                            <span className="truncate">
+                              {isNumericColumn(header, cellVal)
+                                ? renderFormattedNumber(cellVal)
+                                : String(cellVal)}
+                            </span>
                             <div className="flex items-center gap-1 shrink-0">
                               {cellError && (
                                 <span
