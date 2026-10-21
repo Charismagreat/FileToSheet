@@ -41,6 +41,29 @@ export function OriginalDocView({ project, onDeleteFile, onGoToTableTab, onApply
   const getDefaultColWidth = (header: string): number => getSmartColumnWidth(header);
 
   const [colWidths, setColWidths] = useState<Record<string, number>>({});
+  // 🌟 증빙 카드 등록일시 포맷팅 헬퍼 (초 단위 생략 및 깔끔한 가독성)
+  const formatCardDateTime = (raw?: string): string => {
+    if (!raw) return '';
+    const trimmed = raw.trim();
+    // '26. 10. 20. 오후 2:49:55' -> '26. 10. 20. 오후 2:49'
+    if (trimmed.includes('오후') || trimmed.includes('오전')) {
+      return trimmed.replace(/:\d{2}$/, '').replace(/\s+/g, ' ');
+    }
+    // ISO 형식인 경우 '26.10.20 14:49'
+    if (trimmed.includes('T')) {
+      const d = new Date(trimmed);
+      if (!isNaN(d.getTime())) {
+        const yy = String(d.getFullYear()).slice(2);
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        const hh = String(d.getHours()).padStart(2, '0');
+        const min = String(d.getMinutes()).padStart(2, '0');
+        return `${yy}.${mm}.${dd} ${hh}:${min}`;
+      }
+    }
+    return trimmed;
+  };
+
 
   const handleResizeStart = (header: string, e: React.MouseEvent) => {
     e.preventDefault();
@@ -389,7 +412,7 @@ export function OriginalDocView({ project, onDeleteFile, onGoToTableTab, onApply
                     </button>
                   )}
                 </div>
-                <div className="flex items-center justify-between text-[11px] text-slate-400 pl-0.5">
+                <div className="flex items-center justify-between text-[11px] text-slate-400 pl-0.5 pt-0.5">
                   {isFiltered && matchedCount !== null ? (
                     <span className={`px-1.5 py-0.2 rounded font-medium text-[10px] ${
                       matchedCount > 0 ? 'bg-blue-100 text-blue-800 font-bold' : 'bg-slate-100 text-slate-400'
@@ -401,7 +424,21 @@ export function OriginalDocView({ project, onDeleteFile, onGoToTableTab, onApply
                       적재 {totalCount}행
                     </span>
                   )}
-                  {file.uploadedAt && <span className="text-[10px] truncate">{file.uploadedAt.split(' ')[0]}</span>}
+                  {(() => {
+                    const matchedRow = currentSheet?.rows.find((r) =>
+                      r._fileName && file.name ? r._fileName === file.name : files.length === 1
+                    );
+                    const rawDate = file.uploadedAt || matchedRow?.['등록일시'] || '';
+                    const formatted = formatCardDateTime(rawDate);
+                    return formatted ? (
+                      <span
+                        className="text-[10px] text-slate-400 font-mono tracking-tight truncate max-w-[140px] text-right"
+                        title={`등록일시: ${rawDate}`}
+                      >
+                        {formatted}
+                      </span>
+                    ) : null;
+                  })()}
                 </div>
               </div>
             );
