@@ -161,6 +161,12 @@ export default function FileToSheetApp() {
 
 
   const [activeSubTab, setActiveSubTab] = useState<'table' | 'original' | 'summary'>('table');
+  const [targetOriginalDoc, setTargetOriginalDoc] = useState<{ name?: string; id?: string | number; uid?: string } | null>(null);
+
+  const handleJumpToOriginalDoc = (fileName?: string, fileId?: string | number, fileUid?: string) => {
+    setTargetOriginalDoc({ name: fileName, id: fileId, uid: fileUid });
+    setActiveSubTab('original');
+  };
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc'); // 최신순 기본값
   const [isTableDragging, setIsTableDragging] = useState<boolean>(false);
@@ -702,6 +708,7 @@ export default function FileToSheetApp() {
                     projectSheets={currentProject.sheets}
                     isJoinViewActive={ws.isJoinViewActive}
                     setIsJoinViewActive={ws.setIsJoinViewActive}
+                    onJumpToOriginalDoc={handleJumpToOriginalDoc}
                   />
                 )}
 
@@ -712,6 +719,7 @@ export default function FileToSheetApp() {
                     onGoToTableTab={() => setActiveSubTab('table')}
                     onApplyCorrection={ws.handleApplyCorrection}
                     onUpdateCell={ws.handleUpdateCellByRow}
+                    targetFile={targetOriginalDoc}
                     filteredRows={filteredRows}
                     isFiltered={filteredRows.length !== rawRowsWithOrigin.length}
                   />

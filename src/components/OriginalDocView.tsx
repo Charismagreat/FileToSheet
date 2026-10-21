@@ -23,11 +23,12 @@ interface OriginalDocViewProps {
     colKey: string,
     newValue: any
   ) => Promise<void> | void;
+  targetFile?: { name?: string; id?: string | number; uid?: string } | null;
   filteredRows?: Record<string, any>[];
   isFiltered?: boolean;
 }
 
-export function OriginalDocView({ project, onDeleteFile, onGoToTableTab, onApplyCorrection, onUpdateCell, filteredRows, isFiltered = false }: OriginalDocViewProps) {
+export function OriginalDocView({ project, onDeleteFile, onGoToTableTab, onApplyCorrection, onUpdateCell, targetFile, filteredRows, isFiltered = false }: OriginalDocViewProps) {
   const currentSheet = project.sheets[project.activeSheetIndex] || null;
   const files: OriginalDocFile[] = getSheetOriginalFiles(project, currentSheet);
 
@@ -127,6 +128,20 @@ export function OriginalDocView({ project, onDeleteFile, onGoToTableTab, onApply
       setSelectedIdx(Math.max(0, files.length - 1));
     }
   }, [files.length, selectedIdx]);
+
+  // 🌟 외부(표 데이터 탭)에서 특정 행의 원본 보기 클릭 시 해당 파일로 자동 이동
+  useEffect(() => {
+    if (!targetFile || files.length === 0) return;
+    const foundIdx = files.findIndex((f) => {
+      if (targetFile.uid && f.uid && f.uid === targetFile.uid) return true;
+      if (targetFile.id && f.id && String(f.id) === String(targetFile.id)) return true;
+      if (targetFile.name && f.name && f.name === targetFile.name) return true;
+      return false;
+    });
+    if (foundIdx !== -1) {
+      setSelectedIdx(foundIdx);
+    }
+  }, [targetFile, files]);
 
   const currentFile = files[selectedIdx] || files[0] || null;
   const filename = currentFile?.name || '문서';

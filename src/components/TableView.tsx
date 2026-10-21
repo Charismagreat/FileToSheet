@@ -44,6 +44,7 @@ interface TableViewProps {
   projectSheets?: ParsedSheet[];
   isJoinViewActive?: boolean;
   setIsJoinViewActive?: (v: boolean) => void;
+  onJumpToOriginalDoc?: (fileName?: string, fileId?: string | number, fileUid?: string) => void;
 }
 
 export function TableView({
@@ -76,6 +77,7 @@ export function TableView({
   projectSheets,
   isJoinViewActive = false,
   setIsJoinViewActive,
+  onJumpToOriginalDoc,
 }: TableViewProps) {
   const [hoveredFileKey, setHoveredFileKey] = useState<string | number | null>(null);
 
@@ -388,14 +390,23 @@ export function TableView({
                     <div className="flex items-center justify-center gap-1">
                       <span>{displayRowNumber}</span>
                       {rowFileName && (
-                        <span
-                          title={`📄 원본 증빙: ${rowFileName}${rowUploadTime}\n(동일 파일에서 추출된 행들이 함께 하이라이트됩니다)`}
-                          className={`p-0.5 rounded cursor-help transition ${
-                            isSame ? 'text-indigo-600 bg-indigo-100' : 'text-slate-400 hover:text-indigo-600'
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (onJumpToOriginalDoc) {
+                              onJumpToOriginalDoc(rowFileName, row._fileId, row._fileUid);
+                            }
+                          }}
+                          title={`📄 원본 증빙 바로가기: ${rowFileName}\n(클릭 시 원본 증빙 대조 탭으로 이동하여 이 파일이 바로 열립니다)`}
+                          className={`p-1 rounded cursor-pointer transition hover:scale-110 active:scale-95 ${
+                            isSame
+                              ? 'text-indigo-600 bg-indigo-100 ring-1 ring-indigo-400'
+                              : 'text-slate-400 hover:text-indigo-600 hover:bg-indigo-50'
                           }`}
                         >
-                          <FileText className="w-3 h-3" />
-                        </span>
+                          <FileText className="w-3.5 h-3.5" />
+                        </button>
                       )}
                     </div>
                   </td>
