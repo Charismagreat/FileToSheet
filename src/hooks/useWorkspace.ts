@@ -255,6 +255,80 @@ export function useWorkspace({ phoneNumber, plan, onPlanLimit }: UseWorkspaceOpt
     if (target.id && !isNaN(Number(target.id))) deleteUploadedFile(Number(target.id)).catch((e) => console.warn('스토리지 파일 삭제 무시:', e));
   };
 
+  const handleApplyCorrection = async (
+    targetFileName: string,
+    correctedRows: Record<string, any>[],
+    suggestedRule?: string,
+    learnRule?: boolean
+  ) => {
+    if (!currentProject || !currentSheet) return;
+
+    let updatedProject: ProjectWorkspace | null = null;
+
+    setProjects((prev) => {
+      const next = prev.map((proj, pIdx) => {
+        if (pIdx !== activeProjectIndex) return proj;
+
+        const nextSheets = proj.sheets.map((sheet, sIdx) => {
+          if (sIdx !== proj.activeSheetIndex) return sheet;
+
+          const isTargetRow = (r: any) =>
+            r._fileName === targetFileName || (!r._fileName && (sheet.originalFiles?.length || 0) <= 1);
+
+          const fileMeta =
+            sheet.originalFiles?.find((f) => f.name === targetFileName) ||
+            proj.originalFiles?.find((f) => f.name === targetFileName);
+
+          const formattedCorrected = correctedRows.map((row) => ({
+            ...row,
+            _fileName: targetFileName,
+            ...(fileMeta?.id ? { _fileId: fileMeta.id } : {}),
+            ...(fileMeta?.uid ? { _fileUid: fileMeta.uid } : {}),
+          }));
+
+          const firstTargetIdx = sheet.rows.findIndex(isTargetRow);
+          let newRows: Record<string, any>[];
+
+          if (firstTargetIdx === -1) {
+            newRows = [...sheet.rows, ...formattedCorrected];
+          } else {
+            const before = sheet.rows.slice(0, firstTargetIdx).filter((r) => !isTargetRow(r));
+            const after = sheet.rows.slice(firstTargetIdx).filter((r) => !isTargetRow(r));
+            newRows = [...before, ...formattedCorrected, ...after];
+          }
+
+          newRows = newRows.map((r, i) => ('일련번호' in r ? { ...r, 일련번호: i + 1 } : r));
+
+          let updatedPrompt = sheet.customPrompt || '';
+          if (learnRule && suggestedRule) {
+            updatedPrompt = updatedPrompt
+              ? `${updatedPrompt}\n- ${suggestedRule}`
+              : `- ${suggestedRule}`;
+          }
+
+          return {
+            ...sheet,
+            rows: newRows,
+            customPrompt: updatedPrompt,
+          };
+        });
+
+        const nextProj = { ...proj, sheets: nextSheets };
+        updatedProject = nextProj;
+        return nextProj;
+      });
+      return next;
+    });
+
+    if (phoneNumber && updatedProject) {
+      try {
+        await saveUserProjectToDb(phoneNumber, updatedProject);
+      } catch (e) {
+        console.error('재검토 정정 내역 DB 저장 실패:', e);
+      }
+    }
+  };
+
   const tableEditor = useTableEditor({ projects, setProjects, activeProjectIndex, plan, onPlanLimit });
 
   return {
@@ -264,6 +338,7 @@ export function useWorkspace({ phoneNumber, plan, onPlanLimit }: UseWorkspaceOpt
     handleAddNewProject, handleCloseProject,
     editingSheetIdx, setEditingSheetIdx, editingSheetName, setEditingSheetName, saveSheetName,
     handleAddNewSheet, handleDeleteSheet, handleSelectSheet, handleDeleteOriginalFile,
+    handleApplyCorrection,
     ...tableEditor,
   };
 }

@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { FileText, ExternalLink, Download, AlertCircle, FileSpreadsheet, Layers, Maximize2, Minimize2, Trash2, Table } from 'lucide-react';
+import { FileText, ExternalLink, Download, AlertCircle, FileSpreadsheet, Layers, Maximize2, Minimize2, Trash2, Table, Sparkles, Loader2 } from 'lucide-react';
+import { apiFetch } from '@/lib/api';
+import { ReexamineModal } from './ReexamineModal';
 import { ProjectWorkspace, OriginalDocFile } from '@/types/workspace';
 import { getSheetOriginalFiles } from '@/lib/sheet-helpers';
 import { DeleteProofModal } from './DeleteProofModal';
@@ -11,11 +13,17 @@ interface OriginalDocViewProps {
   project: ProjectWorkspace;
   onDeleteFile?: (fileIdx: number, deleteDataRows: boolean, targetDoc?: OriginalDocFile) => void;
   onGoToTableTab?: () => void;
+  onApplyCorrection?: (
+    targetFileName: string,
+    correctedRows: Record<string, any>[],
+    suggestedRule?: string,
+    learnRule?: boolean
+  ) => Promise<void> | void;
   filteredRows?: Record<string, any>[];
   isFiltered?: boolean;
 }
 
-export function OriginalDocView({ project, onDeleteFile, onGoToTableTab, filteredRows, isFiltered = false }: OriginalDocViewProps) {
+export function OriginalDocView({ project, onDeleteFile, onGoToTableTab, onApplyCorrection, filteredRows, isFiltered = false }: OriginalDocViewProps) {
   const currentSheet = project.sheets[project.activeSheetIndex] || null;
   const files: OriginalDocFile[] = getSheetOriginalFiles(project, currentSheet);
 
@@ -23,6 +31,9 @@ export function OriginalDocView({ project, onDeleteFile, onGoToTableTab, filtere
   const [isZoomFit, setIsZoomFit] = useState<boolean>(true);
   const [deletingIdx, setDeletingIdx] = useState<number | null>(null);
   const [showDataModal, setShowDataModal] = useState<boolean>(false);
+  const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
+  const [showReexamineModal, setShowReexamineModal] = useState<boolean>(false);
+  const [reexamineData, setReexamineData] = useState<any>(null);
 
   useEffect(() => {
     if (files.length > 0 && selectedIdx >= files.length) {
@@ -48,6 +59,60 @@ export function OriginalDocView({ project, onDeleteFile, onGoToTableTab, filtere
     if (r._fileId && currentFile?.id) return r._fileId === currentFile.id;
     return files.length === 1;
   }) || [];
+
+
+  const handleReexamine = async () => {
+    if (!currentFile || !currentSheet) return;
+    setIsAnalyzing(true);
+    try {
+      let base64 = currentFile.dataUrl || '';
+      if (!base64 && resolvedFileUrl) {
+        try {
+          const res = await fetch(resolvedFileUrl);
+          const blob = await res.blob();
+          base64 = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+        } catch (fetchErr) {
+          console.warn('파일 바이너리 변환 실패:', fetchErr);
+        }
+      }
+
+      if (!base64) {
+        alert('원본 파일의 이미지 데이터를 불러올 수 없습니다. 다시 시도해 주세요.');
+        return;
+      }
+
+      const res = await apiFetch('/api/audit/reexamine', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          imageBase64: base64,
+          mimeType: currentFile.type || 'image/jpeg',
+          fileName: currentFile.name,
+          sheetName: currentSheet.name,
+          headers: currentSheet.headers,
+          currentRows: loadedRows,
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || '재검토 분석에 실패했습니다.');
+      }
+
+      setReexamineData(json.data);
+      setShowReexamineModal(true);
+    } catch (err: any) {
+      console.error('재검토 오류:', err);
+      alert(err.message || '재검토 요청 중 오류가 발생했습니다.');
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
 
   const handleDeleteConfirm = (deleteDataRows: boolean) => {
     if (deletingIdx !== null && onDeleteFile) {
@@ -139,6 +204,26 @@ export function OriginalDocView({ project, onDeleteFile, onGoToTableTab, filtere
             {currentFile.size && <span className="text-slate-400 text-[11px] shrink-0">({Math.round(currentFile.size / 1024)} KB)</span>}
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
+            {/* AI 정밀 1:1 재검토 버튼 */}
+            <button
+              onClick={handleReexamine}
+              disabled={isAnalyzing}
+              className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white text-xs font-bold transition shadow-xs disabled:opacity-50"
+              title="AI가 원본과 적재 데이터를 1:1 정밀 대조하여 무엇이 문제인지 분석 보고서와 올바른 정정 데이터를 제안합니다."
+            >
+              {isAnalyzing ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>AI 대조 분석 중...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
+                  <span>재검토</span>
+                </>
+              )}
+            </button>
+
             <button
               onClick={() => setShowDataModal(true)}
               className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 text-indigo-700 text-xs font-bold transition shadow-2xs"
@@ -219,6 +304,23 @@ export function OriginalDocView({ project, onDeleteFile, onGoToTableTab, filtere
         headers={currentSheet?.headers || []}
         rows={loadedRows}
         onGoToTableTab={onGoToTableTab}
+      />
+
+      {/* 모달 3: AI 정밀 1:1 재검토 진단 보고서 및 정정 승인 모달 */}
+      <ReexamineModal
+        show={showReexamineModal}
+        onClose={() => setShowReexamineModal(false)}
+        fileName={filename}
+        sheetName={currentSheet?.name || ''}
+        report={reexamineData}
+        headers={currentSheet?.headers || []}
+        onApplyCorrection={async (correctedRows, suggestedRule, learnRule) => {
+          if (onApplyCorrection) {
+            await onApplyCorrection(filename, correctedRows, suggestedRule, learnRule);
+          }
+          setShowReexamineModal(false);
+          alert('정정 내역이 성공적으로 시트에 반영되었습니다.');
+        }}
       />
     </div>
   );
