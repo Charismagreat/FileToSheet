@@ -71,6 +71,15 @@ export function detectCategory(headers: string[], firstRows: any[]): string {
   return '일반 표 데이터';
 }
 
+/**
+ * 🌟 '비고' 컬럼을 항상 맨 마지막 열로 정렬하는 헬퍼 함수
+ */
+export function ensureRemarkAtEnd(headers: string[]): string[] {
+  if (!headers || headers.length === 0) return headers;
+  const withoutRemark = headers.filter((h) => h !== '비고');
+  return [...withoutRemark, '비고'];
+}
+
 export function ensureDefaultColumns(
   headers: string[],
   rows: Array<Record<string, any>>
@@ -82,21 +91,23 @@ export function ensureDefaultColumns(
 
   const hasSeq = headers.includes('일련번호');
   const hasRegDate = headers.includes('등록일시');
-  const hasRemark = headers.includes('비고');
 
   const prefixHeaders: string[] = [];
   if (!hasSeq) prefixHeaders.push('일련번호');
   if (!hasRegDate) prefixHeaders.push('등록일시');
 
-  const finalHeaders = [...prefixHeaders, ...headers];
-  if (!hasRemark) finalHeaders.push('비고');
+  // '비고'를 제외한 순수 본문 컬럼들
+  const middleHeaders = headers.filter((h) => !prefixHeaders.includes(h) && h !== '비고');
+
+  // 🌟 '비고' 컬럼은 무조건 맨 마지막 열에 배치!
+  const finalHeaders = [...prefixHeaders, ...middleHeaders, '비고'];
 
   const finalRows = rows.map((row, idx) => {
     const newRow: Record<string, any> = {};
     if (!hasSeq) newRow['일련번호'] = idx + 1;
     if (!hasRegDate) newRow['등록일시'] = kstTime;
     const merged = { ...newRow, ...row };
-    if (!hasRemark && merged['비고'] === undefined) merged['비고'] = '';
+    if (merged['비고'] === undefined) merged['비고'] = '';
     return merged;
   });
 

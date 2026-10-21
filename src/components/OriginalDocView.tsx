@@ -155,57 +155,121 @@ export function OriginalDocView({ project, onDeleteFile, onGoToTableTab, onApply
     return files.length === 1;
   }) || [];
 
-  // 🌟 해당 원본 파일에서 추출된 행들의 합계 지표 실시간 계산 (수량, 공급가액, 합계금액 등)
+  // 🌟 해당 원본 파일에서 추출된 행들의 합계 지표 실시간 계산 (수량, 공급가액, 부가세, 합계금액 등)
   const fileSummaryMetrics = useMemo(() => {
     if (!loadedRows || loadedRows.length === 0 || !currentSheet) return [];
 
     const headers = currentSheet.headers.filter((h) => !h.startsWith('_'));
-    const metrics: { label: string; icon: string; sum: number; isCurrency: boolean }[] = [];
+    const metrics: { label: string; icon: string; sum: number; isCurrency: boolean; colorClass: string }[] = [];
 
-    // 1. 수량 컬럼 합계
-    const qtyCol = headers.find((h) => h === '수량' || h.endsWith('수량') || h.includes('수량'));
-    if (qtyCol) {
-      let qtySum = 0;
-      let hasValid = false;
+    // 컬럼 합계 계산 헬퍼
+    const calcSum = (colName: string): number | null => {
+      let sum = 0;
+      let count = 0;
       loadedRows.forEach((r) => {
-        const val = r[qtyCol];
+        const val = r[colName];
         if (val !== undefined && val !== null && String(val).trim() !== '') {
           const num = Number(String(val).replace(/,/g, '').trim());
           if (!isNaN(num)) {
-            qtySum += num;
-            hasValid = true;
+            sum += num;
+            count++;
           }
         }
       });
-      if (hasValid && qtySum > 0) {
-        metrics.push({ label: '수량 합계', icon: '📦', sum: qtySum, isCurrency: false });
+      return count > 0 ? sum : null;
+    };
+
+    // 1. 수량 컬럼 (1순위)
+    const qtyCol = headers.find((h) => ['수량', '수량(EA)', '총수량'].includes(h) || h.endsWith('수량'));
+    if (qtyCol) {
+      const qSum = calcSum(qtyCol);
+      if (qSum !== null && qSum > 0) {
+        metrics.push({
+          label: qtyCol,
+          icon: '📦',
+          sum: qSum,
+          isCurrency: false,
+          colorClass: 'bg-slate-100/90 text-slate-800 border-slate-200',
+        });
       }
     }
 
-    // 2. 금액 컬럼 합계 (공급가액, 합계금액, 금액 등)
-    const amountCols = headers.filter((h) =>
-      ['합계금액', '공급가액', '금액', '합계', '결제금액', '청구금액'].some((k) => h === k || h.endsWith(k))
+    // 🌟 2. 사용자 요청: 공급가, 부가세, 합계 컬럼이 있으면 무조건 우선 사용!
+    const supplyCol = headers.find((h) =>
+      ['공급가액', '공급가', '공급금액'].includes(h) || h.endsWith('공급가액') || h.includes('공급가')
+    );
+    const vatCol = headers.find((h) =>
+      ['부가가치세', '부가세', '세액'].includes(h) || h.endsWith('부가세') || h.endsWith('세액')
+    );
+    const totalCol = headers.find((h) =>
+      ['합계금액', '합계', '총액', '총합계', '결제금액', '청구금액'].includes(h) ||
+      h.endsWith('합계금액') ||
+      h.endsWith('합계')
     );
 
-    // 대표 금액 컬럼 1~2개 선별
-    const selectedAmountCols = amountCols.slice(0, 2);
-    selectedAmountCols.forEach((col) => {
-      let amtSum = 0;
-      let hasValid = false;
-      loadedRows.forEach((r) => {
-        const val = r[col];
-        if (val !== undefined && val !== null && String(val).trim() !== '') {
-          const num = Number(String(val).replace(/,/g, '').trim());
-          if (!isNaN(num)) {
-            amtSum += num;
-            hasValid = true;
-          }
-        }
-      });
-      if (hasValid && amtSum > 0) {
-        metrics.push({ label: col, icon: '💰', sum: amtSum, isCurrency: true });
+    let hasSpecialTaxAmount = false;
+
+    // 공급가 뱃지
+    if (supplyCol) {
+      const sSum = calcSum(supplyCol);
+      if (sSum !== null && sSum > 0) {
+        metrics.push({
+          label: supplyCol,
+          icon: '💵',
+          sum: sSum,
+          isCurrency: true,
+          colorClass: 'bg-blue-50/80 text-blue-800 border-blue-200',
+        });
+        hasSpecialTaxAmount = true;
       }
-    });
+    }
+
+    // 부가세 뱃지
+    if (vatCol) {
+      const vSum = calcSum(vatCol);
+      if (vSum !== null && vSum > 0) {
+        metrics.push({
+          label: vatCol,
+          icon: '🏛️',
+          sum: vSum,
+          isCurrency: true,
+          colorClass: 'bg-purple-50/80 text-purple-800 border-purple-200',
+        });
+        hasSpecialTaxAmount = true;
+      }
+    }
+
+    // 합계금액 뱃지
+    if (totalCol) {
+      const tSum = calcSum(totalCol);
+      if (tSum !== null && tSum > 0) {
+        metrics.push({
+          label: totalCol,
+          icon: '💰',
+          sum: tSum,
+          isCurrency: true,
+          colorClass: 'bg-emerald-50/80 text-emerald-800 border-emerald-200',
+        });
+        hasSpecialTaxAmount = true;
+      }
+    }
+
+    // 만약 공급가/부가세/합계가 하나도 없는 일반 시트라면 fallback으로 '금액' 등 다른 컬럼 표시
+    if (!hasSpecialTaxAmount) {
+      const fallbackAmountCol = headers.find((h) => ['금액', '지출액', '입금액'].includes(h) || h.endsWith('금액'));
+      if (fallbackAmountCol) {
+        const fSum = calcSum(fallbackAmountCol);
+        if (fSum !== null && fSum > 0) {
+          metrics.push({
+            label: fallbackAmountCol,
+            icon: '💰',
+            sum: fSum,
+            isCurrency: true,
+            colorClass: 'bg-indigo-50/80 text-indigo-800 border-indigo-200',
+          });
+        }
+      }
+    }
 
     return metrics;
   }, [loadedRows, currentSheet]);
@@ -363,14 +427,14 @@ export function OriginalDocView({ project, onDeleteFile, onGoToTableTab, onApply
             {fileSummaryMetrics.map((metric, idx) => (
               <div
                 key={idx}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-50/70 border border-indigo-100 text-slate-700 shadow-2xs shrink-0 select-none animate-in fade-in"
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border shadow-2xs shrink-0 select-none animate-in fade-in ${metric.colorClass}`}
                 title={`${metric.label}: ${metric.sum.toLocaleString()} (현재 파일에서 적재된 ${loadedRows.length}개 행 기준 실시간 합산)`}
               >
                 <span className="text-[11px]">{metric.icon}</span>
-                <span className="text-[11px] font-semibold text-indigo-700">{metric.label}</span>
-                <span className="font-bold text-slate-900 font-mono text-xs">
+                <span className="text-[11px] font-semibold opacity-90">{metric.label}</span>
+                <span className="font-bold font-mono text-xs">
                   {renderFormattedNumber(metric.sum)}
-                  <span className="text-[10px] font-normal text-slate-500 ml-0.5">{metric.isCurrency ? '원' : '개'}</span>
+                  <span className="text-[10px] font-normal opacity-75 ml-0.5">{metric.isCurrency ? '원' : '개'}</span>
                 </span>
               </div>
             ))}

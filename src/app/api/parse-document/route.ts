@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { callAiCaller, insertRows, queryTable } from '@/egdesk-helpers';
+import { ensureRemarkAtEnd } from '@/lib/parser';
 
 const FALLBACK_MODELS = [
   'gemini-3.8-flash',
@@ -97,7 +98,7 @@ ${sheetsDesc}
 3. 만약 위 기존 시트 어디에도 성격이나 양식이 부합하지 않는 이질적 문서(예: 영수증/계산서 시트만 있는데 계약서, 이력서, 정관 등이 업로드된 경우)라면:
    - 억지로 기존 시트에 끼워맞추지 말고 반드시 "matched": false 로 설정하세요!
    - "mismatchReason": 기존 시트들의 양식과 왜 일치하지 않는지 친절한 설명 (예: "기존 시트(카드영수증, 세금계산서)와 서식이 다른 부동산 계약서 문서입니다.")
-   - "headers" 및 "rows": 이 문서 자체의 성격에 맞는 독립적인 최적의 표 형태로 추출하세요 (사용자가 '새 시트로 생성'할 때 사용됩니다).`;
+   - "headers" 및 "rows": 이 문서 자체의 성격에 맞는 독립적인 최적의 표 형태로 추출하세요 (단, "비고" 컬럼은 반드시 표의 맨 마지막 열로 배치하세요).`;
     }
 
     let targetHeaderConstraint = '';
@@ -263,6 +264,11 @@ ${sheetsDesc}
         created_at: new Date().toISOString(),
       },
     ]).catch((err) => console.warn('ai_call_logs 로깅 실패:', err));
+
+    // 🌟 시트 생성 시 '비고' 컬럼은 반드시 맨 마지막 열에 위치하도록 보장
+    if (Array.isArray(finalHeaders) && finalHeaders.includes('비고')) {
+      finalHeaders = ensureRemarkAtEnd(finalHeaders);
+    }
 
     return NextResponse.json({
       success: true,
