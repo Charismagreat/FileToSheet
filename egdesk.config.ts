@@ -1,6 +1,6 @@
 /**
  * EGDesk User Data Configuration
- * Generated at: 2026-10-20T05:08:56.809Z
+ * Generated at: 2026-10-21T00:40:21.791Z
  *
  * This file contains type-safe definitions for your EGDesk tables.
  */
@@ -122,7 +122,7 @@ export const TABLES = {
     name: 'ai_call_logs',
     displayName: 'AI 호출 및 사용량 감사 로그',
     description: 'AI 문서 파싱 및 질의응답 시 호출된 모델명, 토큰 소모량, 응답시간, 성공여부 감사 로그 테이블',
-    rowCount: 12,
+    rowCount: 19,
     columnCount: 12,
     columns: ['id', '_version', 'phone_number', 'call_type', 'model_name', 'prompt_tokens', 'completion_tokens', 'total_tokens', 'latency_ms', 'status', 'error_message', 'created_at']
   } as TableDefinition,
@@ -186,7 +186,7 @@ export const TABLES = {
     name: 'sheet_rows',
     displayName: '시트 데이터 행 목록',
     description: '파싱된 시트 행별 데이터 테이블',
-    rowCount: 0,
+    rowCount: 2,
     columnCount: 8,
     columns: ['id', '_version', 'file_id', 'sheet_name', 'row_index', 'row_data', 'category', 'created_at']
   } as TableDefinition,
@@ -194,7 +194,7 @@ export const TABLES = {
     name: 'uploaded_files',
     displayName: '업로드 파일 목록',
     description: '업로드된 원본 파일 및 스토리지 연동 관리 테이블',
-    rowCount: 4,
+    rowCount: 10,
     columnCount: 12,
     columns: ['id', '_version', 'filename', 'file_type', 'file_size', 'file_data', 'status', 'category', 'sheet_names', 'row_count', 'error_message', 'created_at']
   } as TableDefinition
