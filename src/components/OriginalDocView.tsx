@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { FileText, ExternalLink, Download, AlertCircle, FileSpreadsheet, Layers, Maximize2, Minimize2, Trash2, Sparkles, Loader2, Database, ChevronUp, ChevronDown, ArrowRight, Table as TableIcon } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { ReexamineModal } from './ReexamineModal';
@@ -34,6 +34,33 @@ export function OriginalDocView({ project, onDeleteFile, onGoToTableTab, onApply
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
   const [showReexamineModal, setShowReexamineModal] = useState<boolean>(false);
   const [reexamineData, setReexamineData] = useState<any>(null);
+
+  // 🌟 우측 미리보기 영역의 좌표 및 가로폭을 실시간 추적하여, fixed 독이 뷰포트 맨 바닥에서 정확히 가로폭 100%로 따라다니게 함
+  const previewSectionRef = useRef<HTMLElement>(null);
+  const [dockBounds, setDockBounds] = useState<{ left: number; width: number } | null>(null);
+
+  useEffect(() => {
+    const updateBounds = () => {
+      if (previewSectionRef.current) {
+        const rect = previewSectionRef.current.getBoundingClientRect();
+        setDockBounds({ left: rect.left, width: rect.width });
+      }
+    };
+    updateBounds();
+    window.addEventListener('resize', updateBounds);
+    window.addEventListener('scroll', updateBounds, true);
+
+    const observer = new ResizeObserver(updateBounds);
+    if (previewSectionRef.current) {
+      observer.observe(previewSectionRef.current);
+    }
+
+    return () => {
+      window.removeEventListener('resize', updateBounds);
+      window.removeEventListener('scroll', updateBounds, true);
+      observer.disconnect();
+    };
+  }, [files.length, selectedIdx]);
 
   useEffect(() => {
     if (files.length > 0 && selectedIdx >= files.length) {
@@ -280,9 +307,12 @@ export function OriginalDocView({ project, onDeleteFile, onGoToTableTab, onApply
             </div>
           )}
         </div>
-        {/* 🌟 3. 하단 플로팅 데이터 독: 원본 이미지 위를 100% 가로폭으로 덮으며 플로팅 (Floating Overlay) */}
+        {/* 🌟 3. 하단 플로팅 데이터 독: 화면을 스크롤해도 뷰포트 맨 바닥에 딱 붙어서 따라 내려가는 fixed overlay */}
         <div
-          className={`absolute bottom-0 left-0 right-0 w-full z-30 border-t border-slate-300/80 bg-white/95 backdrop-blur-md shadow-[0_-8px_30px_rgba(0,0,0,0.14)] transition-all duration-200 flex flex-col ${
+          style={dockBounds ? { left: `${dockBounds.left}px`, width: `${dockBounds.width}px` } : undefined}
+          className={`fixed bottom-0 z-30 border-t border-slate-300/90 bg-white/95 backdrop-blur-md shadow-[0_-8px_30px_rgba(0,0,0,0.18)] transition-all duration-200 flex flex-col ${
+            !dockBounds ? 'left-0 md:left-64 right-0' : ''
+          } ${
             isDockCollapsed
               ? 'h-9'
               : dockSize === 'sm'
