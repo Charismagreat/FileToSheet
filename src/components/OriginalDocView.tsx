@@ -132,7 +132,7 @@ export function OriginalDocView({ project, onDeleteFile, onGoToTableTab, onApply
   }
 
   return (
-    <div className="flex-1 flex flex-col md:flex-row bg-slate-50 min-h-[600px] h-[calc(100vh-210px)] overflow-hidden">
+    <div className="flex-1 flex flex-col md:flex-row bg-slate-50 min-h-[440px] h-[calc(100vh-290px)] overflow-hidden">
       {/* 1. 좌측 사이드바: 세로 파일 목록 및 각 파일별 적재 행수 뱃지 */}
       <aside className="w-full md:w-64 border-b md:border-b-0 md:border-r border-slate-200 bg-white flex flex-col shrink-0">
         <div className="p-3 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 shrink-0">
@@ -285,10 +285,10 @@ export function OriginalDocView({ project, onDeleteFile, onGoToTableTab, onApply
             isDockCollapsed
               ? 'h-9'
               : dockSize === 'sm'
-              ? 'h-[160px]'
+              ? 'h-[140px]'
               : dockSize === 'lg'
-              ? 'h-[320px]'
-              : 'h-[220px]'
+              ? 'h-[280px]'
+              : 'h-[190px]'
           }`}
         >
           {/* 독 상단 헤더 바 (원클릭 접기/펼치기) */}
@@ -329,7 +329,7 @@ export function OriginalDocView({ project, onDeleteFile, onGoToTableTab, onApply
                     className={`px-1.5 py-0.5 text-[10px] font-bold rounded transition ${
                       dockSize === 'sm' ? 'bg-indigo-600 text-white' : 'bg-slate-200/80 text-slate-600 hover:bg-slate-300'
                     }`}
-                    title="컴팩트 높이 (160px)"
+                    title="컴팩트 높이 (140px)"
                   >
                     소
                   </button>
@@ -339,7 +339,7 @@ export function OriginalDocView({ project, onDeleteFile, onGoToTableTab, onApply
                     className={`px-1.5 py-0.5 text-[10px] font-bold rounded transition ${
                       dockSize === 'md' ? 'bg-indigo-600 text-white' : 'bg-slate-200/80 text-slate-600 hover:bg-slate-300'
                     }`}
-                    title="기본 높이 (220px)"
+                    title="기본 높이 (190px)"
                   >
                     중
                   </button>
@@ -349,7 +349,7 @@ export function OriginalDocView({ project, onDeleteFile, onGoToTableTab, onApply
                     className={`px-1.5 py-0.5 text-[10px] font-bold rounded transition ${
                       dockSize === 'lg' ? 'bg-indigo-600 text-white' : 'bg-slate-200/80 text-slate-600 hover:bg-slate-300'
                     }`}
-                    title="확장 높이 (320px)"
+                    title="확장 높이 (280px)"
                   >
                     대
                   </button>
