@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { FileText, ExternalLink, Download, AlertCircle, FileSpreadsheet, Layers, Maximize2, Minimize2, Trash2, Sparkles, Loader2, Database, ChevronUp, ChevronDown, ArrowRight, Table as TableIcon } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { ReexamineModal } from './ReexamineModal';
@@ -87,6 +87,61 @@ export function OriginalDocView({ project, onDeleteFile, onGoToTableTab, onApply
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
   const [showReexamineModal, setShowReexamineModal] = useState<boolean>(false);
   const [reexamineData, setReexamineData] = useState<any>(null);
+  // 🌟 해당 원본 파일에서 추출된 행들의 합계 지표 실시간 계산 (수량, 공급가액, 합계금액 등)
+  const fileSummaryMetrics = useMemo(() => {
+    if (!loadedRows || loadedRows.length === 0 || !currentSheet) return [];
+
+    const headers = currentSheet.headers.filter((h) => !h.startsWith('_'));
+    const metrics: { label: string; icon: string; sum: number; isCurrency: boolean }[] = [];
+
+    // 1. 수량 컬럼 합계
+    const qtyCol = headers.find((h) => h === '수량' || h.endsWith('수량') || h.includes('수량'));
+    if (qtyCol) {
+      let qtySum = 0;
+      let hasValid = false;
+      loadedRows.forEach((r) => {
+        const val = r[qtyCol];
+        if (val !== undefined && val !== null && String(val).trim() !== '') {
+          const num = Number(String(val).replace(/,/g, '').trim());
+          if (!isNaN(num)) {
+            qtySum += num;
+            hasValid = true;
+          }
+        }
+      });
+      if (hasValid && qtySum > 0) {
+        metrics.push({ label: '수량 합계', icon: '📦', sum: qtySum, isCurrency: false });
+      }
+    }
+
+    // 2. 금액 컬럼 합계 (공급가액, 합계금액, 금액 등)
+    const amountCols = headers.filter((h) =>
+      ['합계금액', '공급가액', '금액', '합계', '결제금액', '청구금액'].some((k) => h === k || h.endsWith(k))
+    );
+
+    // 대표 금액 컬럼 1~2개 선별
+    const selectedAmountCols = amountCols.slice(0, 2);
+    selectedAmountCols.forEach((col) => {
+      let amtSum = 0;
+      let hasValid = false;
+      loadedRows.forEach((r) => {
+        const val = r[col];
+        if (val !== undefined && val !== null && String(val).trim() !== '') {
+          const num = Number(String(val).replace(/,/g, '').trim());
+          if (!isNaN(num)) {
+            amtSum += num;
+            hasValid = true;
+          }
+        }
+      });
+      if (hasValid && amtSum > 0) {
+        metrics.push({ label: col, icon: '💰', sum: amtSum, isCurrency: true });
+      }
+    });
+
+    return metrics;
+  }, [loadedRows, currentSheet]);
+
 
   // 🌟 우측 미리보기 영역의 좌표 및 가로폭을 실시간 추적하여, fixed 독이 뷰포트 맨 바닥에서 정확히 가로폭 100%로 따라다니게 함
   const previewSectionRef = useRef<HTMLElement>(null);
@@ -291,12 +346,36 @@ export function OriginalDocView({ project, onDeleteFile, onGoToTableTab, onApply
 
       {/* 2. 우측 메인 영역: 원본 증빙 뷰어 및 적재 데이터 보기 버튼 */}
       <section className="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-slate-100/60">
-        <div className="h-11 px-4 border-b border-slate-200 bg-white flex items-center justify-between shrink-0 text-xs">
-          <div className="flex items-center gap-2 min-w-0">
+        <div className="h-11 px-4 border-b border-slate-200 bg-white flex items-center justify-between shrink-0 text-xs gap-3">
+          {/* 좌측: 파일명 */}
+          <div className="flex items-center gap-2 min-w-0 shrink-0">
             <FileText className="w-4 h-4 text-blue-600 shrink-0" />
-            <span className="font-bold text-slate-800 truncate max-w-xs" title={filename}>{filename}</span>
-            {currentFile.size && <span className="text-slate-400 text-[11px] shrink-0">({Math.round(currentFile.size / 1024)} KB)</span>}
+            <span className="font-bold text-slate-800 truncate max-w-[160px] sm:max-w-[220px]" title={filename}>{filename}</span>
+            {currentFile.size && <span className="text-slate-400 text-[11px] shrink-0 hidden sm:inline">({Math.round(currentFile.size / 1024)} KB)</span>}
           </div>
+
+          {/* 🌟 중앙: 원본 파일명 옆 실시간 합계 요약 배지 영역 */}
+          <div className="flex items-center gap-2 flex-1 min-w-0 overflow-x-auto no-scrollbar">
+            {fileSummaryMetrics.length > 0 && (
+              <div className="h-4 w-[1px] bg-slate-200 mx-0.5 shrink-0 hidden sm:block" />
+            )}
+            {fileSummaryMetrics.map((metric, idx) => (
+              <div
+                key={idx}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-50/70 border border-indigo-100 text-slate-700 shadow-2xs shrink-0 select-none animate-in fade-in"
+                title={`${metric.label}: ${metric.sum.toLocaleString()} (현재 파일에서 적재된 ${loadedRows.length}개 행 기준 실시간 합산)`}
+              >
+                <span className="text-[11px]">{metric.icon}</span>
+                <span className="text-[11px] font-semibold text-indigo-700">{metric.label}</span>
+                <span className="font-bold text-slate-900 font-mono text-xs">
+                  {renderFormattedNumber(metric.sum)}
+                  <span className="text-[10px] font-normal text-slate-500 ml-0.5">{metric.isCurrency ? '원' : '개'}</span>
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* 우측: 도구 버튼들 */}
           <div className="flex items-center gap-1.5 shrink-0">
             {/* AI 정밀 1:1 재검토 버튼 */}
             <button
