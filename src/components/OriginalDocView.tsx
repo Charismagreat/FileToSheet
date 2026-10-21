@@ -248,7 +248,8 @@ export function OriginalDocView({ project, onDeleteFile, onGoToTableTab, onApply
           </div>
         </div>
 
-        <div className="flex-1 overflow-auto p-3 flex items-center justify-center relative min-h-0">
+        <div className={`flex-1 overflow-auto p-3 flex items-center justify-center relative min-h-0 transition-all ${isDockCollapsed ? 'pb-12' : 'pb-[230px]'}`}>
+
           {isImage ? (
             <div className={`flex items-center justify-center ${isZoomFit ? 'w-full h-full' : 'min-w-full min-h-full'}`}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -279,16 +280,16 @@ export function OriginalDocView({ project, onDeleteFile, onGoToTableTab, onApply
             </div>
           )}
         </div>
-        {/* 🌟 3. 하단 플로팅 데이터 독: 가로폭 100% 빈틈없이 채움 (원본과 실시간 1:1 동시 대조) */}
+        {/* 🌟 3. 하단 플로팅 데이터 독: 원본 이미지 위를 100% 가로폭으로 덮으며 플로팅 (Floating Overlay) */}
         <div
-          className={`border-t border-slate-200 bg-white shadow-xl transition-all duration-200 flex flex-col shrink-0 w-full z-20 ${
+          className={`absolute bottom-0 left-0 right-0 w-full z-30 border-t border-slate-300/80 bg-white/95 backdrop-blur-md shadow-[0_-8px_30px_rgba(0,0,0,0.14)] transition-all duration-200 flex flex-col ${
             isDockCollapsed
               ? 'h-9'
               : dockSize === 'sm'
-              ? 'h-[140px]'
+              ? 'h-[160px]'
               : dockSize === 'lg'
-              ? 'h-[280px]'
-              : 'h-[190px]'
+              ? 'h-[320px]'
+              : 'h-[220px]'
           }`}
         >
           {/* 독 상단 헤더 바 (원클릭 접기/펼치기) */}
