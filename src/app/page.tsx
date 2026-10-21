@@ -711,6 +711,7 @@ export default function FileToSheetApp() {
                     onDeleteFile={ws.handleDeleteOriginalFile}
                     onGoToTableTab={() => setActiveSubTab('table')}
                     onApplyCorrection={ws.handleApplyCorrection}
+                    onUpdateCell={ws.handleUpdateCellByRow}
                     filteredRows={filteredRows}
                     isFiltered={filteredRows.length !== rawRowsWithOrigin.length}
                   />

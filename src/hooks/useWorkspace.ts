@@ -329,6 +329,49 @@ export function useWorkspace({ phoneNumber, plan, onPlanLimit }: UseWorkspaceOpt
     }
   };
 
+  const handleUpdateCellByRow = async (targetRow: Record<string, any>, colKey: string, newValue: any) => {
+    if (!currentProject || !currentSheet) return;
+
+    let updatedProject: ProjectWorkspace | null = null;
+
+    setProjects((prev) => {
+      const next = prev.map((proj, pIdx) => {
+        if (pIdx !== activeProjectIndex) return proj;
+
+        const nextSheets = proj.sheets.map((sheet, sIdx) => {
+          if (sIdx !== proj.activeSheetIndex) return sheet;
+
+          const rowIdx = sheet.rows.findIndex((r) => {
+            if (r === targetRow) return true;
+            if (r._rowId && targetRow._rowId && r._rowId === targetRow._rowId) return true;
+            if (r.일련번호 && targetRow.일련번호 && r.일련번호 === targetRow.일련번호) return true;
+            return false;
+          });
+
+          if (rowIdx === -1) return sheet;
+
+          const nextRows = [...sheet.rows];
+          nextRows[rowIdx] = { ...nextRows[rowIdx], [colKey]: newValue };
+
+          return { ...sheet, rows: nextRows };
+        });
+
+        const nextProj = { ...proj, sheets: nextSheets };
+        updatedProject = nextProj;
+        return nextProj;
+      });
+      return next;
+    });
+
+    if (phoneNumber && updatedProject) {
+      try {
+        await saveUserProjectToDb(phoneNumber, updatedProject);
+      } catch (e) {
+        console.error('셀 편집 DB 저장 실패:', e);
+      }
+    }
+  };
+
   const tableEditor = useTableEditor({ projects, setProjects, activeProjectIndex, plan, onPlanLimit });
 
   return {
@@ -339,6 +382,7 @@ export function useWorkspace({ phoneNumber, plan, onPlanLimit }: UseWorkspaceOpt
     editingSheetIdx, setEditingSheetIdx, editingSheetName, setEditingSheetName, saveSheetName,
     handleAddNewSheet, handleDeleteSheet, handleSelectSheet, handleDeleteOriginalFile,
     handleApplyCorrection,
+    handleUpdateCellByRow,
     ...tableEditor,
   };
 }

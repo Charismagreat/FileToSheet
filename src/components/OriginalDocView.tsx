@@ -18,11 +18,16 @@ interface OriginalDocViewProps {
     suggestedRule?: string,
     learnRule?: boolean
   ) => Promise<void> | void;
+  onUpdateCell?: (
+    targetRow: Record<string, any>,
+    colKey: string,
+    newValue: any
+  ) => Promise<void> | void;
   filteredRows?: Record<string, any>[];
   isFiltered?: boolean;
 }
 
-export function OriginalDocView({ project, onDeleteFile, onGoToTableTab, onApplyCorrection, filteredRows, isFiltered = false }: OriginalDocViewProps) {
+export function OriginalDocView({ project, onDeleteFile, onGoToTableTab, onApplyCorrection, onUpdateCell, filteredRows, isFiltered = false }: OriginalDocViewProps) {
   const currentSheet = project.sheets[project.activeSheetIndex] || null;
   const files: OriginalDocFile[] = getSheetOriginalFiles(project, currentSheet);
 
@@ -31,6 +36,61 @@ export function OriginalDocView({ project, onDeleteFile, onGoToTableTab, onApply
   const [deletingIdx, setDeletingIdx] = useState<number | null>(null);
   const [isDockCollapsed, setIsDockCollapsed] = useState<boolean>(false);
   const [dockSize, setDockSize] = useState<'sm' | 'md' | 'lg'>('md');
+  // 🌟 컬럼별 너비 조절 상태 (기본값: '비고'는 220px로 과도한 너비 제한)
+  const getDefaultColWidth = (header: string): number => {
+    if (['#', '일련번호', '순번', 'No', 'no'].includes(header)) return 55;
+    if (header === '비고') return 220; // 비고 열 과도한 확장 방지
+    if (['수량', '단가', '금액', '공급가액', '부가가치세', '부가세', '합계금액', '세액'].includes(header)) return 110;
+    if (['거래일자', '등록일시', '일자'].includes(header)) return 120;
+    if (['공급자', '공급받는자', '상호', '회사명'].includes(header)) return 140;
+    if (['품번', '품명', '규격'].includes(header)) return 140;
+    return 130;
+  };
+
+  const [colWidths, setColWidths] = useState<Record<string, number>>({});
+
+  const handleResizeStart = (header: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const startX = e.clientX;
+    const startWidth = colWidths[header] || getDefaultColWidth(header);
+
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      const deltaX = moveEvent.clientX - startX;
+      const newWidth = Math.max(50, startWidth + deltaX);
+      setColWidths((prev) => ({ ...prev, [header]: newWidth }));
+    };
+
+    const onMouseUp = () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  };
+
+  // 🌟 인라인 셀 즉시 편집 상태
+  const [editingCell, setEditingCell] = useState<{ rowIdx: number; colKey: string } | null>(null);
+  const [editValue, setEditValue] = useState<string>('');
+
+  const handleStartEdit = (rowIdx: number, colKey: string, initialVal: any) => {
+    setEditingCell({ rowIdx, colKey });
+    setEditValue(initialVal !== undefined && initialVal !== null ? String(initialVal) : '');
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingCell) return;
+    const { rowIdx, colKey } = editingCell;
+    const targetRow = loadedRows[rowIdx];
+    if (targetRow && String(targetRow[colKey] ?? '') !== editValue) {
+      if (onUpdateCell) {
+        await onUpdateCell(targetRow, colKey, editValue);
+      }
+    }
+    setEditingCell(null);
+  };
+
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
   const [showReexamineModal, setShowReexamineModal] = useState<boolean>(false);
   const [reexamineData, setReexamineData] = useState<any>(null);
@@ -414,28 +474,41 @@ export function OriginalDocView({ project, onDeleteFile, onGoToTableTab, onApply
                 </div>
               ) : (
                 <div className="min-w-full inline-block align-middle">
-                  <table className="w-full text-xs text-left border-collapse">
+                  <table className="text-xs text-left border-collapse table-fixed">
                     <thead className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200 sticky top-0 z-10 select-none shadow-2xs">
                       <tr>
-                        <th className="w-12 px-3 py-2 text-center text-slate-400 font-mono text-[11px] border-r border-slate-200 bg-slate-100">
+                        <th style={{ width: '48px', minWidth: '48px', maxWidth: '48px' }} className="px-2 py-2 text-center text-slate-400 font-mono text-[11px] border-r border-slate-200 bg-slate-100 shrink-0">
                           #
                         </th>
                         {(currentSheet?.headers || [])
                           .filter((h) => !h.startsWith('_'))
-                          .map((header, idx) => (
-                            <th
-                              key={idx}
-                              className="px-3.5 py-2 border-r border-slate-200 whitespace-nowrap bg-slate-100 tracking-wide font-bold"
-                            >
-                              {header}
-                            </th>
-                          ))}
+                          .map((header, idx) => {
+                            const width = colWidths[header] || getDefaultColWidth(header);
+                            return (
+                              <th
+                                key={idx}
+                                style={{ width: `${width}px`, minWidth: `${width}px`, maxWidth: `${width}px` }}
+                                className="relative px-3 py-2 border-r border-slate-200 whitespace-nowrap bg-slate-100 tracking-wide font-bold select-none group/th truncate"
+                                title={`${header} (드래그하여 열 너비 조절)`}
+                              >
+                                <span className="truncate block pr-2">{header}</span>
+                                {/* 🌟 마우스 드래그 열 너비 조절 핸들러 */}
+                                <div
+                                  onMouseDown={(e) => handleResizeStart(header, e)}
+                                  className="absolute right-0 top-0 bottom-0 w-2.5 cursor-col-resize hover:bg-blue-400 active:bg-blue-600 transition flex items-center justify-center z-20 group-hover/th:bg-slate-200/80"
+                                  title="열 너비 드래그 조절"
+                                >
+                                  <div className="w-[1px] h-3.5 bg-slate-300 group-hover/th:bg-blue-500" />
+                                </div>
+                              </th>
+                            );
+                          })}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 font-sans bg-white">
                       {loadedRows.map((row, rowIdx) => (
-                        <tr key={rowIdx} className="hover:bg-blue-50/60 transition group">
-                          <td className="px-3 py-2 text-center font-mono text-slate-400 text-[11px] border-r border-slate-100 bg-slate-50/50 group-hover:bg-blue-50/30">
+                        <tr key={rowIdx} className="hover:bg-blue-50/50 transition group">
+                          <td style={{ width: '48px', minWidth: '48px', maxWidth: '48px' }} className="px-2 py-1.5 text-center font-mono text-slate-400 text-[11px] border-r border-slate-100 bg-slate-50/40 group-hover:bg-blue-50/30 shrink-0">
                             {rowIdx + 1}
                           </td>
                           {(currentSheet?.headers || [])
@@ -443,17 +516,40 @@ export function OriginalDocView({ project, onDeleteFile, onGoToTableTab, onApply
                             .map((header, colIdx) => {
                               const val = row[header];
                               const isNum = typeof val === 'number';
+                              const width = colWidths[header] || getDefaultColWidth(header);
+                              const isEditing = editingCell?.rowIdx === rowIdx && editingCell?.colKey === header;
+
                               return (
                                 <td
                                   key={colIdx}
-                                  className={`px-3.5 py-2 border-r border-slate-100 whitespace-nowrap text-slate-700 text-xs ${
+                                  style={{ width: `${width}px`, minWidth: `${width}px`, maxWidth: `${width}px` }}
+                                  onDoubleClick={() => handleStartEdit(rowIdx, header, val)}
+                                  className={`px-3 py-1.5 border-r border-slate-100 text-slate-700 text-xs truncate relative transition ${
                                     isNum ? 'text-right font-mono' : ''
-                                  }`}
+                                  } ${isEditing ? 'p-0.5 bg-blue-50/80 ring-2 ring-blue-500 z-10' : 'hover:bg-indigo-50/40 cursor-pointer'}`}
+                                  title={isEditing ? undefined : (val !== undefined && val !== null ? `${String(val)} (더블클릭하여 수정)` : '더블클릭하여 수정')}
                                 >
-                                  {val !== undefined && val !== null ? (
-                                    isNum ? Number(val).toLocaleString() : String(val)
+                                  {isEditing ? (
+                                    <input
+                                      autoFocus
+                                      type="text"
+                                      value={editValue}
+                                      onChange={(e) => setEditValue(e.target.value)}
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter') handleSaveEdit();
+                                        if (e.key === 'Escape') setEditingCell(null);
+                                      }}
+                                      onBlur={handleSaveEdit}
+                                      className="w-full h-7 px-2 text-xs border border-blue-500 rounded bg-white font-sans text-slate-800 shadow-inner focus:outline-none"
+                                    />
                                   ) : (
-                                    <span className="text-slate-300">-</span>
+                                    <span className="truncate block">
+                                      {val !== undefined && val !== null && String(val).trim() !== '' ? (
+                                        isNum ? Number(val).toLocaleString() : String(val)
+                                      ) : (
+                                        <span className="text-slate-300">-</span>
+                                      )}
+                                    </span>
                                   )}
                                 </td>
                               );
