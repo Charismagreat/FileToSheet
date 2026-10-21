@@ -87,60 +87,6 @@ export function OriginalDocView({ project, onDeleteFile, onGoToTableTab, onApply
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
   const [showReexamineModal, setShowReexamineModal] = useState<boolean>(false);
   const [reexamineData, setReexamineData] = useState<any>(null);
-  // 🌟 해당 원본 파일에서 추출된 행들의 합계 지표 실시간 계산 (수량, 공급가액, 합계금액 등)
-  const fileSummaryMetrics = useMemo(() => {
-    if (!loadedRows || loadedRows.length === 0 || !currentSheet) return [];
-
-    const headers = currentSheet.headers.filter((h) => !h.startsWith('_'));
-    const metrics: { label: string; icon: string; sum: number; isCurrency: boolean }[] = [];
-
-    // 1. 수량 컬럼 합계
-    const qtyCol = headers.find((h) => h === '수량' || h.endsWith('수량') || h.includes('수량'));
-    if (qtyCol) {
-      let qtySum = 0;
-      let hasValid = false;
-      loadedRows.forEach((r) => {
-        const val = r[qtyCol];
-        if (val !== undefined && val !== null && String(val).trim() !== '') {
-          const num = Number(String(val).replace(/,/g, '').trim());
-          if (!isNaN(num)) {
-            qtySum += num;
-            hasValid = true;
-          }
-        }
-      });
-      if (hasValid && qtySum > 0) {
-        metrics.push({ label: '수량 합계', icon: '📦', sum: qtySum, isCurrency: false });
-      }
-    }
-
-    // 2. 금액 컬럼 합계 (공급가액, 합계금액, 금액 등)
-    const amountCols = headers.filter((h) =>
-      ['합계금액', '공급가액', '금액', '합계', '결제금액', '청구금액'].some((k) => h === k || h.endsWith(k))
-    );
-
-    // 대표 금액 컬럼 1~2개 선별
-    const selectedAmountCols = amountCols.slice(0, 2);
-    selectedAmountCols.forEach((col) => {
-      let amtSum = 0;
-      let hasValid = false;
-      loadedRows.forEach((r) => {
-        const val = r[col];
-        if (val !== undefined && val !== null && String(val).trim() !== '') {
-          const num = Number(String(val).replace(/,/g, '').trim());
-          if (!isNaN(num)) {
-            amtSum += num;
-            hasValid = true;
-          }
-        }
-      });
-      if (hasValid && amtSum > 0) {
-        metrics.push({ label: col, icon: '💰', sum: amtSum, isCurrency: true });
-      }
-    });
-
-    return metrics;
-  }, [loadedRows, currentSheet]);
 
 
   // 🌟 우측 미리보기 영역의 좌표 및 가로폭을 실시간 추적하여, fixed 독이 뷰포트 맨 바닥에서 정확히 가로폭 100%로 따라다니게 함
@@ -208,6 +154,61 @@ export function OriginalDocView({ project, onDeleteFile, onGoToTableTab, onApply
     if (r._fileId && currentFile?.id) return r._fileId === currentFile.id;
     return files.length === 1;
   }) || [];
+
+  // 🌟 해당 원본 파일에서 추출된 행들의 합계 지표 실시간 계산 (수량, 공급가액, 합계금액 등)
+  const fileSummaryMetrics = useMemo(() => {
+    if (!loadedRows || loadedRows.length === 0 || !currentSheet) return [];
+
+    const headers = currentSheet.headers.filter((h) => !h.startsWith('_'));
+    const metrics: { label: string; icon: string; sum: number; isCurrency: boolean }[] = [];
+
+    // 1. 수량 컬럼 합계
+    const qtyCol = headers.find((h) => h === '수량' || h.endsWith('수량') || h.includes('수량'));
+    if (qtyCol) {
+      let qtySum = 0;
+      let hasValid = false;
+      loadedRows.forEach((r) => {
+        const val = r[qtyCol];
+        if (val !== undefined && val !== null && String(val).trim() !== '') {
+          const num = Number(String(val).replace(/,/g, '').trim());
+          if (!isNaN(num)) {
+            qtySum += num;
+            hasValid = true;
+          }
+        }
+      });
+      if (hasValid && qtySum > 0) {
+        metrics.push({ label: '수량 합계', icon: '📦', sum: qtySum, isCurrency: false });
+      }
+    }
+
+    // 2. 금액 컬럼 합계 (공급가액, 합계금액, 금액 등)
+    const amountCols = headers.filter((h) =>
+      ['합계금액', '공급가액', '금액', '합계', '결제금액', '청구금액'].some((k) => h === k || h.endsWith(k))
+    );
+
+    // 대표 금액 컬럼 1~2개 선별
+    const selectedAmountCols = amountCols.slice(0, 2);
+    selectedAmountCols.forEach((col) => {
+      let amtSum = 0;
+      let hasValid = false;
+      loadedRows.forEach((r) => {
+        const val = r[col];
+        if (val !== undefined && val !== null && String(val).trim() !== '') {
+          const num = Number(String(val).replace(/,/g, '').trim());
+          if (!isNaN(num)) {
+            amtSum += num;
+            hasValid = true;
+          }
+        }
+      });
+      if (hasValid && amtSum > 0) {
+        metrics.push({ label: col, icon: '💰', sum: amtSum, isCurrency: true });
+      }
+    });
+
+    return metrics;
+  }, [loadedRows, currentSheet]);
 
 
   const handleReexamine = async () => {
