@@ -1,13 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { FileText, ExternalLink, Download, AlertCircle, FileSpreadsheet, Layers, Maximize2, Minimize2, Trash2, Table, Sparkles, Loader2 } from 'lucide-react';
+import { FileText, ExternalLink, Download, AlertCircle, FileSpreadsheet, Layers, Maximize2, Minimize2, Trash2, Sparkles, Loader2, Database, ChevronUp, ChevronDown, ArrowRight, Table as TableIcon } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { ReexamineModal } from './ReexamineModal';
 import { ProjectWorkspace, OriginalDocFile } from '@/types/workspace';
 import { getSheetOriginalFiles } from '@/lib/sheet-helpers';
 import { DeleteProofModal } from './DeleteProofModal';
-import { ProofDataModal } from './ProofDataModal';
 
 interface OriginalDocViewProps {
   project: ProjectWorkspace;
@@ -30,7 +29,8 @@ export function OriginalDocView({ project, onDeleteFile, onGoToTableTab, onApply
   const [selectedIdx, setSelectedIdx] = useState<number>(0);
   const [isZoomFit, setIsZoomFit] = useState<boolean>(true);
   const [deletingIdx, setDeletingIdx] = useState<number | null>(null);
-  const [showDataModal, setShowDataModal] = useState<boolean>(false);
+  const [isDockCollapsed, setIsDockCollapsed] = useState<boolean>(false);
+  const [dockSize, setDockSize] = useState<'sm' | 'md' | 'lg'>('md');
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
   const [showReexamineModal, setShowReexamineModal] = useState<boolean>(false);
   const [reexamineData, setReexamineData] = useState<any>(null);
@@ -224,14 +224,7 @@ export function OriginalDocView({ project, onDeleteFile, onGoToTableTab, onApply
               )}
             </button>
 
-            <button
-              onClick={() => setShowDataModal(true)}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 text-indigo-700 text-xs font-bold transition shadow-2xs"
-              title="이 파일에서 적재된 데이터 행 확인"
-            >
-              <Table className="w-3.5 h-3.5" />
-              <span>적재 데이터 ({loadedRows.length}행)</span>
-            </button>
+
             {isImage && (
               <button
                 onClick={() => setIsZoomFit(!isZoomFit)}
@@ -286,6 +279,163 @@ export function OriginalDocView({ project, onDeleteFile, onGoToTableTab, onApply
             </div>
           )}
         </div>
+        {/* 🌟 3. 하단 플로팅 데이터 독: 가로폭 100% 빈틈없이 채움 (원본과 실시간 1:1 동시 대조) */}
+        <div
+          className={`border-t border-slate-200 bg-white shadow-xl transition-all duration-200 flex flex-col shrink-0 w-full z-20 ${
+            isDockCollapsed
+              ? 'h-9'
+              : dockSize === 'sm'
+              ? 'h-[160px]'
+              : dockSize === 'lg'
+              ? 'h-[320px]'
+              : 'h-[220px]'
+          }`}
+        >
+          {/* 독 상단 헤더 바 (원클릭 접기/펼치기) */}
+          <div
+            onClick={() => setIsDockCollapsed(!isDockCollapsed)}
+            className="h-9 px-3.5 bg-slate-50 hover:bg-slate-100/90 border-b border-slate-200 flex items-center justify-between cursor-pointer select-none shrink-0 text-xs transition"
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              <Database className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+              <span className="font-bold text-slate-800">적재 데이터</span>
+              <span className="px-2 py-0.2 rounded-full bg-indigo-100 text-indigo-700 font-bold font-mono text-[11px] shrink-0">
+                {loadedRows.length}행
+              </span>
+              <span className="text-slate-400 text-[11px] truncate hidden sm:inline">
+                · {filename}
+              </span>
+              {onGoToTableTab && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onGoToTableTab();
+                  }}
+                  className="ml-2 inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 hover:text-blue-800 hover:underline shrink-0"
+                >
+                  <span>표 탭 전체보기</span>
+                  <ArrowRight className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              {!isDockCollapsed && (
+                <div className="flex items-center gap-1 mr-1" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    type="button"
+                    onClick={() => setDockSize('sm')}
+                    className={`px-1.5 py-0.5 text-[10px] font-bold rounded transition ${
+                      dockSize === 'sm' ? 'bg-indigo-600 text-white' : 'bg-slate-200/80 text-slate-600 hover:bg-slate-300'
+                    }`}
+                    title="컴팩트 높이 (160px)"
+                  >
+                    소
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDockSize('md')}
+                    className={`px-1.5 py-0.5 text-[10px] font-bold rounded transition ${
+                      dockSize === 'md' ? 'bg-indigo-600 text-white' : 'bg-slate-200/80 text-slate-600 hover:bg-slate-300'
+                    }`}
+                    title="기본 높이 (220px)"
+                  >
+                    중
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDockSize('lg')}
+                    className={`px-1.5 py-0.5 text-[10px] font-bold rounded transition ${
+                      dockSize === 'lg' ? 'bg-indigo-600 text-white' : 'bg-slate-200/80 text-slate-600 hover:bg-slate-300'
+                    }`}
+                    title="확장 높이 (320px)"
+                  >
+                    대
+                  </button>
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsDockCollapsed(!isDockCollapsed);
+                }}
+                className="p-1 text-slate-500 hover:text-slate-800 hover:bg-slate-200/60 rounded transition"
+                title={isDockCollapsed ? '적재 데이터 표 펼치기' : '적재 데이터 표 접기'}
+              >
+                {isDockCollapsed ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+
+          {/* 독 본문: 데이터 테이블 (가로/세로 독립 스크롤) */}
+          {!isDockCollapsed && (
+            <div className="flex-1 overflow-auto bg-slate-50/30">
+              {loadedRows.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-center text-slate-400 text-xs p-4 min-h-[100px]">
+                  <TableIcon className="w-6 h-6 mb-1 opacity-40 text-slate-400" />
+                  <p className="font-semibold text-slate-600">이 증빙 파일에서 추출·적재된 데이터가 없습니다.</p>
+                  <p className="mt-0.5 text-[11px] text-slate-400">
+                    상단의 [🔍 재검토]를 누르면 AI가 원본을 재분석하여 정정 데이터를 제안합니다.
+                  </p>
+                </div>
+              ) : (
+                <div className="min-w-full inline-block align-middle">
+                  <table className="w-full text-xs text-left border-collapse">
+                    <thead className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200 sticky top-0 z-10 select-none shadow-2xs">
+                      <tr>
+                        <th className="w-12 px-3 py-2 text-center text-slate-400 font-mono text-[11px] border-r border-slate-200 bg-slate-100">
+                          #
+                        </th>
+                        {(currentSheet?.headers || [])
+                          .filter((h) => !h.startsWith('_'))
+                          .map((header, idx) => (
+                            <th
+                              key={idx}
+                              className="px-3.5 py-2 border-r border-slate-200 whitespace-nowrap bg-slate-100 tracking-wide font-bold"
+                            >
+                              {header}
+                            </th>
+                          ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 font-sans bg-white">
+                      {loadedRows.map((row, rowIdx) => (
+                        <tr key={rowIdx} className="hover:bg-blue-50/60 transition group">
+                          <td className="px-3 py-2 text-center font-mono text-slate-400 text-[11px] border-r border-slate-100 bg-slate-50/50 group-hover:bg-blue-50/30">
+                            {rowIdx + 1}
+                          </td>
+                          {(currentSheet?.headers || [])
+                            .filter((h) => !h.startsWith('_'))
+                            .map((header, colIdx) => {
+                              const val = row[header];
+                              const isNum = typeof val === 'number';
+                              return (
+                                <td
+                                  key={colIdx}
+                                  className={`px-3.5 py-2 border-r border-slate-100 whitespace-nowrap text-slate-700 text-xs ${
+                                    isNum ? 'text-right font-mono' : ''
+                                  }`}
+                                >
+                                  {val !== undefined && val !== null ? (
+                                    isNum ? Number(val).toLocaleString() : String(val)
+                                  ) : (
+                                    <span className="text-slate-300">-</span>
+                                  )}
+                                </td>
+                              );
+                            })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </section>
 
       {/* 모달 1: 증빙 삭제 시 데이터 유지 여부 선택 */}
@@ -296,15 +446,7 @@ export function OriginalDocView({ project, onDeleteFile, onGoToTableTab, onApply
         onConfirmDelete={handleDeleteConfirm}
       />
 
-      {/* 모달 2: 원본 파일에서 적재된 데이터 행 조회 */}
-      <ProofDataModal
-        show={showDataModal}
-        onClose={() => setShowDataModal(false)}
-        fileName={filename}
-        headers={currentSheet?.headers || []}
-        rows={loadedRows}
-        onGoToTableTab={onGoToTableTab}
-      />
+
 
       {/* 모달 3: AI 정밀 1:1 재검토 진단 보고서 및 정정 승인 모달 */}
       <ReexamineModal
