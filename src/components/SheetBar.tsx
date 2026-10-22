@@ -46,7 +46,8 @@ export function SheetBar({
   onReorderSheets,
   plan,
 }: SheetBarProps) {
-  const maxSheets = plan === 'pro' ? 30 : 5;
+  const isPro = plan === 'pro' || plan === 'enterprise';
+  const maxSheets = isPro ? 30 : 5;
   const isLimitReached = sheets.length >= maxSheets;
 
   // 드래그 앤 드롭 상태

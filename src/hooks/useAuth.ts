@@ -15,8 +15,36 @@ export function useAuth() {
   const [testCodeHint, setTestCodeHint] = useState<string>('');
   const [timerSeconds, setTimerSeconds] = useState<number>(180);
 
-  // 로컬 세션 복원
+  // 🌟 서버로부터 최신 사용자 프로필(플랜, 잔여 토큰 등)을 실시간 동기화
+  const syncLatestUserProfile = async (phoneNumber: string) => {
+    try {
+      const cleanPhone = phoneNumber.replace(/[^0-9]/g, '');
+      if (!cleanPhone) return;
+      const res = await apiFetch(`/api/auth/phone/me?phone=${cleanPhone}`);
+      const data = await res.json();
+      if (data.success && data.user) {
+        setCurrentUser((prev) => {
+          const updated: UserSession = {
+            ...prev,
+            ...data.user,
+            id: data.user.id || prev?.id || 1,
+            phoneNumber: data.user.phoneNumber || prev?.phoneNumber || phoneNumber,
+            nickname: data.user.nickname || prev?.nickname,
+            plan: data.user.plan || prev?.plan || 'free',
+          };
+          localStorage.setItem('filetosheet_user', JSON.stringify(updated));
+          document.cookie = `fts_user_phone=${updated.phoneNumber}; path=/; max-age=2592000; SameSite=Lax`;
+          return updated;
+        });
+      }
+    } catch (e) {
+      console.warn('사용자 최신 세션 실시간 동기화 실패 (오프라인/네트워크):', e);
+    }
+  };
+
+  // 로컬 세션 복원 및 서버 최신 상태 즉각 재검증(Revalidate)
   useEffect(() => {
+    let phoneToSync = '';
     try {
       const savedUser = localStorage.getItem('filetosheet_user');
       if (savedUser) {
@@ -24,15 +52,15 @@ export function useAuth() {
         if (parsed?.phoneNumber) {
           setCurrentUser(parsed);
           document.cookie = `fts_user_phone=${parsed.phoneNumber}; path=/; max-age=2592000; SameSite=Lax`;
-          return;
+          phoneToSync = parsed.phoneNumber;
         }
       }
     } catch (e) {
       console.error('세션 복원 실패:', e);
     }
 
-    // ⚡ 개발 환경 예외: 010-7216-5884 최고관리자로 별도 로그인 없이 자동 로그인
-    if (process.env.NODE_ENV === 'development') {
+    if (!phoneToSync && process.env.NODE_ENV === 'development') {
+      phoneToSync = '010-7216-5884';
       const devSuperAdmin: UserSession = {
         id: 1,
         phoneNumber: '010-7216-5884',
@@ -43,6 +71,20 @@ export function useAuth() {
       localStorage.setItem('filetosheet_user', JSON.stringify(devSuperAdmin));
       document.cookie = `fts_user_phone=${devSuperAdmin.phoneNumber}; path=/; max-age=2592000; SameSite=Lax`;
     }
+
+    // 서버의 최신 플랜/토큰 정보를 조회하여 즉시 동기화
+    if (phoneToSync) {
+      syncLatestUserProfile(phoneToSync);
+    }
+
+    // 창 포커스 복귀 시 최신 플랜 재검증 (관리자 탭에서 플랜 변경 후 돌아왔을 때 즉시 반영)
+    const handleWindowFocus = () => {
+      if (phoneToSync) {
+        syncLatestUserProfile(phoneToSync);
+      }
+    };
+    window.addEventListener('focus', handleWindowFocus);
+    return () => window.removeEventListener('focus', handleWindowFocus);
   }, []);
 
   // 인증번호 타이머 카운트다운
@@ -173,5 +215,6 @@ export function useAuth() {
     handleSendAuthCode,
     handleVerifyAuthCode,
     handleLogout,
+    refreshUser: () => currentUser?.phoneNumber && syncLatestUserProfile(currentUser.phoneNumber),
   };
 }

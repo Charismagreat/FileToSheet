@@ -53,7 +53,8 @@ export const PLAN_LIMITS: Record<string, PlanPolicy> = {
 
 
 export function getPlanLimits(plan?: string): PlanPolicy {
-  return PLAN_LIMITS[plan === 'pro' ? 'pro' : 'free'];
+  const normalized = (plan || '').toLowerCase();
+  return PLAN_LIMITS[normalized === 'pro' || normalized === 'enterprise' ? 'pro' : 'free'];
 }
 
 /**
