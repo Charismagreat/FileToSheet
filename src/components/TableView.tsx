@@ -450,7 +450,7 @@ export function TableView({
                         key={colIdx}
                         style={{
                           width: w ? `${w}px` : undefined,
-                          minWidth: w ? `${w}px` : '80px',
+                          minWidth: w ? `${w}px` : '48px',
                           maxWidth: w ? `${w}px` : undefined,
                         }}
                         title={cellError ? cellError.message : undefined}

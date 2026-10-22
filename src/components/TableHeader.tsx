@@ -194,7 +194,7 @@ export function TableHeader({
               key={colIdx}
               style={{
                 width: w ? `${w}px` : undefined,
-                minWidth: w ? `${w}px` : '80px',
+                minWidth: w ? `${w}px` : '48px',
               }}
               className={`py-1 px-2.5 text-center font-mono font-semibold border-r border-slate-200 tracking-wider transition-colors relative group/alphacol ${
                 dragOverIdx === colIdx
@@ -248,7 +248,7 @@ export function TableHeader({
               draggable={!isEditing}
               style={{
                 width: w ? `${w}px` : undefined,
-                minWidth: w ? `${w}px` : '80px',
+                minWidth: w ? `${w}px` : '48px',
               }}
               onDragStart={(e) => handleDragStart(colIdx, e)}
               onDragOver={(e) => {
