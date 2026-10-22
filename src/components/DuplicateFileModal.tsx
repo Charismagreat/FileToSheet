@@ -35,8 +35,17 @@ export function DuplicateFileModal({ isOpen, onClose, existingFile, newFile, onP
         </div>
 
         <p className="text-xs text-slate-600 mb-4 leading-relaxed">
-          파일명은 다르지만 <strong>파일의 디지털 내용(SHA-256 지문)이 100% 동일</strong>합니다.<br />
-          중복 파싱 시 <strong>AI 사용량이 낭비</strong>되고 표 데이터가 2번 들어갈 수 있습니다.
+          {existingFile?.name === newFile.name ? (
+            <span>
+              동일한 이름과 내용의 <strong>파일(SHA-256 지문)이 이미 프로젝트에 적재</strong>되어 있습니다.
+            </span>
+          ) : (
+            <span>
+              파일명은 다르지만 <strong>파일의 디지털 내용(SHA-256 지문)이 기존 파일과 100% 동일</strong>합니다.
+            </span>
+          )}
+          <br />
+          중복 적재 시 <strong>동일한 데이터가 이중으로 추가</strong>될 수 있습니다.
         </p>
 
         {/* 대조 카드 */}

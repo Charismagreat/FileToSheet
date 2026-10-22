@@ -115,6 +115,53 @@ export function useFileUpload({
   };
 
   /**
+   * 프로젝트 내 기존 유효 파일들과 동일한 내용(SHA-256 지문 또는 파일명+용량)인지 확인
+   */
+  const findDuplicateExistingFile = async (file: File): Promise<OriginalDocFile | null> => {
+    if (!currentProject) return null;
+    const fileHash = await computeFileHash(file);
+
+    const validFileUids = new Set<string>();
+    const validFileIds = new Set<number>();
+    const validFileNames = new Set<string>();
+
+    for (const s of currentProject.sheets || []) {
+      for (const f of s.originalFiles || []) {
+        if (f.uid) validFileUids.add(f.uid);
+        if (f.id && !isNaN(Number(f.id))) validFileIds.add(Number(f.id));
+        if (f.name) validFileNames.add(f.name.trim());
+      }
+      for (const r of s.rows || []) {
+        if (r._fileUid) validFileUids.add(String(r._fileUid));
+        if (r._fileId && !isNaN(Number(r._fileId))) validFileIds.add(Number(r._fileId));
+        if (r._fileName) validFileNames.add(String(r._fileName).trim());
+      }
+    }
+
+    const activeProjectDocs = (currentProject.originalFiles || []).filter((f) => {
+      if (f.uid && validFileUids.has(f.uid)) return true;
+      if (f.id && !isNaN(Number(f.id)) && validFileIds.has(Number(f.id))) return true;
+      if (f.name && validFileNames.has(f.name.trim())) return true;
+      return false;
+    });
+
+    const allOriginalDocs: OriginalDocFile[] = [
+      ...activeProjectDocs,
+      ...(currentProject.sheets || []).flatMap((s) => s.originalFiles || []),
+    ];
+
+    const existing = allOriginalDocs.find((f) => {
+      const existingHash = f.hash || (f as any).fileHash;
+      if (existingHash && fileHash) {
+        return existingHash === fileHash;
+      }
+      return f.name === file.name && f.size === file.size;
+    });
+
+    return existing || null;
+  };
+
+  /**
    * 핵심 파일 파싱 및 프로젝트/시트 데이터 적재 파이프라인
    */
   const processFile = async (
@@ -129,44 +176,7 @@ export function useFileUpload({
 
     // 1. 동일 내용 파일(SHA-256 지문 또는 파일명+용량) 중복 감지 인터셉트
     if (!bypassDup && currentProject) {
-      const fileHash = await computeFileHash(file);
-
-      // 🌟 현재 살아있는 유효한 시트들에 실제로 연결되어 있는 파일들만 수집 (삭제된 시트의 파일 제외)
-      const validFileUids = new Set<string>();
-      const validFileIds = new Set<number>();
-      const validFileNames = new Set<string>();
-
-      for (const s of currentProject.sheets || []) {
-        for (const f of s.originalFiles || []) {
-          if (f.uid) validFileUids.add(f.uid);
-          if (f.id && !isNaN(Number(f.id))) validFileIds.add(Number(f.id));
-          if (f.name) validFileNames.add(f.name.trim());
-        }
-        for (const r of s.rows || []) {
-          if (r._fileUid) validFileUids.add(String(r._fileUid));
-          if (r._fileId && !isNaN(Number(r._fileId))) validFileIds.add(Number(r._fileId));
-          if (r._fileName) validFileNames.add(String(r._fileName).trim());
-        }
-      }
-
-      const activeProjectDocs = (currentProject.originalFiles || []).filter((f) => {
-        if (f.uid && validFileUids.has(f.uid)) return true;
-        if (f.id && !isNaN(Number(f.id)) && validFileIds.has(Number(f.id))) return true;
-        if (f.name && validFileNames.has(f.name.trim())) return true;
-        return false;
-      });
-
-      const allOriginalDocs: OriginalDocFile[] = [
-        ...activeProjectDocs,
-        ...(currentProject.sheets || []).flatMap((s) => s.originalFiles || []),
-      ];
-      const existing = allOriginalDocs.find((f) => {
-        const existingHash = f.hash || (f as any).fileHash;
-        if (existingHash && fileHash) {
-          return existingHash === fileHash;
-        }
-        return f.name === file.name && f.size === file.size;
-      });
+      const existing = await findDuplicateExistingFile(file);
       if (existing) {
         setDuplicateWarning({
           existingFile: existing,
@@ -572,19 +582,33 @@ export function useFileUpload({
 
   const confirmProceedDuplicate = () => {
     if (!duplicateWarning) return;
-    const { newFile, mode, prompt, targetSheetIndex } = duplicateWarning;
+    const { newFile } = duplicateWarning;
     setDuplicateWarning(null);
-    processFile(newFile, mode, prompt, true, targetSheetIndex);
+    // 중복 파일임을 확인하고도 계속 진행을 선택한 경우: 중복 검사를 건너뛰고 스마트 라우팅으로 진입!
+    handleFileDropOrSelect(newFile, true);
   };
 
-  const handleFileDropOrSelect = async (file: File) => {
+  const handleFileDropOrSelect = async (file: File, bypassDup = false) => {
     if (!checkSafety(file)) return;
     if (projects.length === 0 || !currentProject || !currentProject.sheets || currentProject.sheets.length === 0) {
-      processFile(file, 'new_document');
+      processFile(file, 'new_document', undefined, bypassDup);
       return;
     }
 
-    // 🌟 고속 헤더 추출 및 스마트 시트 일치도 분석
+    // 🌟 1. 중복 파일 감지 인터셉트 (스마트 라우팅 안내창보다 먼저 안내!)
+    if (!bypassDup) {
+      const existing = await findDuplicateExistingFile(file);
+      if (existing) {
+        setDuplicateWarning({
+          existingFile: existing,
+          newFile: file,
+          mode: 'append_rows',
+        });
+        return;
+      }
+    }
+
+    // 🌟 2. 고속 헤더 추출 및 스마트 시트 일치도 분석
     let incomingHeaders: string[] = [];
     const ext = file.name.split('.').pop()?.toLowerCase();
     if (['xlsx', 'xls', 'csv'].includes(ext || '')) {
