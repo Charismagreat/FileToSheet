@@ -8,6 +8,7 @@ import { ProjectWorkspace, OriginalDocFile } from '@/types/workspace';
 import { getSheetOriginalFiles } from '@/lib/sheet-helpers';
 import { DeleteProofModal } from './DeleteProofModal';
 import { getSmartColumnWidth, renderFormattedNumber, isNumericColumn } from '@/lib/formatters';
+import { ExcelPreviewViewer } from './ExcelPreviewViewer';
 
 interface OriginalDocViewProps {
   project: ProjectWorkspace;
@@ -163,6 +164,7 @@ export function OriginalDocView({ project, onDeleteFile, onGoToTableTab, onApply
   const filename = currentFile?.name || '문서';
   const isImage = Boolean(currentFile?.type?.includes('image')) || ['png', 'jpg', 'jpeg', 'webp', 'gif'].some((ext) => filename.toLowerCase().endsWith(ext));
   const isPdf = Boolean(currentFile?.type?.includes('pdf')) || filename.toLowerCase().endsWith('.pdf');
+  const isExcel = Boolean(currentFile?.type?.includes('sheet') || currentFile?.type?.includes('excel') || currentFile?.type?.includes('csv')) || ['.xlsx', '.xls', '.csv'].some((ext) => filename.toLowerCase().endsWith(ext));
 
   // 🌟 파일 영구 접근 URL 결정 (Base64 캐시 -> 이지데스크 영구 서빙 API -> 세션 blob URL 순서)
   const resolvedFileUrl =
@@ -544,6 +546,13 @@ export function OriginalDocView({ project, onDeleteFile, onGoToTableTab, onApply
             </div>
           ) : isPdf ? (
             <iframe src={resolvedFileUrl} className="w-full h-full border-none rounded-lg bg-white shadow-xs" title="PDF 증빙 뷰어" />
+          ) : isExcel ? (
+            <ExcelPreviewViewer
+              fileUrl={resolvedFileUrl}
+              filename={filename}
+              dataUrl={currentFile?.dataUrl}
+              fileId={currentFile?.id}
+            />
           ) : (
             <div className="border border-slate-200 bg-white rounded-2xl p-8 text-center shadow-xs max-w-md mx-auto my-auto">
               <FileSpreadsheet className="w-12 h-12 text-emerald-600 mx-auto mb-3" />
