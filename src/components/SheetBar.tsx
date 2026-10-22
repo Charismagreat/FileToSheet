@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Table as TableIcon,
   Plus,
@@ -50,17 +50,45 @@ export function SheetBar({
   const maxSheets = isPro ? 30 : 5;
   const isLimitReached = sheets.length >= maxSheets;
 
+  // 가로 스크롤 및 휠 인터랙션 제어
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const activeTabRef = useRef<HTMLDivElement>(null);
+
   // 드래그 앤 드롭 상태
   const [draggingIdx, setDraggingIdx] = useState<number | null>(null);
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
 
+  // 마우스 휠로 가로 스크롤
+  const handleWheel = (e: React.WheelEvent) => {
+    if (scrollContainerRef.current && e.deltaY !== 0) {
+      scrollContainerRef.current.scrollLeft += e.deltaY;
+    }
+  };
+
+  // 활성 탭이 바뀔 때 탭이 스크롤 영역 밖이면 자동으로 보이도록 스크롤
+  useEffect(() => {
+    if (activeTabRef.current) {
+      activeTabRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'nearest',
+      });
+    }
+  }, [activeSheetIndex]);
+
   return (
-    <div className="border-b border-slate-200 bg-slate-50/90 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3">
-      <div className="flex items-center gap-1.5 overflow-x-auto">
-        <div className="flex items-center gap-1 text-xs text-slate-500 mr-1.5 shrink-0 font-bold">
+    <div className="border-b border-slate-200 bg-slate-50/95 px-4 py-2 flex items-center justify-between gap-3 select-none">
+      {/* 🌟 좌측: 시트 라벨 + 탭 목록 + 시트 추가 버튼 (한 줄 가로 스크롤 유지) */}
+      <div
+        ref={scrollContainerRef}
+        onWheel={handleWheel}
+        className="flex-1 min-w-0 flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5"
+      >
+        <div className="flex items-center gap-1 text-xs text-slate-500 mr-1 shrink-0 font-bold">
           <TableIcon className="w-4 h-4 text-blue-600" />
           <span>시트:</span>
         </div>
+
         {sheets.map((sheet, idx) => {
           const isCurrent = activeSheetIndex === idx;
           const isRenaming = editingSheetIdx === idx;
@@ -69,6 +97,7 @@ export function SheetBar({
           return (
             <div
               key={idx}
+              ref={isCurrent ? activeTabRef : null}
               draggable={!isRenaming}
               onDragStart={(e) => {
                 e.dataTransfer.setData('text/plain', String(idx));
@@ -97,14 +126,14 @@ export function SheetBar({
                 setDragOverIdx(null);
               }}
               onClick={() => onSelectSheet(idx)}
-              className={`group flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border transition select-none ${
+              className={`group flex items-center gap-1.5 px-3 h-8 rounded-lg text-xs font-semibold cursor-pointer border transition shrink-0 whitespace-nowrap ${
                 isCurrent
-                  ? 'bg-blue-600 text-white shadow-xs border-blue-600'
-                  : 'bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-100 border-slate-200'
+                  ? 'bg-blue-600 text-white shadow-xs border-blue-600 ring-1 ring-blue-500/30'
+                  : 'bg-white text-slate-700 hover:text-slate-900 hover:bg-slate-100 border-slate-200'
               } ${draggingIdx === idx ? 'opacity-40 scale-95 border-dashed border-blue-400' : ''} ${
                 dragOverIdx === idx && draggingIdx !== idx ? 'ring-2 ring-blue-500 ring-offset-1 bg-blue-50/90' : ''
               }`}
-              title={hasRule ? `[AI 규칙 적용 중]\n${sheet.customPrompt}` : '드래그하여 시트 순서 변경 가능'}
+              title={hasRule ? `[AI 규칙 적용 중]\n${sheet.customPrompt}` : '더블클릭: 이름 변경 / 드래그: 순서 이동'}
             >
               {/* 드래그 힌트 아이콘 (호버 시 표시) */}
               {sheets.length > 1 && !isRenaming && (
@@ -135,7 +164,7 @@ export function SheetBar({
                     if (e.key === 'Enter') onSaveSheetName();
                     if (e.key === 'Escape') setEditingSheetIdx(null);
                   }}
-                  className="bg-white text-slate-900 px-1 py-0.5 rounded text-xs w-20 focus:outline-none"
+                  className="bg-white text-slate-900 px-1.5 py-0.5 rounded text-xs w-24 focus:outline-none ring-1 ring-blue-400"
                 />
               ) : (
                 <span
@@ -144,27 +173,29 @@ export function SheetBar({
                     setEditingSheetIdx(idx);
                     setEditingSheetName(sheet.name);
                   }}
-                  title="더블클릭하여 시트 이름 변경"
+                  className="truncate max-w-[140px] inline-block"
+                  title={`${sheet.name} (더블클릭하여 시트 이름 변경)`}
                 >
                   {sheet.name}
                 </span>
               )}
 
-              <span className={`opacity-80 font-mono text-[10px] ${isCurrent ? 'text-blue-100' : 'text-slate-400'}`}>
-                ({sheet.rows.length})
+              <span className={`opacity-80 font-mono text-[10px] shrink-0 ${isCurrent ? 'text-blue-100' : 'text-slate-400'}`}>
+                ({sheet.rows?.length || 0})
               </span>
-
-
 
               {!isRenaming && (
                 <button
+                  type="button"
                   onClick={(e) => {
                     e.stopPropagation();
                     setEditingSheetIdx(idx);
                     setEditingSheetName(sheet.name);
                   }}
-                  className="opacity-0 group-hover:opacity-100 p-0.5 hover:text-blue-200 transition"
-                  title="시트 이름 편집"
+                  className={`opacity-0 group-hover:opacity-100 p-0.5 rounded transition ${
+                    isCurrent ? 'hover:bg-blue-700 text-blue-100 hover:text-white' : 'hover:bg-slate-200 text-slate-400 hover:text-slate-700'
+                  }`}
+                  title="시트 이름 변경"
                 >
                   <Edit2 className="w-2.5 h-2.5" />
                 </button>
@@ -173,14 +204,17 @@ export function SheetBar({
               {/* 시트 전용 AI 규칙 열기 버튼 */}
               {onOpenSheetRule && !isRenaming && (
                 <button
+                  type="button"
                   onClick={(e) => {
                     e.stopPropagation();
                     onOpenSheetRule(idx);
                   }}
-                  className={`p-0.5 transition ${
+                  className={`p-0.5 rounded transition ${
                     hasRule
                       ? isCurrent ? 'text-amber-300 hover:text-white' : 'text-blue-600 hover:text-blue-800'
-                      : 'opacity-0 group-hover:opacity-100 hover:text-blue-200'
+                      : isCurrent
+                      ? 'opacity-0 group-hover:opacity-100 hover:bg-blue-700 text-blue-100 hover:text-white'
+                      : 'opacity-0 group-hover:opacity-100 hover:bg-slate-200 text-slate-400 hover:text-slate-700'
                   }`}
                   title="이 시트의 AI 분석·적재 규칙 설정"
                 >
@@ -190,8 +224,11 @@ export function SheetBar({
 
               {sheets.length > 1 && (
                 <button
+                  type="button"
                   onClick={(e) => onDeleteSheet(idx, e)}
-                  className="opacity-0 group-hover:opacity-100 p-0.5 hover:text-red-300 transition"
+                  className={`opacity-0 group-hover:opacity-100 p-0.5 rounded transition ${
+                    isCurrent ? 'hover:bg-red-500/80 text-blue-100 hover:text-white' : 'hover:bg-red-100 text-slate-400 hover:text-red-600'
+                  }`}
                   title="시트 삭제"
                 >
                   <X className="w-2.5 h-2.5" />
@@ -201,24 +238,30 @@ export function SheetBar({
           );
         })}
 
+        {/* 🌟 신규 시트 추가 버튼 (한 줄 유지 및 명확한 상태 피드백) */}
         <button
+          type="button"
           onClick={onAddNewSheet}
-          className={`flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg transition font-medium shadow-2xs border ${
-            isLimitReached ? 'bg-slate-100 text-slate-400 border-slate-200 hover:bg-slate-200' : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200'
+          disabled={isLimitReached}
+          className={`flex items-center gap-1.5 text-xs px-3 h-8 rounded-lg transition font-medium shadow-2xs border shrink-0 whitespace-nowrap ${
+            isLimitReached
+              ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
+              : 'bg-white hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 text-slate-700 border-slate-200 cursor-pointer active:scale-95'
           }`}
-          title={`새 빈 시트 추가 (${sheets.length}/${maxSheets})`}
+          title={isLimitReached ? `시트 생성 한도 도달 (${sheets.length}/${maxSheets})` : `새 빈 시트 추가 (${sheets.length}/${maxSheets})`}
         >
-          <Plus className="w-3 h-3 text-blue-600" />
+          <Plus className="w-3.5 h-3.5 text-blue-600 shrink-0" />
           <span>시트 추가</span>
           <span className="text-[10px] text-slate-400 font-mono">({sheets.length}/{maxSheets})</span>
         </button>
       </div>
 
-      {/* 우측: 현재 활성 시트 AI 적재 규칙 원클릭 제어 버튼 */}
+      {/* 🌟 우측: 현재 활성 시트 AI 적재 규칙 원클릭 제어 버튼 (한 줄 고정) */}
       {onOpenSheetRule && sheets[activeSheetIndex] && (
         <button
+          type="button"
           onClick={() => onOpenSheetRule(activeSheetIndex)}
-          className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl border transition font-bold shadow-2xs shrink-0 cursor-pointer ${
+          className={`flex items-center gap-1.5 text-xs px-3 h-8 rounded-xl border transition font-bold shadow-2xs shrink-0 whitespace-nowrap cursor-pointer ${
             sheets[activeSheetIndex].customPrompt?.trim()
               ? 'bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 shadow-xs'
               : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200'
@@ -226,7 +269,7 @@ export function SheetBar({
           title="현재 활성 시트에 파일이 추가되거나 다중 파일 분류 시 적용할 자연어 규칙을 설정합니다."
         >
           <Sparkles
-            className={`w-3.5 h-3.5 ${
+            className={`w-3.5 h-3.5 shrink-0 ${
               sheets[activeSheetIndex].customPrompt?.trim()
                 ? 'text-amber-500 fill-amber-500'
                 : 'text-blue-600'
@@ -234,20 +277,20 @@ export function SheetBar({
           />
           <span>시트 AI 적재 규칙</span>
           {sheets[activeSheetIndex].customPrompt?.trim() ? (
-            <span className="text-[10px] bg-blue-600 text-white font-mono px-1.5 py-0.2 rounded-full leading-none">
+            <span className="text-[10px] bg-blue-600 text-white font-mono px-1.5 py-0.5 rounded-full leading-none shrink-0">
               ON
             </span>
           ) : (
-            <span className="text-[10px] text-slate-400 font-mono">미설정</span>
+            <span className="text-[10px] text-slate-400 font-mono shrink-0">미설정</span>
           )}
 
           {/* 누적 데이터 In-Context 학습 상태 뱃지 */}
           {sheets[activeSheetIndex].rows && sheets[activeSheetIndex].rows.length > 0 && (
             <span
-              className="text-[10px] bg-purple-100 text-purple-700 font-extrabold px-1.5 py-0.5 rounded-md border border-purple-200 flex items-center gap-1"
+              className="text-[10px] bg-purple-100 text-purple-700 font-extrabold px-1.5 py-0.5 rounded-md border border-purple-200 flex items-center gap-1 shrink-0"
               title={`이 시트에 누적된 ${sheets[activeSheetIndex].rows.length}건의 데이터 패턴을 AI가 자동으로 학습·계승합니다.`}
             >
-              <Brain className="w-2.5 h-2.5" />
+              <Brain className="w-2.5 h-2.5 shrink-0" />
               <span>{sheets[activeSheetIndex].rows.length}건 학습중</span>
             </span>
           )}

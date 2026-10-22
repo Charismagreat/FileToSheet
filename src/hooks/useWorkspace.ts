@@ -209,7 +209,15 @@ export function useWorkspace({ phoneNumber, plan, onPlanLimit }: UseWorkspaceOpt
       else alert(check.message);
       return;
     }
-    const nextSheets = [...currentProject.sheets, { name: `Sheet${currentProject.sheets.length + 1}`, headers: ['일련번호', '등록일시', '항목', '금액', '비고'], rows: [], rawRows: [] }];
+    // 중복 없는 시트 이름 고유 번호 생성
+    const existingNames = new Set(currentProject.sheets.map((s) => s.name.trim()));
+    let nextNum = currentProject.sheets.length + 1;
+    let nextName = `Sheet${nextNum}`;
+    while (existingNames.has(nextName)) {
+      nextNum += 1;
+      nextName = `Sheet${nextNum}`;
+    }
+    const nextSheets = [...currentProject.sheets, { name: nextName, headers: ['일련번호', '등록일시', '항목', '금액', '비고'], rows: [], rawRows: [] }];
     setProjects((prev) => prev.map((p, i) => i === activeProjectIndex ? { ...p, sheets: nextSheets, activeSheetIndex: nextSheets.length - 1 } : p));
   };
 
