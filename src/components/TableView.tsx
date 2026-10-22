@@ -46,6 +46,7 @@ interface TableViewProps {
   isJoinViewActive?: boolean;
   setIsJoinViewActive?: (v: boolean) => void;
   onJumpToOriginalDoc?: (fileName?: string, fileId?: string | number, fileUid?: string) => void;
+  autoFitTrigger?: number;
 }
 
 export function TableView({
@@ -79,6 +80,7 @@ export function TableView({
   isJoinViewActive = false,
   setIsJoinViewActive,
   onJumpToOriginalDoc,
+  autoFitTrigger,
 }: TableViewProps) {
   const [hoveredFileKey, setHoveredFileKey] = useState<string | number | null>(null);
 
@@ -155,25 +157,33 @@ export function TableView({
   // 🌟 컬럼 너비 상태 관리 (시트별 localStorage 영속화 지원)
   const [colWidths, setColWidths] = useState<Record<string, number>>({});
 
-  // 시트 변경 시 저장된 너비 로드 또는 기본값 계산
+  // 시트 변경 또는 데이터 적재 시 저장된 너비 로드 또는 데이터 기반 지능형 자동 계산
   useEffect(() => {
     if (!sheet?.name) return;
     try {
       const storageKey = `fts_col_widths_${sheet.name}`;
       const saved = localStorage.getItem(storageKey);
       if (saved) {
-        setColWidths(JSON.parse(saved));
+        const parsed = JSON.parse(saved);
+        // 저장된 설정이 있더라도 새 컬럼이 추가되었으면 그 컬럼은 실제 데이터 기반으로 자동 계산
+        const merged: Record<string, number> = { ...parsed };
+        (sheet.headers || []).forEach((h) => {
+          if (!merged[h]) {
+            merged[h] = getSmartColumnWidth(h, sheet.rows);
+          }
+        });
+        setColWidths(merged);
         return;
       }
     } catch {}
 
-    // 기본 너비 초기값 지능형 설정 (불필요하게 넓은 컬럼 슬림화)
+    // 실제 데이터와 헤더 길이를 측정한 최적 자동 너비 설정
     const initial: Record<string, number> = {};
     (sheet.headers || []).forEach((h) => {
-      initial[h] = getSmartColumnWidth(h);
+      initial[h] = getSmartColumnWidth(h, sheet.rows);
     });
     setColWidths(initial);
-  }, [sheet.name, sheet.headers]);
+  }, [sheet.name, sheet.headers, sheet.rows?.length]);
 
   // 컬럼 너비 변경 핸들러
   const handleColWidthChange = (header: string, width: number) => {
@@ -188,25 +198,32 @@ export function TableView({
     });
   };
 
-  // 컬럼 너비 자동 맞춤 (Auto-fit): 최장 텍스트 길이에 맞춰 지능형 확장
+  // 단일 컬럼 너비 자동 맞춤
   const handleColAutoFit = (header: string) => {
-    let maxPixel = header.length * 14;
-    const sampleRows = (sheet.rows || []).slice(0, 100);
-    sampleRows.forEach((r) => {
-      const val = r[header];
-      if (val !== undefined && val !== null) {
-        const str = String(val);
-        let px = 0;
-        for (let i = 0; i < str.length; i++) {
-          px += str.charCodeAt(i) > 127 ? 13 : 8;
-        }
-        if (px > maxPixel) maxPixel = px;
-      }
-    });
-
-    const fitWidth = Math.max(70, Math.min(650, maxPixel + 40));
+    const fitWidth = getSmartColumnWidth(header, sheet.rows);
     handleColWidthChange(header, fitWidth);
   };
+
+  // 🌟 전체 열 너비 일괄 자동 최적 맞춤 (Auto-fit All Columns)
+  const handleAutoFitAllColumns = () => {
+    const updated: Record<string, number> = {};
+    (sheet.headers || []).forEach((h) => {
+      updated[h] = getSmartColumnWidth(h, sheet.rows);
+    });
+    setColWidths(updated);
+    try {
+      if (sheet?.name) {
+        localStorage.setItem(`fts_col_widths_${sheet.name}`, JSON.stringify(updated));
+      }
+    } catch {}
+  };
+
+  // 외부 트리거(예: 툴바 버튼 클릭) 시 전체 열 너비 자동 맞춤 실행
+  useEffect(() => {
+    if (autoFitTrigger && autoFitTrigger > 0) {
+      handleAutoFitAllColumns();
+    }
+  }, [autoFitTrigger]);
 
   // 컬럼 너비 기본값 복원
   const handleResetColWidth = (header: string) => {
@@ -358,6 +375,7 @@ export function TableView({
             onToggleColSort={onToggleColSort}
             onSetColSort={onSetColSort}
             colWidths={colWidths}
+            onAutoFitAllColumns={handleAutoFitAllColumns}
             onColWidthChange={handleColWidthChange}
             onColAutoFit={handleColAutoFit}
             onResetColWidth={handleResetColWidth}

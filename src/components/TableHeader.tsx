@@ -35,6 +35,7 @@ interface TableHeaderProps {
   colWidths?: Record<string, number>;
   onColWidthChange?: (header: string, width: number) => void;
   onColAutoFit?: (header: string) => void;
+  onAutoFitAllColumns?: () => void;
   onResetColWidth?: (header: string) => void;
 }
 
@@ -65,6 +66,7 @@ export function TableHeader({
   colWidths,
   onColWidthChange,
   onColAutoFit,
+  onAutoFitAllColumns,
   onResetColWidth,
 }: TableHeaderProps) {
   const [draggedColIdx, setDraggedColIdx] = useState<number | null>(null);
@@ -177,7 +179,13 @@ export function TableHeader({
     <thead className="sticky top-0 z-10 select-none shadow-2xs">
       {/* 1행: 엑셀 스타일 열 알파벳 (A, B, C...) 독립 행 */}
       <tr className="bg-slate-100/90 text-slate-500 border-b border-slate-200 text-[11px]">
-        <th className="w-10 py-1 border-r border-slate-200 bg-slate-200/50"></th>
+        <th
+          onClick={onAutoFitAllColumns}
+          className="w-10 py-1 border-r border-slate-200 bg-slate-200/50 hover:bg-blue-100 hover:text-blue-700 cursor-pointer transition text-center select-none"
+          title="모든 열 너비 자동 맞춤 (클릭)"
+        >
+          <ArrowLeftRight className="w-3 h-3 mx-auto text-slate-400 hover:text-blue-600 transition" />
+        </th>
         {headers.map((header, colIdx) => {
           const isDef = header === '일련번호' || header === '등록일시';
           const w = colWidths?.[header];
@@ -218,7 +226,11 @@ export function TableHeader({
 
       {/* 2행: 실제 데이터 열 이름 행 (더보기 드롭다운 메뉴로 슬림화) */}
       <tr className="bg-slate-50 border-b border-slate-200 text-xs">
-        <th className="w-10 px-3 py-2 text-center text-slate-400 font-mono text-[11px] border-r border-slate-200">
+        <th
+          onClick={onAutoFitAllColumns}
+          className="w-10 px-3 py-2 text-center text-slate-400 hover:text-blue-600 hover:bg-blue-50/80 cursor-pointer font-mono text-[11px] border-r border-slate-200 transition select-none"
+          title="모든 열 너비 자동 맞춤 (클릭)"
+        >
           #
         </th>
         {headers.map((header, colIdx) => {
@@ -462,8 +474,21 @@ export function TableHeader({
                             className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-slate-100 text-slate-700 transition"
                           >
                             <ArrowLeftRight className="w-3.5 h-3.5 text-indigo-500" />
-                            <span>열 너비 자동 맞춤</span>
+                            <span>이 열 너비 자동 맞춤</span>
                           </button>
+                          {onAutoFitAllColumns && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                onAutoFitAllColumns();
+                                setOpenMenuColIdx(null);
+                              }}
+                              className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-slate-100 text-blue-700 font-medium transition"
+                            >
+                              <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+                              <span>전체 열 너비 자동 맞춤</span>
+                            </button>
+                          )}
                           {colWidths?.[header] && (
                             <button
                               type="button"

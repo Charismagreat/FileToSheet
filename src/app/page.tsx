@@ -164,6 +164,7 @@ export default function FileToSheetApp() {
 
 
   const [activeSubTab, setActiveSubTab] = useState<'table' | 'original' | 'summary'>('table');
+  const [autoFitTrigger, setAutoFitTrigger] = useState<number>(0);
   const [targetOriginalDoc, setTargetOriginalDoc] = useState<{ name?: string; id?: string | number; uid?: string } | null>(null);
 
   const handleJumpToOriginalDoc = (fileName?: string, fileId?: string | number, fileUid?: string) => {
@@ -674,6 +675,7 @@ export default function FileToSheetApp() {
                   isFilterActive={isFilterActive}
                   activeFilterCount={activeFilterCount}
                   onDeduplicateRows={ws.handleDeduplicateRows}
+                  onAutoFitAllColumns={() => setAutoFitTrigger((prev) => prev + 1)}
                 />
 
                 {activeSubTab === 'table' && (
@@ -714,6 +716,7 @@ export default function FileToSheetApp() {
                     isJoinViewActive={ws.isJoinViewActive}
                     setIsJoinViewActive={ws.setIsJoinViewActive}
                     onJumpToOriginalDoc={handleJumpToOriginalDoc}
+                    autoFitTrigger={autoFitTrigger}
                   />
                 )}
 

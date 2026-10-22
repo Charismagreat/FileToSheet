@@ -103,23 +103,64 @@ export function renderFormattedNumber(val: any): React.ReactNode {
 }
 
 /**
- * 🌟 화면 밀도와 가독성을 최적화한 스마트 열 너비 기본값 (불필요하게 넓은 컬럼 타이트하게 슬림화)
+ * 🌟 문자열의 픽셀 폭을 한글/영문/숫자별 가중치로 정밀 계산
  */
-export function getSmartColumnWidth(header: string): number {
-  if (['#', 'No', 'no'].includes(header)) return 48;
-  if (['일련번호', '순번'].includes(header)) return 68;
-  if (header === '수량') return 75;
-  if (header === '단가') return 95;
-  if (['금액', '공급가액', '부가가치세', '부가세', '합계금액', '세액', '합계'].some((k) => header.includes(k))) return 105;
-  if (['거래일자', '일자'].includes(header)) return 100;
-  if (['등록일시'].includes(header)) return 120;
-  if (['전화번호', '연락처', '휴대폰', '핸드폰', '팩스', '팩스번호', '대표번호', 'TEL', 'FAX'].some((k) => header.includes(k))) return 125;
-  if (['발주번호'].includes(header)) return 130;
-  if (['공급자등록번호', '사업자등록번호', '등록번호'].includes(header)) return 115;
-  if (['공급자', '공급받는자', '상호', '회사명'].includes(header)) return 125;
-  if (header === '품번') return 110;
-  if (header === '품명') return 130;
-  if (header === '규격') return 115;
-  if (header === '비고') return 180;
-  return 120;
+function estimateTextPixelWidth(text: string): number {
+  let px = 0;
+  for (let i = 0; i < text.length; i++) {
+    const code = text.charCodeAt(i);
+    if (code > 127) {
+      px += 13.2; // 한글/한자/특수문자
+    } else if (code >= 65 && code <= 90) {
+      px += 8.8; // 영문 대문자
+    } else if (code >= 48 && code <= 57) {
+      px += 7.8; // 숫자
+    } else {
+      px += 7.0; // 영문 소문자/기호
+    }
+  }
+  return px;
+}
+
+/**
+ * 🌟 헤더 명칭과 실제 셀 데이터 길이를 동적으로 실측하여 최적의 자동 열 너비 계산
+ */
+export function getSmartColumnWidth(
+  header: string,
+  rows: Array<Record<string, any>> = []
+): number {
+  // 1. 헤더 글자 폭 측정 (헤더 좌우 패딩, 정렬 아이콘, 리사이즈 핸들 여백 포함)
+  const headerTextPx = estimateTextPixelWidth(header);
+  let maxPx = headerTextPx + 46;
+
+  // 2. 실제 데이터 행들의 셀 내용 폭 측정 (최대 60개 행 표본 조사)
+  const sampleRows = (rows || []).slice(0, 60);
+  for (const r of sampleRows) {
+    const val = r[header];
+    if (val !== undefined && val !== null && val !== '') {
+      const contentPx = estimateTextPixelWidth(String(val));
+      if (contentPx + 38 > maxPx) {
+        maxPx = contentPx + 38;
+      }
+    }
+  }
+
+  // 3. 특수 컬럼 기본 최소폭 가이드 (글자가 말줄임 없이 시원하게 표시되도록 보장)
+  if (['#', 'No', 'no'].includes(header)) return Math.max(56, Math.min(90, Math.round(maxPx)));
+  if (['일련번호', '순번'].includes(header)) return Math.max(82, Math.min(115, Math.round(maxPx)));
+  if (['등록일시', '거래일시', '승인일시', '결제일시'].includes(header)) return Math.max(168, Math.min(230, Math.round(maxPx)));
+  if (['카드번호', '상대계좌번호', '계좌번호'].includes(header)) return Math.max(165, Math.min(230, Math.round(maxPx)));
+  if (['전화번호', '연락처', '휴대폰', '핸드폰', '팩스', '팩스번호'].some((k) => header.includes(k))) {
+    return Math.max(130, Math.min(185, Math.round(maxPx)));
+  }
+  if (['이용가맹점명', '가맹점명', '상호', '회사명', '품명', '품목명'].some((k) => header.includes(k))) {
+    return Math.max(150, Math.min(320, Math.round(maxPx)));
+  }
+  if (['금액', '출금', '입금', '공급가액', '합계금액', '승인금액'].some((k) => header.includes(k))) {
+    return Math.max(105, Math.min(180, Math.round(maxPx)));
+  }
+  if (header === '비고') return Math.max(180, Math.min(450, Math.round(maxPx)));
+
+  // 일반 열: 최소 80px ~ 최대 420px
+  return Math.max(80, Math.min(420, Math.round(maxPx)));
 }

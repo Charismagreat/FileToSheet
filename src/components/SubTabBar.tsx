@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Table as TableIcon, Eye, BarChart3, Search, Plus, Columns, ArrowUpDown, RotateCcw, Sparkles } from 'lucide-react';
+import { Table as TableIcon, Eye, BarChart3, Search, Plus, Columns, ArrowUpDown, RotateCcw, Sparkles, ArrowLeftRight } from 'lucide-react';
 import { DataFilterPopover, FilterState } from './DataFilterPopover';
 
 interface SubTabBarProps {
@@ -25,6 +25,7 @@ interface SubTabBarProps {
   isFilterActive?: boolean;
   activeFilterCount?: number;
   onDeduplicateRows?: () => void;
+  onAutoFitAllColumns?: () => void;
 }
 
 export function SubTabBar({
@@ -48,6 +49,7 @@ export function SubTabBar({
   isFilterActive = false,
   activeFilterCount = 0,
   onDeduplicateRows,
+  onAutoFitAllColumns,
 }: SubTabBarProps) {
   const isFiltered = (totalRowsCount !== undefined && rowsCount !== totalRowsCount) || Boolean(searchQuery.trim()) || isFilterActive;
 
@@ -155,6 +157,19 @@ export function SubTabBar({
             <Columns className="w-3.5 h-3.5 text-indigo-600" />
             <span>열 추가</span>
           </button>
+
+          {/* 🌟 전체 열 너비 자동 최적 맞춤 버튼 */}
+          {onAutoFitAllColumns && (
+            <button
+              type="button"
+              onClick={onAutoFitAllColumns}
+              className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 bg-white hover:bg-blue-50 text-slate-700 hover:text-blue-700 border border-slate-200 hover:border-blue-300 rounded-lg transition shadow-2xs cursor-pointer"
+              title="헤더와 데이터 길이에 맞춰 모든 열의 너비를 자동으로 최적화합니다"
+            >
+              <ArrowLeftRight className="w-3.5 h-3.5 text-blue-600" />
+              <span>열 너비 자동 맞춤</span>
+            </button>
+          )}
 
           {/* 중복 데이터 행 정리 버튼 */}
           {onDeduplicateRows && (

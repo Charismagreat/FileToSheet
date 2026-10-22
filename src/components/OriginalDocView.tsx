@@ -39,7 +39,7 @@ export function OriginalDocView({ project, onDeleteFile, onGoToTableTab, onApply
   const [deletingIdx, setDeletingIdx] = useState<number | null>(null);
   const [isDockCollapsed, setIsDockCollapsed] = useState<boolean>(false);
   const [dockSize, setDockSize] = useState<'sm' | 'md' | 'lg'>('md');
-  const getDefaultColWidth = (header: string): number => getSmartColumnWidth(header);
+  const getDefaultColWidth = (header: string): number => getSmartColumnWidth(header, loadedRows);
 
   const [colWidths, setColWidths] = useState<Record<string, number>>({});
   // 🌟 증빙 카드 등록일시 포맷팅 헬퍼 (초 단위 생략 및 깔끔한 가독성)
@@ -692,8 +692,15 @@ export function OriginalDocView({ project, onDeleteFile, onGoToTableTab, onApply
                                 {/* 🌟 마우스 드래그 열 너비 조절 핸들러 */}
                                 <div
                                   onMouseDown={(e) => handleResizeStart(header, e)}
+                                  onDoubleClick={(e) => {
+                                    e.stopPropagation();
+                                    setColWidths((prev) => ({
+                                      ...prev,
+                                      [header]: getSmartColumnWidth(header, loadedRows),
+                                    }));
+                                  }}
                                   className="absolute right-0 top-0 bottom-0 w-2.5 cursor-col-resize hover:bg-blue-400 active:bg-blue-600 transition flex items-center justify-center z-20 group-hover/th:bg-slate-200/80"
-                                  title="열 너비 드래그 조절"
+                                  title="드래그: 열 너비 조절 / 더블클릭: 자동 맞춤"
                                 >
                                   <div className="w-[1px] h-3.5 bg-slate-300 group-hover/th:bg-blue-500" />
                                 </div>
