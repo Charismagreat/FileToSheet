@@ -318,7 +318,7 @@ export function ExcelPreviewViewer({
 
                     // 숫자 여부 판별 (단순 정수/실수/콤마 포함 숫자)
                     const cleanNumStr = strVal.replace(/,/g, '');
-                    const isNum = strVal !== '' && !isNaN(Number(cleanNumStr)) && !strVal.startsWith('00') && cleanNumStr.length <= 15;
+                    const isNum = strVal !== '' && !isNaN(Number(cleanNumStr)) && !strVal.startsWith('00') && !(strVal.startsWith('0') && strVal.length > 1 && !strVal.startsWith('0.')) && cleanNumStr.length <= 12;
 
                     // 검색어 매칭 하이라이트 여부
                     const isMatched =
