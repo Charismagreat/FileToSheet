@@ -126,9 +126,10 @@ export function computeSheetRecommendation(
   allMatches.sort((a, b) => b.matchRatio - a.matchRatio);
 
   const bestMatch = allMatches[0] || null;
-  // 일치율 50% 이상이고 매칭된 컬럼이 3개 이상일 때 적합한 시트로 판정
+  // 🌟 일치율 90% 이상이고 매칭된 컬럼이 3개 이상일 때에만 기존 시트 병합을 AI 추천으로 판정
+  // (은행 통장 입출금 내역과 카드 승인 내역처럼 성격이 다른 금융 문서는 서로 분리 보존되어야 함)
   const hasGoodMatch = Boolean(
-    bestMatch && bestMatch.matchRatio >= 50 && bestMatch.matchedColumns.length >= 3
+    bestMatch && bestMatch.matchRatio >= 90 && bestMatch.matchedColumns.length >= 3
   );
 
   // 새 시트명 후보 생성
@@ -149,9 +150,14 @@ export function computeSheetRecommendation(
       recommendedSheetName: bestMatch.sheetName,
       suggestedNewSheetName,
       allMatches,
-      reason: `업로드하신 파일은 기존 [${bestMatch.sheetName}] 시트와 컬럼이 ${bestMatch.matchRatio}% 일치합니다.`,
+      reason: `업로드하신 파일은 기존 [${bestMatch.sheetName}] 시트와 컬럼이 ${bestMatch.matchRatio}% 일치하는 동일 양식입니다. 기존 시트에 행 추가를 추천합니다.`,
     };
   }
+
+  const reasonDetail =
+    bestMatch && bestMatch.matchRatio > 0
+      ? `기존 [${bestMatch.sheetName}] 시트와의 컬럼 일치율이 ${bestMatch.matchRatio}%로 상이한 양식의 문서입니다. (동일 서식 90% 이상일 때만 기존 시트 병합 권장) 고유 서식을 온전히 보존하기 위해 새 시트 생성을 추천합니다.`
+      : `업로드하신 파일은 기존 시트들과 양식이 다른 새로운 문서입니다. 데이터 유실을 막기 위해 새 시트로 분리 생성을 추천합니다.`;
 
   return {
     bestMatch,
@@ -161,7 +167,7 @@ export function computeSheetRecommendation(
     recommendedSheetName: '',
     suggestedNewSheetName,
     allMatches,
-    reason: `업로드하신 파일은 기존 시트들과 양식이 다른 새로운 문서입니다. 데이터 유실을 막기 위해 새 시트로 생성하는 것을 추천합니다.`,
+    reason: reasonDetail,
   };
 }
 
