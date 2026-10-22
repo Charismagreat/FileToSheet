@@ -172,10 +172,19 @@ export function useWorkspace({ phoneNumber, plan, onPlanLimit }: UseWorkspaceOpt
   };
 
   const handleAddNewProject = () => {
+    // 중복 없는 프로젝트 고유 이름 자동 부여
+    const existingNames = new Set(projects.map((p) => (p.name || '').trim()));
+    let nextNum = projects.length + 1;
+    let nextName = `새 프로젝트 ${nextNum}`;
+    while (existingNames.has(nextName)) {
+      nextNum += 1;
+      nextName = `새 프로젝트 ${nextNum}`;
+    }
+
     const newProj: ProjectWorkspace = {
       id: null,
-      name: `새 프로젝트 ${projects.length + 1}`,
-      filename: `새 프로젝트 ${projects.length + 1}`,
+      name: nextName,
+      filename: nextName,
       category: '신규 프로젝트',
       sheets: [{ name: 'Sheet1', headers: ['일련번호', '등록일시', '항목', '금액', '비고'], rows: [], rawRows: [] }],
       activeSheetIndex: 0,
