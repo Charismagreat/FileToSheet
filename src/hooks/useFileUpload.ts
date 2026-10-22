@@ -200,8 +200,12 @@ export function useFileUpload({
           ? currentProject.sheets[targetSheetIndex]
           : currentSheet;
 
+      // 🌟 대상 시트에 이미 데이터 행이 존재하는 경우에만 기존 컬럼 스키마를 강제함.
+      // 빈 시트(rows가 0개)인 경우에는 업로드되는 새 파일 본연의 컬럼을 채택하도록 undefined 전달!
+      const isDestSheetEmpty = !effectiveDestSheet?.rows || effectiveDestSheet.rows.length === 0;
+
       const targetHeaders =
-        mode === 'append_rows' && effectiveDestSheet?.headers?.length
+        mode === 'append_rows' && effectiveDestSheet?.headers?.length && !isDestSheetEmpty
           ? effectiveDestSheet.headers
           : undefined;
 
@@ -288,14 +292,28 @@ export function useFileUpload({
         const s = [...proj.sheets];
         const destIdx = targetSheetIndex !== undefined ? targetSheetIndex : proj.activeSheetIndex;
         const target = s[destIdx] || s[0];
-        const fixedHeaders = target.headers?.length ? target.headers : (parsedSheets[0]?.headers || []);
+        const isTargetEmpty = !target.rows?.length;
 
-        if (!target.rows?.length) {
+        // 🌟 빈 시트에 첫 업로드인 경우, 기존 임시 컬럼을 버리고 파싱된 파일의 실제 컬럼을 100% 채택!
+        const parsedHeaders = parsedSheets[0]?.headers || [];
+        const fixedHeaders = isTargetEmpty && parsedHeaders.length > 0
+          ? parsedHeaders
+          : (target.headers?.length ? target.headers : parsedHeaders);
+
+        if (isTargetEmpty) {
           const tr = truncateRowsToLimit(plan, 0, parsedSheets[0]?.rows || []);
           recordedRowCount = tr.rows.length;
-          recordedSheetName = target.name;
+
+          // 기본 'SheetN' 이름인 경우 파싱된 원본 시트명이나 카테고리로 가독성 있게 자동 업그레이드
+          const isGenericSheetName = /^Sheet\d+$/i.test(target.name);
+          const newSheetName = isGenericSheetName && parsedSheets[0]?.name && !/^Sheet\d+$/i.test(parsedSheets[0].name)
+            ? parsedSheets[0].name
+            : target.name;
+          recordedSheetName = newSheetName;
+
           s[destIdx] = {
             ...target,
+            name: newSheetName,
             headers: fixedHeaders,
             originalFiles: [...(target.originalFiles || []), docItem],
             rows: tr.rows.map((r) => ({

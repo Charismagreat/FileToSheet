@@ -152,7 +152,10 @@ export async function parseSpreadsheetBuffer(
     const rawHeaders = rawData[headerRowIndex] || [];
     const headers: string[] = rawHeaders.map((h: any, idx: number) => {
       const str = String(h ?? '').trim();
-      return str || `열_${idx + 1}`;
+      if (!str) {
+        return idx === 0 ? 'No' : `열_${idx + 1}`;
+      }
+      return str;
     });
 
     const dataRows = rawData.slice(headerRowIndex + 1);
@@ -162,6 +165,18 @@ export async function parseSpreadsheetBuffer(
       // 행 전체가 비어있는지 확인
       const hasContent = row.some((c) => c !== null && c !== '');
       if (!hasContent) continue;
+
+      // 🌟 요약/합계/총계 행 자동 감지 및 제외
+      const firstNonEmptyText = row
+        .map((c) => String(c ?? '').trim())
+        .filter((c) => c.length > 0)[0]?.toLowerCase();
+
+      if (
+        firstNonEmptyText &&
+        ['합계', '소계', '총계', '총합계', '합 계', '소 계', '총 계', '총 합계', 'total', 'grand total', 'subtotal'].includes(firstNonEmptyText)
+      ) {
+        continue;
+      }
 
       const rowObj: Record<string, any> = {};
       headers.forEach((header, idx) => {
