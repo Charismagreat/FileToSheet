@@ -106,7 +106,8 @@ export function renderFormattedNumber(val: any): React.ReactNode {
  * 🌟 화면 밀도와 가독성을 최적화한 스마트 열 너비 기본값 (불필요하게 넓은 컬럼 타이트하게 슬림화)
  */
 export function getSmartColumnWidth(header: string): number {
-  if (['#', '일련번호', '순번', 'No', 'no'].includes(header)) return 52;
+  if (['#', 'No', 'no'].includes(header)) return 48;
+  if (['일련번호', '순번'].includes(header)) return 68;
   if (header === '수량') return 75;
   if (header === '단가') return 95;
   if (['금액', '공급가액', '부가가치세', '부가세', '합계금액', '세액', '합계'].some((k) => header.includes(k))) return 105;

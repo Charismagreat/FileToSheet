@@ -17,6 +17,7 @@ import {
 } from '@/lib/plan-limits';
 import { generateFileUid, getUniqueFileName, computeFileHash } from '@/lib/sheet-helpers';
 import { normalizePhoneNumbersInRows } from '@/lib/phone-normalizer';
+import { computeSheetRecommendation, quickExtractSpreadsheetHeaders, RoutingRecommendation } from '@/lib/sheet-similarity';
 import { saveUserProjectToDb } from '@/lib/project-db';
 
 export interface LastUploadAction {
@@ -64,6 +65,12 @@ export function useFileUpload({
 
   // 🌟 방금 업로드된 내역 1-Click 실행 취소(Undo) 상태
   const [lastUploadAction, setLastUploadAction] = useState<LastUploadAction | null>(null);
+  // 🌟 AI 스마트 시트 라우팅 상태 (업로드 파일과 기존 시트 간 일치도 기반 추천 안내창)
+  const [smartRoutingState, setSmartRoutingState] = useState<{
+    file: File;
+    incomingHeaders: string[];
+    recommendation: RoutingRecommendation;
+  } | null>(null);
 
   // 분당 호출 제한 및 일일 공정 사용 정책(FUP) 추적용 ref
   const uploadTimestampsRef = useRef<number[]>([]);
@@ -115,7 +122,8 @@ export function useFileUpload({
     mode: 'new_document' | 'new_sheet' | 'append_rows',
     customPrompt?: string,
     bypassDup = false,
-    targetSheetIndex?: number
+    targetSheetIndex?: number,
+    customNewSheetName?: string
   ) => {
     setPendingUploadFile(null);
 
@@ -330,17 +338,32 @@ export function useFileUpload({
           recordedRowCount = tr.rows.length;
           recordedSheetName = target.name;
 
+          // 🌟 기존 시트에 없는 새 파일의 유효 컬럼들을 비고 앞자리에 자동 추가 확장 (동적 스키마 확장)
+          const incomingNewCols = (parsedSheets[0]?.headers || []).filter(
+            (h) => !fixedHeaders.includes(h) && h !== '비고' && !h.startsWith('_')
+          );
+
+          let expandedHeaders = [...fixedHeaders];
+          if (incomingNewCols.length > 0) {
+            const remarkIdx = expandedHeaders.indexOf('비고');
+            if (remarkIdx !== -1) {
+              expandedHeaders.splice(remarkIdx, 0, ...incomingNewCols);
+            } else {
+              expandedHeaders.push(...incomingNewCols, '비고');
+            }
+          }
+
           const mappedRows = tr.rows.map((row, i) => {
             const cleanRow: Record<string, any> = {};
-            for (const h of fixedHeaders) {
+            for (const h of expandedHeaders) {
               cleanRow[h] = row[h] !== undefined && row[h] !== null ? row[h] : '';
             }
             const extra = Object.entries(row)
-              .filter(([k]) => !fixedHeaders.includes(k) && !k.startsWith('_'))
+              .filter(([k]) => !expandedHeaders.includes(k) && !k.startsWith('_'))
               .map(([k, v]) => `[${k}] ${v}`)
               .join(' | ');
 
-            if (extra && fixedHeaders.includes('비고')) {
+            if (extra && expandedHeaders.includes('비고')) {
               cleanRow['비고'] = cleanRow['비고'] ? `${cleanRow['비고']} | ${extra}` : extra;
             }
             cleanRow['일련번호'] = target.rows.length + i + 1;
@@ -351,11 +374,11 @@ export function useFileUpload({
             return cleanRow;
           });
 
-          const normalizedMappedRows = normalizePhoneNumbersInRows(mappedRows, fixedHeaders, customPrompt);
+          const normalizedMappedRows = normalizePhoneNumbersInRows(mappedRows, expandedHeaders, customPrompt);
 
           s[destIdx] = {
             ...target,
-            headers: fixedHeaders,
+            headers: expandedHeaders,
             rows: [...target.rows, ...normalizedMappedRows],
             originalFiles: [...(target.originalFiles || []), docItem],
           };
@@ -389,6 +412,7 @@ export function useFileUpload({
 
         const incomingSheets = parsedSheets.map((sh) => ({
           ...sh,
+          name: customNewSheetName || sh.name || '새 시트',
           originalFiles: [docItem],
           rows: truncateRowsToLimit(plan, 0, sh.rows).rows.map((r) => ({
             ...r,
@@ -517,10 +541,37 @@ export function useFileUpload({
     processFile(newFile, mode, prompt, true, targetSheetIndex);
   };
 
-  const handleFileDropOrSelect = (file: File) => {
+  const handleFileDropOrSelect = async (file: File) => {
     if (!checkSafety(file)) return;
-    if (projects.length === 0) processFile(file, 'new_document');
-    else setPendingUploadFile(file);
+    if (projects.length === 0 || !currentProject || !currentProject.sheets || currentProject.sheets.length === 0) {
+      processFile(file, 'new_document');
+      return;
+    }
+
+    // 🌟 고속 헤더 추출 및 스마트 시트 일치도 분석
+    let incomingHeaders: string[] = [];
+    const ext = file.name.split('.').pop()?.toLowerCase();
+    if (['xlsx', 'xls', 'csv'].includes(ext || '')) {
+      incomingHeaders = await quickExtractSpreadsheetHeaders(file);
+    }
+
+    // 헤더가 없거나 이미지/PDF인 경우 기본 가이드 헤더 또는 빈 배열
+    if (incomingHeaders.length === 0) {
+      incomingHeaders = ['거래일자', '품목명', '수량', '단가', '공급가액', '합계금액'];
+    }
+
+    const recommendation = computeSheetRecommendation(
+      incomingHeaders,
+      currentProject.sheets,
+      file.name
+    );
+
+    // 스마트 라우팅 모달 오픈
+    setSmartRoutingState({
+      file,
+      incomingHeaders,
+      recommendation,
+    });
   };
 
   const handleDropDirectlyToTable = (file: File) => {
@@ -546,5 +597,7 @@ export function useFileUpload({
     lastUploadAction,
     undoLastUpload,
     dismissUndoToast,
+    smartRoutingState,
+    setSmartRoutingState,
   };
 }
