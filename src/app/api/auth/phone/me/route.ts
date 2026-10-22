@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { queryTable } from '@/egdesk-helpers';
 
-export const dynamic = 'force-dynamic';
-
 /**
  * GET /api/auth/phone/me
  * 현재 로그인된 사용자의 최신 프로필, 이용 플랜(Pro/Free), 잔여 토큰 동기화
