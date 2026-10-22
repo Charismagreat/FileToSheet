@@ -21,6 +21,7 @@ export function useWorkspace({ phoneNumber, plan, onPlanLimit }: UseWorkspaceOpt
   const [editingProjectName, setEditingProjectName] = useState<string>('');
   const [editingSheetIdx, setEditingSheetIdx] = useState<number | null>(null);
   const [editingSheetName, setEditingSheetName] = useState<string>('');
+  const [deletingSheetTarget, setDeletingSheetTarget] = useState<{ index: number; name: string; rowCount: number } | null>(null);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isLoadedRef = useRef<boolean>(false);
   const isSavingRef = useRef<boolean>(false);
@@ -219,15 +220,15 @@ export function useWorkspace({ phoneNumber, plan, onPlanLimit }: UseWorkspaceOpt
     setEditingSheetIdx(null);
   };
 
-  const handleDeleteSheet = (sheetIdx: number, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!currentProject || currentProject.sheets.length <= 1) return alert('최소 1개의 시트가 존재해야 합니다.');
+  // 🌟 실제 시트 삭제 처리 내부 실행 함수
+  const executeDeleteSheet = (sheetIdx: number) => {
+    if (!currentProject || currentProject.sheets.length <= 1) return;
     
     const targetSheet = currentProject.sheets[sheetIdx];
     const nextSheets = currentProject.sheets.filter((_, i) => i !== sheetIdx);
     const nextIdx = currentProject.activeSheetIndex >= nextSheets.length ? Math.max(0, nextSheets.length - 1) : currentProject.activeSheetIndex;
 
-    // 🌟 삭제되지 않고 남아있는 시트들에서 여전히 참조 중인 파일 식별자(UID, ID, Name) 수집
+    // 삭제되지 않고 남아있는 시트들에서 여전히 참조 중인 파일 식별자(UID, ID, Name) 수집
     const remainingFileUids = new Set<string>();
     const remainingFileIds = new Set<number>();
     const remainingFileNames = new Set<string>();
@@ -277,6 +278,40 @@ export function useWorkspace({ phoneNumber, plan, onPlanLimit }: UseWorkspaceOpt
           : p
       )
     );
+  };
+
+  // 🌟 시트 삭제 핸들러 (데이터가 있는 경우 확인 절차 모달 트리거)
+  const handleDeleteSheet = (sheetIdx: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!currentProject || currentProject.sheets.length <= 1) {
+      return alert('최소 1개의 시트가 존재해야 합니다.');
+    }
+
+    const targetSheet = currentProject.sheets[sheetIdx];
+    if (!targetSheet) return;
+
+    // 데이터 행이 1개 이상 들어있는 시트인 경우 사용자 확인 모달 호출
+    if (targetSheet.rows && targetSheet.rows.length > 0) {
+      setDeletingSheetTarget({
+        index: sheetIdx,
+        name: targetSheet.name,
+        rowCount: targetSheet.rows.length,
+      });
+      return;
+    }
+
+    // 빈 시트인 경우 확인 없이 즉시 삭제
+    executeDeleteSheet(sheetIdx);
+  };
+
+  const confirmDeleteSheet = () => {
+    if (!deletingSheetTarget) return;
+    executeDeleteSheet(deletingSheetTarget.index);
+    setDeletingSheetTarget(null);
+  };
+
+  const cancelDeleteSheet = () => {
+    setDeletingSheetTarget(null);
   };
 
   const handleSelectSheet = (idx: number) => {
@@ -432,7 +467,7 @@ export function useWorkspace({ phoneNumber, plan, onPlanLimit }: UseWorkspaceOpt
     editingProjectIdx, setEditingProjectIdx, editingProjectName, setEditingProjectName, saveProjectName,
     handleAddNewProject, handleCloseProject,
     editingSheetIdx, setEditingSheetIdx, editingSheetName, setEditingSheetName, saveSheetName,
-    handleAddNewSheet, handleDeleteSheet, handleSelectSheet, handleDeleteOriginalFile,
+    handleAddNewSheet, handleDeleteSheet, handleSelectSheet, handleDeleteOriginalFile, deletingSheetTarget, setDeletingSheetTarget, confirmDeleteSheet, cancelDeleteSheet,
     handleApplyCorrection,
     handleUpdateCellByRow,
     ...tableEditor,

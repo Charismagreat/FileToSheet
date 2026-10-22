@@ -1,5 +1,7 @@
 'use client';
 
+import { DeleteSheetModal } from '@/components/DeleteSheetModal';
+
 import React, { useState, useRef } from 'react';
 import { Header } from '@/components/Header';
 import { WelcomeDropzone } from '@/components/WelcomeDropzone';
@@ -844,6 +846,15 @@ export default function FileToSheetApp() {
         existingFile={upload.duplicateWarning?.existingFile || null}
         newFile={upload.duplicateWarning?.newFile || null}
         onProceed={upload.confirmProceedDuplicate}
+      />
+
+      {/* 🌟 데이터가 포함된 시트 삭제 시 사용자 취소/확인 절차 모달 */}
+      <DeleteSheetModal
+        isOpen={Boolean(ws.deletingSheetTarget)}
+        sheetName={ws.deletingSheetTarget?.name || ''}
+        rowCount={ws.deletingSheetTarget?.rowCount || 0}
+        onClose={ws.cancelDeleteSheet}
+        onConfirm={ws.confirmDeleteSheet}
       />
 
       {/* 11. 담당자 인수인계 및 휴대폰 번호 데이터 승계 모달 */}
