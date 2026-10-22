@@ -116,6 +116,28 @@ export function normalizePhoneNumber(
     return cleaned.replace(/[.\s]+/g, '-').replace(/-+/g, '-');
   }
 
+  // 🌟 2-1단계: 원본에 이미 명확한 구분자('.', '-', ' ')가 들어가 분절되어 있는 경우 우선 보존
+  // 예: '0504.182.7674' -> parts: ['0504', '182', '7674'] -> '0504-182-7674'
+  const naturalParts = cleaned.split(/[.\s\-]+/).filter(Boolean);
+  if (naturalParts.length === 3 && naturalParts.every((p) => /^\d+$/.test(p))) {
+    const [p1, p2, p3] = naturalParts;
+    // p1이 0504 등 4자리 안심/팩스번호 또는 02(2자리) 또는 010/031 등(3자리)이고
+    // p2가 3~4자리, p3가 4자리인 유효 전화번호 형태인 경우 원본의 의도된 분절 지점 그대로 하이픈 연결!
+    if (
+      (p1.length === 4 || p1.length === 3 || p1.length === 2) &&
+      (p2.length === 3 || p2.length === 4) &&
+      p3.length === 4
+    ) {
+      return `${p1}-${p2}-${p3}`;
+    }
+  } else if (naturalParts.length === 2 && naturalParts.every((p) => /^\d+$/.test(p))) {
+    const [p1, p2] = naturalParts;
+    // 전국 대표번호: 1588.0000 -> 1588-0000
+    if (p1.length === 4 && p2.length === 4) {
+      return `${p1}-${p2}`;
+    }
+  }
+
   // 3단계: 국내 번호 숫자만 추출 후 대한민국 표준 분절
   const digits = cleaned.replace(/\D/g, '');
 
@@ -136,7 +158,20 @@ export function normalizePhoneNumber(
     }
   }
 
-  // C. 3자리 국번 (010, 011, 016, 017, 018, 019, 070, 031, 032, 033, 041, 042, 043, 044, 051, 052, 053, 054, 055, 061, 062, 063, 064 등)
+  // 🌟 C. 안심번호 / 인터넷 팩스 050x (11~12자리)
+  // [중요] 0504, 0505 등은 4자리 국번이므로 3자리 국번 판별보다 무조건 먼저 처리해야 함!
+  if (digits.startsWith('050')) {
+    if (digits.length === 11) {
+      // 0504-182-7674 (4자리 국번 - 3자리 - 4자리)
+      return `${digits.slice(0, 4)}-${digits.slice(4, 7)}-${digits.slice(7)}`;
+    }
+    if (digits.length === 12) {
+      // 0504-1823-7674 (4자리 국번 - 4자리 - 4자리)
+      return `${digits.slice(0, 4)}-${digits.slice(4, 8)}-${digits.slice(8)}`;
+    }
+  }
+
+  // D. 일반 3자리 국번 (010, 011, 016, 017, 018, 019, 070, 031, 032, 033, 041, 042, 043, 044, 051, 052, 053, 054, 055, 061, 062, 063, 064 등)
   if (/^0[1-9]\d/.test(digits)) {
     // 10자리: 031-123-4567, 011-123-4567
     if (digits.length === 10) {
@@ -145,16 +180,6 @@ export function normalizePhoneNumber(
     // 11자리: 010-1234-5678, 031-1234-5678, 070-1234-5678
     if (digits.length === 11) {
       return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
-    }
-  }
-
-  // D. 안심번호 050x (11~12자리)
-  if (digits.startsWith('050')) {
-    if (digits.length === 11) {
-      return `${digits.slice(0, 4)}-${digits.slice(4, 7)}-${digits.slice(7)}`;
-    }
-    if (digits.length === 12) {
-      return `${digits.slice(0, 4)}-${digits.slice(4, 8)}-${digits.slice(8)}`;
     }
   }
 
