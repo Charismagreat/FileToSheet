@@ -765,27 +765,29 @@ export default function FileToSheetApp() {
       />
 
       {/* 🌟 2-A. AI 스마트 시트 라우팅 안내창 (기존 시트 매칭 추천 또는 새 시트 생성 추천) */}
-      <SmartSheetRoutingModal
-        isOpen={Boolean(upload.smartRoutingState)}
-        onClose={() => upload.setSmartRoutingState(null)}
-        fileName={upload.smartRoutingState?.file?.name || ''}
-        incomingHeaders={upload.smartRoutingState?.incomingHeaders || []}
-        recommendation={upload.smartRoutingState?.recommendation || null}
-        currentProject={currentProject}
-        onConfirm={(mode, targetSheetIndex, customNewSheetName, customPrompt) => {
-          if (!upload.smartRoutingState) return;
-          const targetFile = upload.smartRoutingState.file;
-          upload.setSmartRoutingState(null);
-          upload.processFile(
-            targetFile,
-            mode,
-            customPrompt,
-            false,
-            targetSheetIndex,
-            customNewSheetName
-          );
-        }}
-      />
+      {upload.smartRoutingState && (
+        <SmartSheetRoutingModal
+          isOpen={true}
+          onClose={() => upload.setSmartRoutingState(null)}
+          fileName={upload.smartRoutingState.file?.name || ''}
+          incomingHeaders={upload.smartRoutingState.incomingHeaders || []}
+          recommendation={upload.smartRoutingState.recommendation || null}
+          currentProject={currentProject}
+          onConfirm={(mode, targetSheetIndex, customNewSheetName, customPrompt) => {
+            if (!upload.smartRoutingState) return;
+            const targetFile = upload.smartRoutingState.file;
+            upload.setSmartRoutingState(null);
+            upload.processFile(
+              targetFile,
+              mode,
+              customPrompt,
+              false,
+              targetSheetIndex,
+              customNewSheetName
+            );
+          }}
+        />
+      )}
 
       {/* 2. 파일 업로드 옵션 선택 모달 (새 문서 / 새 시트 / 행 추가) */}
       <UploadOptionModal

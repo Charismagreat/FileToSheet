@@ -40,31 +40,23 @@ export function SmartSheetRoutingModal({
   currentProject,
   onConfirm,
 }: SmartSheetRoutingModalProps) {
-  if (!isOpen || !recommendation || !currentProject) return null;
-
-  const sheets = currentProject.sheets || [];
-  const hasGoodMatch = recommendation.hasGoodMatch;
-
-  // 선택된 모드 ('append_rows' | 'new_sheet')
+  // 🌟 React Hooks 규칙 준수: early return 이전에 모든 Hook 최상단 선언
   const [selectedMode, setSelectedMode] = useState<'append_rows' | 'new_sheet'>(
-    recommendation.recommendedMode
+    recommendation?.recommendedMode || 'new_sheet'
   );
 
-  // 대상 시트 인덱스
   const [targetSheetIdx, setTargetSheetIdx] = useState<number>(
-    hasGoodMatch && recommendation.bestMatch
+    recommendation?.hasGoodMatch && recommendation.bestMatch
       ? recommendation.bestMatch.sheetIndex
-      : currentProject.activeSheetIndex ?? 0
+      : currentProject?.activeSheetIndex ?? 0
   );
 
-  // 새 시트 이름
   const [newSheetName, setNewSheetName] = useState<string>(
-    recommendation.suggestedNewSheetName || '새 시트'
+    recommendation?.suggestedNewSheetName || '새 시트'
   );
 
-  // 추천 변경 시 초기화
   useEffect(() => {
-    if (recommendation) {
+    if (recommendation && currentProject) {
       setSelectedMode(recommendation.recommendedMode);
       if (recommendation.hasGoodMatch && recommendation.bestMatch) {
         setTargetSheetIdx(recommendation.bestMatch.sheetIndex);
@@ -73,7 +65,12 @@ export function SmartSheetRoutingModal({
       }
       setNewSheetName(recommendation.suggestedNewSheetName || '새 시트');
     }
-  }, [recommendation, currentProject.activeSheetIndex]);
+  }, [recommendation, currentProject]);
+
+  if (!isOpen || !recommendation || !currentProject) return null;
+
+  const sheets = currentProject.sheets || [];
+  const hasGoodMatch = recommendation.hasGoodMatch;
 
   const handleSubmit = () => {
     onConfirm(
