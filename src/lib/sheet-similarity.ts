@@ -1,14 +1,15 @@
 import { ParsedSheet } from '@/lib/parser';
 
 // 유사도 계산 시 제외할 기본 공통 메타 컬럼
-const META_COLUMNS = ['#', '일련번호', '순번', 'no', '등록일시', '비고'];
+export const META_COLUMNS = ['#', '일련번호', '순번', 'no', '등록일시', '비고'];
 
 // 의미적으로 유사한 컬럼 동의어 그룹
-const SYNONYM_GROUPS: string[][] = [
+export const SYNONYM_GROUPS: string[][] = [
   ['거래일시', '승인일시', '거래일자', '승인일자', '일자', '일시', 'date'],
-  ['공급가액', '공급가', '금액', '승인금액', '이용금액', '결제금액', '출금', '출금액', 'amount', 'price'],
+  ['출금', '출금액', '승인금액', '이용금액', '결제금액', '공급가액', '공급가', '금액', '지급액', '사용금액', 'amount', 'price'],
+  ['입금', '입금액', '수납액', '받은금액'],
   ['세액', '부가가치세', '부가세', 'vat', 'tax'],
-  ['품목', '품명', '거래내용', '이용가맹점명', '가맹점명', '적요', '내용', 'item'],
+  ['거래내용', '품목', '품명', '이용가맹점명', '가맹점명', '적요', '내용', 'item'],
   ['수량', 'qty', 'quantity', 'ea'],
   ['단가', '단위가격', 'unit_price'],
   ['합계금액', '합계', '총액', '총합계', 'total'],
@@ -20,7 +21,7 @@ const SYNONYM_GROUPS: string[][] = [
 /**
  * 두 컬럼 헤더가 동일하거나 동의어 관계인지 판별
  */
-function isHeaderSimilar(h1: string, h2: string): boolean {
+export function isHeaderSimilar(h1: string, h2: string): boolean {
   const clean1 = h1.toLowerCase().replace(/[\s_\-]/g, '');
   const clean2 = h2.toLowerCase().replace(/[\s_\-]/g, '');
 
@@ -34,6 +35,17 @@ function isHeaderSimilar(h1: string, h2: string): boolean {
   }
 
   return false;
+}
+
+/**
+ * 대상 컬럼(targetCol)에 해당하는 가장 적합한 동의어 컬럼을 가용 컬럼 목록에서 탐색
+ */
+export function findBestSynonymColumn(targetCol: string, availableCols: string[]): string | null {
+  if (availableCols.includes(targetCol)) return targetCol;
+  for (const col of availableCols) {
+    if (isHeaderSimilar(targetCol, col)) return col;
+  }
+  return null;
 }
 
 export interface SheetMatchResult {
@@ -97,9 +109,9 @@ export function computeSheetRecommendation(
       }
     }
 
-    // Jaccard 유사도 기반 일치율 계산 (0 ~ 100%)
-    const unionSize = new Set([...cleanIncoming, ...cleanSheetHeaders]).size;
-    const ratio = Math.round((matchedCols.length / Math.max(cleanIncoming.length, 1)) * 100);
+    // 양방향 최대 컬럼수 기반 일치율 계산 (0 ~ 100%)
+    const maxCols = Math.max(cleanIncoming.length, cleanSheetHeaders.length, 1);
+    const ratio = Math.round((matchedCols.length / maxCols) * 100);
 
     allMatches.push({
       sheetIndex: idx,
@@ -114,9 +126,9 @@ export function computeSheetRecommendation(
   allMatches.sort((a, b) => b.matchRatio - a.matchRatio);
 
   const bestMatch = allMatches[0] || null;
-  // 일치율 40% 이상이고 매칭된 컬럼이 2개 이상일 때 적합한 시트로 판정
+  // 일치율 50% 이상이고 매칭된 컬럼이 3개 이상일 때 적합한 시트로 판정
   const hasGoodMatch = Boolean(
-    bestMatch && bestMatch.matchRatio >= 40 && bestMatch.matchedColumns.length >= 2
+    bestMatch && bestMatch.matchRatio >= 50 && bestMatch.matchedColumns.length >= 3
   );
 
   // 새 시트명 후보 생성

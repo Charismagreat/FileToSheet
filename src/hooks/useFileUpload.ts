@@ -17,7 +17,7 @@ import {
 } from '@/lib/plan-limits';
 import { generateFileUid, getUniqueFileName, computeFileHash } from '@/lib/sheet-helpers';
 import { normalizePhoneNumbersInRows } from '@/lib/phone-normalizer';
-import { computeSheetRecommendation, quickExtractSpreadsheetHeaders, RoutingRecommendation } from '@/lib/sheet-similarity';
+import { computeSheetRecommendation, quickExtractSpreadsheetHeaders, RoutingRecommendation, findBestSynonymColumn, META_COLUMNS } from '@/lib/sheet-similarity';
 import { saveUserProjectToDb } from '@/lib/project-db';
 
 export interface LastUploadAction {
@@ -338,9 +338,28 @@ export function useFileUpload({
           recordedRowCount = tr.rows.length;
           recordedSheetName = target.name;
 
-          // 🌟 기존 시트에 없는 새 파일의 유효 컬럼들을 비고 앞자리에 자동 추가 확장 (동적 스키마 확장)
-          const incomingNewCols = (parsedSheets[0]?.headers || []).filter(
-            (h) => !fixedHeaders.includes(h) && h !== '비고' && !h.startsWith('_')
+          // 🌟 동의어 기반 지능형 컬럼 매핑 & 동적 스키마 확장
+          const incomingHeaders = parsedSheets[0]?.headers || [];
+          const mappedIncomingCols = new Set<string>();
+
+          // 1. 대상 시트의 기존 헤더들에 대해 동의어 매칭 매핑 테이블 구축
+          const synonymMap: Record<string, string> = {}; // targetHeader -> incomingCol
+          for (const tgtH of fixedHeaders) {
+            if (META_COLUMNS.includes(tgtH.toLowerCase().trim())) continue;
+            const matchedIncoming = findBestSynonymColumn(tgtH, incomingHeaders);
+            if (matchedIncoming) {
+              synonymMap[tgtH] = matchedIncoming;
+              mappedIncomingCols.add(matchedIncoming);
+            }
+          }
+
+          // 2. 기존 헤더에 매핑되지 않은 인입 파일만의 고유 컬럼들을 비고 앞자리에 확장
+          const incomingNewCols = incomingHeaders.filter(
+            (h) => !fixedHeaders.includes(h) &&
+                   !mappedIncomingCols.has(h) &&
+                   h !== '비고' &&
+                   !META_COLUMNS.includes(h.toLowerCase().trim()) &&
+                   !h.startsWith('_')
           );
 
           let expandedHeaders = [...fixedHeaders];
@@ -353,19 +372,36 @@ export function useFileUpload({
             }
           }
 
+          // 3. 각 행 데이터 매핑 (기존 컬럼 + 동의어 매핑 + 확장 신규 컬럼)
           const mappedRows = tr.rows.map((row, i) => {
             const cleanRow: Record<string, any> = {};
-            for (const h of expandedHeaders) {
+
+            // (1) 기존 헤더 채우기 (동의어 매핑 활용)
+            for (const h of fixedHeaders) {
+              if (row[h] !== undefined && row[h] !== null && row[h] !== '') {
+                cleanRow[h] = row[h];
+              } else if (synonymMap[h] && row[synonymMap[h]] !== undefined && row[synonymMap[h]] !== null) {
+                cleanRow[h] = row[synonymMap[h]];
+              } else {
+                cleanRow[h] = '';
+              }
+            }
+
+            // (2) 확장된 신규 컬럼 채우기
+            for (const h of incomingNewCols) {
               cleanRow[h] = row[h] !== undefined && row[h] !== null ? row[h] : '';
             }
+
+            // (3) 비고 처리
             const extra = Object.entries(row)
-              .filter(([k]) => !expandedHeaders.includes(k) && !k.startsWith('_'))
+              .filter(([k]) => !expandedHeaders.includes(k) && !mappedIncomingCols.has(k) && !k.startsWith('_'))
               .map(([k, v]) => `[${k}] ${v}`)
               .join(' | ');
 
             if (extra && expandedHeaders.includes('비고')) {
               cleanRow['비고'] = cleanRow['비고'] ? `${cleanRow['비고']} | ${extra}` : extra;
             }
+
             cleanRow['일련번호'] = target.rows.length + i + 1;
             cleanRow['등록일시'] = cleanRow['등록일시'] || row.등록일시 || nowKst;
             cleanRow._fileId = fileId;
@@ -575,9 +611,7 @@ export function useFileUpload({
   };
 
   const handleDropDirectlyToTable = (file: File) => {
-    if (!checkSafety(file)) return;
-    if (projects.length === 0) processFile(file, 'new_document');
-    else processFile(file, 'append_rows');
+    handleFileDropOrSelect(file);
   };
 
   return {
