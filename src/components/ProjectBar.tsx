@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { FolderOpen, FolderPlus, X, ChevronLeft, ChevronRight, GripVertical } from 'lucide-react';
+import { FolderOpen, FolderPlus, X, GripVertical } from 'lucide-react';
 import { ProjectWorkspace } from '@/types/workspace';
 
 interface ProjectBarProps {
@@ -87,7 +87,7 @@ export function ProjectBar({
               } ${draggingIdx === idx ? 'opacity-40 scale-95 border-dashed border-blue-400' : ''} ${
                 dragOverIdx === idx && draggingIdx !== idx ? 'ring-2 ring-blue-500 ring-offset-1 bg-blue-50/90' : ''
               }`}
-              title="드래그하거나 좌우 화살표로 순서 변경 가능"
+              title="드래그하여 프로젝트 순서 변경 가능"
             >
               {/* 드래그 힌트 그립 아이콘 */}
               {projects.length > 1 && !isRenaming && (
@@ -127,37 +127,7 @@ export function ProjectBar({
                 </span>
               )}
 
-              {/* 🌟 좌/우 단축 순서 이동 버튼 */}
-              {onReorderProjects && projects.length > 1 && !isRenaming && (
-                <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition ml-0.5">
-                  {idx > 0 && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onReorderProjects(idx, idx - 1);
-                      }}
-                      className="p-0.5 rounded hover:bg-slate-200 text-slate-400 hover:text-slate-700 transition"
-                      title="프로젝트 왼쪽으로 이동"
-                    >
-                      <ChevronLeft className="w-3 h-3" />
-                    </button>
-                  )}
-                  {idx < projects.length - 1 && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onReorderProjects(idx, idx + 1);
-                      }}
-                      className="p-0.5 rounded hover:bg-slate-200 text-slate-400 hover:text-slate-700 transition"
-                      title="프로젝트 오른쪽으로 이동"
-                    >
-                      <ChevronRight className="w-3 h-3" />
-                    </button>
-                  )}
-                </div>
-              )}
+
 
               <button
                 onClick={(e) => onCloseProject(idx, e)}

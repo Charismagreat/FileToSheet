@@ -9,8 +9,6 @@ import {
   Sparkles,
   Sliders,
   Brain,
-  ChevronLeft,
-  ChevronRight,
   GripVertical,
 } from 'lucide-react';
 import { ParsedSheet } from '@/lib/parser';
@@ -105,7 +103,7 @@ export function SheetBar({
               } ${draggingIdx === idx ? 'opacity-40 scale-95 border-dashed border-blue-400' : ''} ${
                 dragOverIdx === idx && draggingIdx !== idx ? 'ring-2 ring-blue-500 ring-offset-1 bg-blue-50/90' : ''
               }`}
-              title={hasRule ? `[AI 규칙 적용 중]\n${sheet.customPrompt}` : '드래그하거나 화살표로 순서 이동 가능'}
+              title={hasRule ? `[AI 규칙 적용 중]\n${sheet.customPrompt}` : '드래그하여 시트 순서 변경 가능'}
             >
               {/* 드래그 힌트 아이콘 (호버 시 표시) */}
               {sheets.length > 1 && !isRenaming && (
@@ -155,41 +153,7 @@ export function SheetBar({
                 ({sheet.rows.length})
               </span>
 
-              {/* 🌟 좌/우 단축 순서 이동 버튼 */}
-              {onReorderSheets && sheets.length > 1 && !isRenaming && (
-                <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition mr-0.5">
-                  {idx > 0 && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onReorderSheets(idx, idx - 1);
-                      }}
-                      className={`p-0.5 rounded hover:bg-black/10 transition ${
-                        isCurrent ? 'text-blue-100 hover:text-white' : 'text-slate-400 hover:text-slate-700'
-                      }`}
-                      title="시트를 왼쪽으로 이동"
-                    >
-                      <ChevronLeft className="w-3 h-3" />
-                    </button>
-                  )}
-                  {idx < sheets.length - 1 && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onReorderSheets(idx, idx + 1);
-                      }}
-                      className={`p-0.5 rounded hover:bg-black/10 transition ${
-                        isCurrent ? 'text-blue-100 hover:text-white' : 'text-slate-400 hover:text-slate-700'
-                      }`}
-                      title="시트를 오른쪽으로 이동"
-                    >
-                      <ChevronRight className="w-3 h-3" />
-                    </button>
-                  )}
-                </div>
-              )}
+
 
               {!isRenaming && (
                 <button
