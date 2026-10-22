@@ -191,7 +191,20 @@ function detectDateColumns(headers: string[], rows: Record<string, any>[]): stri
   return candidatesByData.length > 0 ? candidatesByData : headers;
 }
 
-export type SingleDatePreset = 'all' | 'today' | 'week' | 'month' | 'quarter' | 'custom';
+export type SingleDatePreset =
+  | 'all'
+  | 'today'
+  | 'yesterday'
+  | 'prev_biz_day'
+  | 'two_days_ago'
+  | 'two_biz_days_ago'
+  | 'week'
+  | 'this_week'
+  | 'last_week'
+  | 'month'
+  | 'last_month'
+  | 'quarter'
+  | 'custom';
 export type ComparePreset = 'mom' | 'wow' | '3months' | '4quarters' | 'custom';
 
 export interface SavedSummaryConfig {
@@ -207,6 +220,52 @@ export interface SavedSummaryConfig {
 }
 
 /**
+ * N번째 이전 영업일(주말 토/일 제외) Date 객체 반환
+ */
+function getPrevBusinessDay(baseDate: Date, n: number = 1): Date {
+  const d = new Date(baseDate);
+  let count = 0;
+  while (count < n) {
+    d.setDate(d.getDate() - 1);
+    const day = d.getDay();
+    // 0: 일요일, 6: 토요일 제외
+    if (day !== 0 && day !== 6) {
+      count++;
+    }
+  }
+  return d;
+}
+
+/**
+ * 이번 주(월요일 ~ 일요일) 범위 산출
+ */
+function getThisWeekRange(now: Date): { start: string; end: string } {
+  const d = new Date(now);
+  const day = d.getDay();
+  // 월요일을 주의 시작(0일째)으로 계산
+  const diffToMonday = day === 0 ? -6 : 1 - day;
+  const mon = new Date(d);
+  mon.setDate(d.getDate() + diffToMonday);
+  const sun = new Date(mon);
+  sun.setDate(mon.getDate() + 6);
+  return { start: formatDate(mon), end: formatDate(sun) };
+}
+
+/**
+ * 지난 주(지난주 월요일 ~ 지난주 일요일) 범위 산출
+ */
+function getLastWeekRange(now: Date): { start: string; end: string } {
+  const d = new Date(now);
+  const day = d.getDay();
+  const diffToMonday = day === 0 ? -6 : 1 - day;
+  const lastMon = new Date(d);
+  lastMon.setDate(d.getDate() + diffToMonday - 7);
+  const lastSun = new Date(lastMon);
+  lastSun.setDate(lastMon.getDate() + 6);
+  return { start: formatDate(lastMon), end: formatDate(lastSun) };
+}
+
+/**
  * 🌟 방문 당일(현재) 기준 동적 상대 날짜 계산기
  * 다음날/다음주/다음달에 재방문하더라도 항상 방문 시점 기준으로 최신 기간 산출
  */
@@ -216,14 +275,47 @@ function computeSinglePresetRange(preset: SingleDatePreset): { start: string; en
     const s = formatDate(now);
     return { start: s, end: s };
   }
+  if (preset === 'yesterday') {
+    const yest = new Date(now);
+    yest.setDate(yest.getDate() - 1);
+    const s = formatDate(yest);
+    return { start: s, end: s };
+  }
+  if (preset === 'prev_biz_day') {
+    const pb = getPrevBusinessDay(now, 1);
+    const s = formatDate(pb);
+    return { start: s, end: s };
+  }
+  if (preset === 'two_days_ago') {
+    const d2 = new Date(now);
+    d2.setDate(d2.getDate() - 2);
+    const s = formatDate(d2);
+    return { start: s, end: s };
+  }
+  if (preset === 'two_biz_days_ago') {
+    const p2b = getPrevBusinessDay(now, 2);
+    const s = formatDate(p2b);
+    return { start: s, end: s };
+  }
   if (preset === 'week') {
     const past = new Date(now);
     past.setDate(past.getDate() - 6);
     return { start: formatDate(past), end: formatDate(now) };
   }
+  if (preset === 'this_week') {
+    return getThisWeekRange(now);
+  }
+  if (preset === 'last_week') {
+    return getLastWeekRange(now);
+  }
   if (preset === 'month') {
     const first = new Date(now.getFullYear(), now.getMonth(), 1);
     return { start: formatDate(first), end: formatDate(now) };
+  }
+  if (preset === 'last_month') {
+    const lmStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const lmEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+    return { start: formatDate(lmStart), end: formatDate(lmEnd) };
   }
   if (preset === 'quarter') {
     const past = new Date(now.getFullYear(), now.getMonth() - 2, 1);
@@ -235,6 +327,21 @@ function computeSinglePresetRange(preset: SingleDatePreset): { start: string; en
 /**
  * 🌟 비교 모드 템플릿의 재방문 시점 동적 재계산기
  */
+// 🌟 사용자 맞춤 단일 모드 일자 빠른 선택 뱃지 정의 (요청 순서 엄수)
+const SINGLE_DATE_PRESET_ITEMS: { key: SingleDatePreset; label: string; title: string }[] = [
+  { key: 'today', label: '오늘', title: '오늘 당일 1일간' },
+  { key: 'yesterday', label: '어제', title: '어제(1일 전) 1일간' },
+  { key: 'prev_biz_day', label: '전영업일', title: '직전 1영업일(주말 토/일 제외)' },
+  { key: 'two_days_ago', label: '그제', title: '그제(2일 전) 1일간' },
+  { key: 'two_biz_days_ago', label: '전전영업일', title: '2번째 이전 영업일(주말 토/일 제외)' },
+  { key: 'week', label: '최근7일', title: '오늘 기준 최근 7일간' },
+  { key: 'this_week', label: '이번주', title: '이번 주(월요일~일요일)' },
+  { key: 'last_week', label: '지난주', title: '지난 주(월요일~일요일 7일간)' },
+  { key: 'month', label: '이번달', title: '이번 달(1일~현재)' },
+  { key: 'last_month', label: '지난달', title: '지난 달(전월 1일~전월 말일)' },
+  { key: 'quarter', label: '최근3개월', title: '최근 3개월간' },
+];
+
 function computeComparePresetPeriods(preset: ComparePreset): PeriodConfig[] | null {
   const now = new Date();
   if (preset === 'mom') {
@@ -744,66 +851,34 @@ export function SummaryView({
 
             {/* 원클릭 빠른 프리셋 버튼 (현재 활성 뱃지 하이라이트 & 상대 날짜 보존) */}
             <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-[11px] text-slate-400 font-medium">빠른 선택:</span>
+              <span className="text-[11px] text-slate-400 font-medium shrink-0">빠른 선택:</span>
               <button
                 type="button"
                 onClick={() => applySinglePreset('all')}
-                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer shrink-0 ${
                   singlePreset === 'all' || (!singleStartDate && !singleEndDate && singlePreset !== 'custom')
                     ? 'bg-blue-600 text-white shadow-2xs'
                     : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
                 }`}
+                title="전체 기간 데이터"
               >
                 전체
               </button>
-              <button
-                type="button"
-                onClick={() => applySinglePreset('today')}
-                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
-                  singlePreset === 'today'
-                    ? 'bg-blue-600 text-white shadow-2xs'
-                    : 'bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-600'
-                }`}
-                title="방문한 당일 기준 실시간 집계"
-              >
-                오늘
-              </button>
-              <button
-                type="button"
-                onClick={() => applySinglePreset('week')}
-                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
-                  singlePreset === 'week'
-                    ? 'bg-blue-600 text-white shadow-2xs'
-                    : 'bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-600'
-                }`}
-                title="방문일 기준 최근 7일 동적 집계"
-              >
-                최근 7일
-              </button>
-              <button
-                type="button"
-                onClick={() => applySinglePreset('month')}
-                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
-                  singlePreset === 'month'
-                    ? 'bg-blue-600 text-white shadow-2xs'
-                    : 'bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-600'
-                }`}
-                title="방문일 기준 당월 1일~오늘 동적 집계"
-              >
-                이번 달
-              </button>
-              <button
-                type="button"
-                onClick={() => applySinglePreset('quarter')}
-                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
-                  singlePreset === 'quarter'
-                    ? 'bg-blue-600 text-white shadow-2xs'
-                    : 'bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-600'
-                }`}
-                title="방문일 기준 최근 3개월 동적 집계"
-              >
-                최근 3개월
-              </button>
+              {SINGLE_DATE_PRESET_ITEMS.map((btn) => (
+                <button
+                  key={btn.key}
+                  type="button"
+                  onClick={() => applySinglePreset(btn.key)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer shrink-0 ${
+                    singlePreset === btn.key
+                      ? 'bg-blue-600 text-white shadow-2xs'
+                      : 'bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-600'
+                  }`}
+                  title={btn.title}
+                >
+                  {btn.label}
+                </button>
+              ))}
             </div>
           </div>
 
