@@ -121,8 +121,34 @@ export function useFileUpload({
     // 1. 동일 내용 파일(SHA-256 지문 또는 파일명+용량) 중복 감지 인터셉트
     if (!bypassDup && currentProject) {
       const fileHash = await computeFileHash(file);
+
+      // 🌟 현재 살아있는 유효한 시트들에 실제로 연결되어 있는 파일들만 수집 (삭제된 시트의 파일 제외)
+      const validFileUids = new Set<string>();
+      const validFileIds = new Set<number>();
+      const validFileNames = new Set<string>();
+
+      for (const s of currentProject.sheets || []) {
+        for (const f of s.originalFiles || []) {
+          if (f.uid) validFileUids.add(f.uid);
+          if (f.id && !isNaN(Number(f.id))) validFileIds.add(Number(f.id));
+          if (f.name) validFileNames.add(f.name.trim());
+        }
+        for (const r of s.rows || []) {
+          if (r._fileUid) validFileUids.add(String(r._fileUid));
+          if (r._fileId && !isNaN(Number(r._fileId))) validFileIds.add(Number(r._fileId));
+          if (r._fileName) validFileNames.add(String(r._fileName).trim());
+        }
+      }
+
+      const activeProjectDocs = (currentProject.originalFiles || []).filter((f) => {
+        if (f.uid && validFileUids.has(f.uid)) return true;
+        if (f.id && !isNaN(Number(f.id)) && validFileIds.has(Number(f.id))) return true;
+        if (f.name && validFileNames.has(f.name.trim())) return true;
+        return false;
+      });
+
       const allOriginalDocs: OriginalDocFile[] = [
-        ...(currentProject.originalFiles || []),
+        ...activeProjectDocs,
         ...(currentProject.sheets || []).flatMap((s) => s.originalFiles || []),
       ];
       const existing = allOriginalDocs.find((f) => {

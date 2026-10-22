@@ -222,9 +222,61 @@ export function useWorkspace({ phoneNumber, plan, onPlanLimit }: UseWorkspaceOpt
   const handleDeleteSheet = (sheetIdx: number, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!currentProject || currentProject.sheets.length <= 1) return alert('최소 1개의 시트가 존재해야 합니다.');
+    
+    const targetSheet = currentProject.sheets[sheetIdx];
     const nextSheets = currentProject.sheets.filter((_, i) => i !== sheetIdx);
     const nextIdx = currentProject.activeSheetIndex >= nextSheets.length ? Math.max(0, nextSheets.length - 1) : currentProject.activeSheetIndex;
-    setProjects((prev) => prev.map((p, i) => i === activeProjectIndex ? { ...p, sheets: nextSheets, activeSheetIndex: nextIdx } : p));
+
+    // 🌟 삭제되지 않고 남아있는 시트들에서 여전히 참조 중인 파일 식별자(UID, ID, Name) 수집
+    const remainingFileUids = new Set<string>();
+    const remainingFileIds = new Set<number>();
+    const remainingFileNames = new Set<string>();
+
+    for (const s of nextSheets) {
+      for (const f of s.originalFiles || []) {
+        if (f.uid) remainingFileUids.add(f.uid);
+        if (f.id && !isNaN(Number(f.id))) remainingFileIds.add(Number(f.id));
+        if (f.name) remainingFileNames.add(f.name.trim());
+      }
+      for (const r of s.rows || []) {
+        if (r._fileUid) remainingFileUids.add(String(r._fileUid));
+        if (r._fileId && !isNaN(Number(r._fileId))) remainingFileIds.add(Number(r._fileId));
+        if (r._fileName) remainingFileNames.add(String(r._fileName).trim());
+      }
+    }
+
+    // 프로젝트 전체 원본 파일 풀에서 남아있는 시트에 속하지 않는 파일들 분리 및 정리
+    const currentFiles = currentProject.originalFiles || [];
+    const nextFiles = currentFiles.filter((f) => {
+      if (f.uid && remainingFileUids.has(f.uid)) return true;
+      if (f.id && !isNaN(Number(f.id)) && remainingFileIds.has(Number(f.id))) return true;
+      if (f.name && remainingFileNames.has(f.name.trim())) return true;
+      return false;
+    });
+
+    // 오직 삭제된 시트에만 속해 있던 파일들은 스토리지에서도 삭제 처리
+    const orphanFiles = currentFiles.filter((f) => !nextFiles.includes(f));
+    for (const orphan of orphanFiles) {
+      if (orphan.id && !isNaN(Number(orphan.id))) {
+        deleteUploadedFile(Number(orphan.id)).catch((err) => console.warn('고아 파일 스토리지 삭제 무시:', err));
+      }
+    }
+
+    setProjects((prev) =>
+      prev.map((p, i) =>
+        i === activeProjectIndex
+          ? {
+              ...p,
+              sheets: nextSheets,
+              activeSheetIndex: nextIdx,
+              originalFiles: nextFiles,
+              originalFileUrl: nextFiles[0]?.url || (nextFiles.length === 0 ? '' : p.originalFileUrl),
+              originalFileType: nextFiles[0]?.type || (nextFiles.length === 0 ? '' : p.originalFileType),
+              originalFileSize: nextFiles[0]?.size || (nextFiles.length === 0 ? 0 : p.originalFileSize),
+            }
+          : p
+      )
+    );
   };
 
   const handleSelectSheet = (idx: number) => {
