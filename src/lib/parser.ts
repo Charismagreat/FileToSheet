@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx';
 import type { OriginalDocFile } from '@/types/workspace';
+import { normalizePhoneNumbersInRows } from '@/lib/phone-normalizer';
 
 export interface SheetRelation {
   foreignKey: string;        // 현재 시트의 외래키 열 이름 (예: "사업자등록번호")
@@ -111,7 +112,10 @@ export function ensureDefaultColumns(
     return merged;
   });
 
-  return { headers: finalHeaders, rows: finalRows };
+  // 🌟 전역 전화/팩스/연락처 번호 대한민국 표준 하이픈 자동 정규화
+  const normalizedRows = normalizePhoneNumbersInRows(finalRows, finalHeaders);
+
+  return { headers: finalHeaders, rows: normalizedRows };
 }
 
 /**

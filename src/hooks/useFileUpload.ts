@@ -16,6 +16,7 @@ import {
   validateUploadFile,
 } from '@/lib/plan-limits';
 import { generateFileUid, getUniqueFileName, computeFileHash } from '@/lib/sheet-helpers';
+import { normalizePhoneNumbersInRows } from '@/lib/phone-normalizer';
 import { saveUserProjectToDb } from '@/lib/project-db';
 
 export interface LastUploadAction {
@@ -316,7 +317,7 @@ export function useFileUpload({
             name: newSheetName,
             headers: fixedHeaders,
             originalFiles: [...(target.originalFiles || []), docItem],
-            rows: tr.rows.map((r) => ({
+            rows: normalizePhoneNumbersInRows(tr.rows, fixedHeaders, customPrompt).map((r) => ({
               ...r,
               _fileId: fileId,
               _fileUid: fileUid,
@@ -350,10 +351,12 @@ export function useFileUpload({
             return cleanRow;
           });
 
+          const normalizedMappedRows = normalizePhoneNumbersInRows(mappedRows, fixedHeaders, customPrompt);
+
           s[destIdx] = {
             ...target,
             headers: fixedHeaders,
-            rows: [...target.rows, ...mappedRows],
+            rows: [...target.rows, ...normalizedMappedRows],
             originalFiles: [...(target.originalFiles || []), docItem],
           };
         }

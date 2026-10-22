@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { callAiCaller, insertRows, queryTable } from '@/egdesk-helpers';
 import { ensureRemarkAtEnd } from '@/lib/parser';
+import { normalizePhoneNumbersInRows } from '@/lib/phone-normalizer';
 
 const FALLBACK_MODELS = [
   'gemini-3.8-flash',
@@ -109,7 +110,7 @@ ${sheetsDesc}
       }
     }
 
-    const userPrompt = `파일명: ${filename}\n이 문서의 종류를 파악하여 본문 데이터를 상세한 독립 컬럼들로 분리해 추출하고, 독립 컬럼에 담기지 않는 상하단 거래처 상세, 주소, 대표자, 승인/문서번호, 계좌, 메모 등 부가 정보는 반드시 '비고' 컬럼에 모아서 적재해 주세요.` +
+    const userPrompt = `파일명: ${filename}\n이 문서의 종류를 파악하여 본문 데이터를 상세한 독립 컬럼들로 분리해 추출하고, 독립 컬럼에 담기지 않는 상하단 거래처 상세, 주소, 대표자, 승인/문서번호, 계좌, 메모 등 부가 정보는 반드시 '비고' 컬럼에 모아서 적재해 주세요.\n- [전화번호 표준화] 전화번호, 휴대전화, 팩스번호, 대표번호는 점(.)이나 공백, 국가번호(+82)를 정리하여 대한민국 표준 하이픈 규격(예: 010-XXXX-XXXX, 02-XXX-XXXX, 1588-XXXX)으로 추출하세요.` +
       routingConstraint +
       targetHeaderConstraint +
       (customPrompt?.trim()
@@ -269,6 +270,9 @@ ${sheetsDesc}
     if (Array.isArray(finalHeaders) && finalHeaders.includes('비고')) {
       finalHeaders = ensureRemarkAtEnd(finalHeaders);
     }
+
+    // 🌟 전화번호/휴대폰/팩스번호 전역 자동 표준화 (대한민국 표준 규격 010-XXXX-XXXX)
+    finalRows = normalizePhoneNumbersInRows(finalRows, finalHeaders, customPrompt);
 
     return NextResponse.json({
       success: true,

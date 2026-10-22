@@ -57,6 +57,7 @@ export function getSmartColumnWidth(header: string): number {
   if (['금액', '공급가액', '부가가치세', '부가세', '합계금액', '세액', '합계'].some((k) => header.includes(k))) return 105;
   if (['거래일자', '일자'].includes(header)) return 100;
   if (['등록일시'].includes(header)) return 120;
+  if (['전화번호', '연락처', '휴대폰', '핸드폰', '팩스', '팩스번호', '대표번호', 'TEL', 'FAX'].some((k) => header.includes(k))) return 125;
   if (['발주번호'].includes(header)) return 130;
   if (['공급자등록번호', '사업자등록번호', '등록번호'].includes(header)) return 115;
   if (['공급자', '공급받는자', '상호', '회사명'].includes(header)) return 125;
