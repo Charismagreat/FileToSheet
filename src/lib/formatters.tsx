@@ -148,7 +148,8 @@ export function getSmartColumnWidth(
   // 3. 특수 컬럼 기본 최소폭 가이드 (글자가 말줄임 없이 시원하게 표시되도록 보장)
   if (['#', 'No', 'no'].includes(header)) return Math.max(56, Math.min(90, Math.round(maxPx)));
   if (['일련번호', '순번'].includes(header)) return Math.max(82, Math.min(115, Math.round(maxPx)));
-  if (['등록일시', '거래일시', '승인일시', '결제일시'].includes(header)) return Math.max(168, Math.min(230, Math.round(maxPx)));
+  if (['등록일시'].includes(header)) return Math.max(215, Math.min(260, Math.round(maxPx)));
+  if (['거래일시', '승인일시', '결제일시', '거래일자', '승인일자'].includes(header)) return Math.max(185, Math.min(240, Math.round(maxPx)));
   if (['카드번호', '상대계좌번호', '계좌번호'].includes(header)) return Math.max(165, Math.min(230, Math.round(maxPx)));
   if (['전화번호', '연락처', '휴대폰', '핸드폰', '팩스', '팩스번호'].some((k) => header.includes(k))) {
     return Math.max(130, Math.min(185, Math.round(maxPx)));

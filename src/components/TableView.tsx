@@ -165,11 +165,12 @@ export function TableView({
       const saved = localStorage.getItem(storageKey);
       if (saved) {
         const parsed = JSON.parse(saved);
-        // 저장된 설정이 있더라도 새 컬럼이 추가되었으면 그 컬럼은 실제 데이터 기반으로 자동 계산
+        // 저장된 설정이 있더라도 최소 가독 폭(smartW)보다 좁은 경우 데이터 가시성을 위해 자동 확장 보정
         const merged: Record<string, number> = { ...parsed };
         (sheet.headers || []).forEach((h) => {
-          if (!merged[h]) {
-            merged[h] = getSmartColumnWidth(h, sheet.rows);
+          const smartW = getSmartColumnWidth(h, sheet.rows);
+          if (!merged[h] || merged[h] < smartW) {
+            merged[h] = smartW;
           }
         });
         setColWidths(merged);
@@ -225,9 +226,9 @@ export function TableView({
     }
   }, [autoFitTrigger]);
 
-  // 컬럼 너비 기본값 복원
+  // 컬럼 너비 기본값 복원 (데이터 실측 스마트 너비로 복원)
   const handleResetColWidth = (header: string) => {
-    const defaultW = header === '일련번호' ? 75 : header === '등록일시' ? 150 : 130;
+    const defaultW = getSmartColumnWidth(header, sheet.rows);
     handleColWidthChange(header, defaultW);
   };
 
