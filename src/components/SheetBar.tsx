@@ -1,7 +1,18 @@
 'use client';
 
-import React from 'react';
-import { Table as TableIcon, Plus, Edit2, X, Sparkles, Sliders, Brain } from 'lucide-react';
+import React, { useState } from 'react';
+import {
+  Table as TableIcon,
+  Plus,
+  Edit2,
+  X,
+  Sparkles,
+  Sliders,
+  Brain,
+  ChevronLeft,
+  ChevronRight,
+  GripVertical,
+} from 'lucide-react';
 import { ParsedSheet } from '@/lib/parser';
 
 interface SheetBarProps {
@@ -17,6 +28,7 @@ interface SheetBarProps {
   onAddNewSheet: () => void;
   onDeleteSheet: (idx: number, e: React.MouseEvent) => void;
   onOpenSheetRule?: (idx: number) => void;
+  onReorderSheets?: (fromIdx: number, toIdx: number) => void;
   plan?: string;
 }
 
@@ -33,10 +45,15 @@ export function SheetBar({
   onAddNewSheet,
   onDeleteSheet,
   onOpenSheetRule,
+  onReorderSheets,
   plan,
 }: SheetBarProps) {
   const maxSheets = plan === 'pro' ? 30 : 5;
   const isLimitReached = sheets.length >= maxSheets;
+
+  // 드래그 앤 드롭 상태
+  const [draggingIdx, setDraggingIdx] = useState<number | null>(null);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
 
   return (
     <div className="border-b border-slate-200 bg-slate-50/90 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3">
@@ -53,14 +70,52 @@ export function SheetBar({
           return (
             <div
               key={idx}
+              draggable={!isRenaming}
+              onDragStart={(e) => {
+                e.dataTransfer.setData('text/plain', String(idx));
+                e.dataTransfer.effectAllowed = 'move';
+                setDraggingIdx(idx);
+              }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                if (dragOverIdx !== idx) setDragOverIdx(idx);
+              }}
+              onDragLeave={() => {
+                if (dragOverIdx === idx) setDragOverIdx(null);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                const fromIdx = Number(e.dataTransfer.getData('text/plain'));
+                if (!isNaN(fromIdx) && fromIdx !== idx && onReorderSheets) {
+                  onReorderSheets(fromIdx, idx);
+                }
+                setDraggingIdx(null);
+                setDragOverIdx(null);
+              }}
+              onDragEnd={() => {
+                setDraggingIdx(null);
+                setDragOverIdx(null);
+              }}
               onClick={() => onSelectSheet(idx)}
-              className={`group flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border transition ${
+              className={`group flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border transition select-none ${
                 isCurrent
                   ? 'bg-blue-600 text-white shadow-xs border-blue-600'
                   : 'bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-100 border-slate-200'
+              } ${draggingIdx === idx ? 'opacity-40 scale-95 border-dashed border-blue-400' : ''} ${
+                dragOverIdx === idx && draggingIdx !== idx ? 'ring-2 ring-blue-500 ring-offset-1 bg-blue-50/90' : ''
               }`}
-              title={hasRule ? `[AI 규칙 적용 중]\n${sheet.customPrompt}` : undefined}
+              title={hasRule ? `[AI 규칙 적용 중]\n${sheet.customPrompt}` : '드래그하거나 화살표로 순서 이동 가능'}
             >
+              {/* 드래그 힌트 아이콘 (호버 시 표시) */}
+              {sheets.length > 1 && !isRenaming && (
+                <GripVertical
+                  className={`w-2.5 h-2.5 opacity-0 group-hover:opacity-60 cursor-grab shrink-0 -ml-1 transition ${
+                    isCurrent ? 'text-white' : 'text-slate-400'
+                  }`}
+                />
+              )}
+
               {/* AI 규칙 적용 시 스파클 아이콘 */}
               {hasRule && (
                 <Sparkles
@@ -99,6 +154,42 @@ export function SheetBar({
               <span className={`opacity-80 font-mono text-[10px] ${isCurrent ? 'text-blue-100' : 'text-slate-400'}`}>
                 ({sheet.rows.length})
               </span>
+
+              {/* 🌟 좌/우 단축 순서 이동 버튼 */}
+              {onReorderSheets && sheets.length > 1 && !isRenaming && (
+                <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition mr-0.5">
+                  {idx > 0 && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onReorderSheets(idx, idx - 1);
+                      }}
+                      className={`p-0.5 rounded hover:bg-black/10 transition ${
+                        isCurrent ? 'text-blue-100 hover:text-white' : 'text-slate-400 hover:text-slate-700'
+                      }`}
+                      title="시트를 왼쪽으로 이동"
+                    >
+                      <ChevronLeft className="w-3 h-3" />
+                    </button>
+                  )}
+                  {idx < sheets.length - 1 && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onReorderSheets(idx, idx + 1);
+                      }}
+                      className={`p-0.5 rounded hover:bg-black/10 transition ${
+                        isCurrent ? 'text-blue-100 hover:text-white' : 'text-slate-400 hover:text-slate-700'
+                      }`}
+                      title="시트를 오른쪽으로 이동"
+                    >
+                      <ChevronRight className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              )}
 
               {!isRenaming && (
                 <button

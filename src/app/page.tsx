@@ -621,6 +621,7 @@ export default function FileToSheetApp() {
               onSaveProjectName={ws.saveProjectName}
               onAddNewProject={ws.handleAddNewProject}
               onCloseProject={ws.handleCloseProject}
+              onReorderProjects={ws.handleReorderProjects}
             />
 
             {currentProject && currentSheet && (
@@ -638,6 +639,7 @@ export default function FileToSheetApp() {
                   onAddNewSheet={ws.handleAddNewSheet}
                   onDeleteSheet={ws.handleDeleteSheet}
                   onOpenSheetRule={(idx) => setRuleModalSheetIdx(idx)}
+                  onReorderSheets={ws.handleReorderSheets}
                   plan={auth.currentUser?.plan}
                 />
 

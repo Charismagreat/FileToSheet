@@ -220,6 +220,56 @@ export function useWorkspace({ phoneNumber, plan, onPlanLimit }: UseWorkspaceOpt
     setEditingSheetIdx(null);
   };
 
+  // 🌟 시트(Sheet) 순서 이동 (Drag & Drop 및 좌우 버튼 지원)
+  const handleReorderSheets = (fromIdx: number, toIdx: number) => {
+    if (!currentProject || fromIdx === toIdx) return;
+    const sheets = [...currentProject.sheets];
+    if (fromIdx < 0 || fromIdx >= sheets.length || toIdx < 0 || toIdx >= sheets.length) return;
+
+    const [movedSheet] = sheets.splice(fromIdx, 1);
+    sheets.splice(toIdx, 0, movedSheet);
+
+    let newActiveIdx = currentProject.activeSheetIndex;
+    if (currentProject.activeSheetIndex === fromIdx) {
+      newActiveIdx = toIdx;
+    } else if (fromIdx < currentProject.activeSheetIndex && toIdx >= currentProject.activeSheetIndex) {
+      newActiveIdx -= 1;
+    } else if (fromIdx > currentProject.activeSheetIndex && toIdx <= currentProject.activeSheetIndex) {
+      newActiveIdx += 1;
+    }
+
+    setProjects((prev) =>
+      prev.map((p, i) =>
+        i === activeProjectIndex
+          ? { ...p, sheets, activeSheetIndex: newActiveIdx }
+          : p
+      )
+    );
+  };
+
+  // 🌟 프로젝트(Project) 순서 이동 (Drag & Drop 및 좌우 버튼 지원)
+  const handleReorderProjects = (fromIdx: number, toIdx: number) => {
+    if (fromIdx === toIdx) return;
+    let newActiveIdx = activeProjectIndex;
+
+    setProjects((prev) => {
+      if (fromIdx < 0 || fromIdx >= prev.length || toIdx < 0 || toIdx >= prev.length) return prev;
+      const next = [...prev];
+      const [movedProject] = next.splice(fromIdx, 1);
+      next.splice(toIdx, 0, movedProject);
+      return next;
+    });
+
+    if (activeProjectIndex === fromIdx) {
+      newActiveIdx = toIdx;
+    } else if (fromIdx < activeProjectIndex && toIdx >= activeProjectIndex) {
+      newActiveIdx = activeProjectIndex - 1;
+    } else if (fromIdx > activeProjectIndex && toIdx <= activeProjectIndex) {
+      newActiveIdx = activeProjectIndex + 1;
+    }
+    setActiveProjectIndex(newActiveIdx);
+  };
+
   // 🌟 실제 시트 삭제 처리 내부 실행 함수
   const executeDeleteSheet = (sheetIdx: number) => {
     if (!currentProject || currentProject.sheets.length <= 1) return;
@@ -465,9 +515,9 @@ export function useWorkspace({ phoneNumber, plan, onPlanLimit }: UseWorkspaceOpt
     projects, setProjects, activeProjectIndex, setActiveProjectIndex,
     currentProject, currentSheet,
     editingProjectIdx, setEditingProjectIdx, editingProjectName, setEditingProjectName, saveProjectName,
-    handleAddNewProject, handleCloseProject,
+    handleAddNewProject, handleCloseProject, handleReorderProjects,
     editingSheetIdx, setEditingSheetIdx, editingSheetName, setEditingSheetName, saveSheetName,
-    handleAddNewSheet, handleDeleteSheet, handleSelectSheet, handleDeleteOriginalFile, deletingSheetTarget, setDeletingSheetTarget, confirmDeleteSheet, cancelDeleteSheet,
+    handleAddNewSheet, handleDeleteSheet, handleSelectSheet, handleReorderSheets, handleDeleteOriginalFile, deletingSheetTarget, setDeletingSheetTarget, confirmDeleteSheet, cancelDeleteSheet,
     handleApplyCorrection,
     handleUpdateCellByRow,
     ...tableEditor,

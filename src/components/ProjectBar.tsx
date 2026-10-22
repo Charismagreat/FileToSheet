@@ -1,7 +1,7 @@
 'use client';
 
-import React from 'react';
-import { FolderOpen, FolderPlus, X } from 'lucide-react';
+import React, { useState } from 'react';
+import { FolderOpen, FolderPlus, X, ChevronLeft, ChevronRight, GripVertical } from 'lucide-react';
 import { ProjectWorkspace } from '@/types/workspace';
 
 interface ProjectBarProps {
@@ -15,6 +15,7 @@ interface ProjectBarProps {
   onSaveProjectName: () => void;
   onAddNewProject: () => void;
   onCloseProject: (idx: number, e: React.MouseEvent) => void;
+  onReorderProjects?: (fromIdx: number, toIdx: number) => void;
 }
 
 export function ProjectBar({
@@ -28,8 +29,13 @@ export function ProjectBar({
   onSaveProjectName,
   onAddNewProject,
   onCloseProject,
+  onReorderProjects,
 }: ProjectBarProps) {
   if (projects.length === 0) return null;
+
+  // 드래그 앤 드롭 상태
+  const [draggingIdx, setDraggingIdx] = useState<number | null>(null);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
 
   return (
     <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1 border-b border-slate-200/90 pt-1">
@@ -46,14 +52,54 @@ export function ProjectBar({
           return (
             <div
               key={idx}
+              draggable={!isRenaming}
+              onDragStart={(e) => {
+                e.dataTransfer.setData('text/plain', String(idx));
+                e.dataTransfer.effectAllowed = 'move';
+                setDraggingIdx(idx);
+              }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                if (dragOverIdx !== idx) setDragOverIdx(idx);
+              }}
+              onDragLeave={() => {
+                if (dragOverIdx === idx) setDragOverIdx(null);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                const fromIdx = Number(e.dataTransfer.getData('text/plain'));
+                if (!isNaN(fromIdx) && fromIdx !== idx && onReorderProjects) {
+                  onReorderProjects(fromIdx, idx);
+                }
+                setDraggingIdx(null);
+                setDragOverIdx(null);
+              }}
+              onDragEnd={() => {
+                setDraggingIdx(null);
+                setDragOverIdx(null);
+              }}
               onClick={() => setActiveProjectIndex(idx)}
-              className={`group flex items-center gap-2 px-3 py-1.5 rounded-t-xl text-xs font-semibold cursor-pointer border transition ${
+              className={`group flex items-center gap-1.5 px-3 py-1.5 rounded-t-xl text-xs font-semibold cursor-pointer border transition select-none ${
                 isActive
                   ? 'bg-white border-slate-300 border-b-transparent text-blue-700 shadow-xs'
                   : 'bg-slate-100/70 hover:bg-slate-200/70 border-slate-200 text-slate-600'
+              } ${draggingIdx === idx ? 'opacity-40 scale-95 border-dashed border-blue-400' : ''} ${
+                dragOverIdx === idx && draggingIdx !== idx ? 'ring-2 ring-blue-500 ring-offset-1 bg-blue-50/90' : ''
               }`}
+              title="드래그하거나 좌우 화살표로 순서 변경 가능"
             >
-              <FolderOpen className={`w-3.5 h-3.5 ${isActive ? 'text-blue-600' : 'text-slate-400'}`} />
+              {/* 드래그 힌트 그립 아이콘 */}
+              {projects.length > 1 && !isRenaming && (
+                <GripVertical
+                  className={`w-2.5 h-2.5 opacity-0 group-hover:opacity-60 cursor-grab shrink-0 -ml-1 transition ${
+                    isActive ? 'text-blue-600' : 'text-slate-400'
+                  }`}
+                />
+              )}
+
+              <FolderOpen className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-blue-600' : 'text-slate-400'}`} />
+
               {isRenaming ? (
                 <input
                   autoFocus
@@ -75,14 +121,47 @@ export function ProjectBar({
                     setEditingProjectName(displayName);
                   }}
                   title="더블클릭하여 프로젝트 이름 변경"
-                  className="max-w-[220px] truncate"
+                  className="max-w-[200px] truncate"
                 >
                   {displayName}
                 </span>
               )}
+
+              {/* 🌟 좌/우 단축 순서 이동 버튼 */}
+              {onReorderProjects && projects.length > 1 && !isRenaming && (
+                <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition ml-0.5">
+                  {idx > 0 && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onReorderProjects(idx, idx - 1);
+                      }}
+                      className="p-0.5 rounded hover:bg-slate-200 text-slate-400 hover:text-slate-700 transition"
+                      title="프로젝트 왼쪽으로 이동"
+                    >
+                      <ChevronLeft className="w-3 h-3" />
+                    </button>
+                  )}
+                  {idx < projects.length - 1 && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onReorderProjects(idx, idx + 1);
+                      }}
+                      className="p-0.5 rounded hover:bg-slate-200 text-slate-400 hover:text-slate-700 transition"
+                      title="프로젝트 오른쪽으로 이동"
+                    >
+                      <ChevronRight className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              )}
+
               <button
                 onClick={(e) => onCloseProject(idx, e)}
-                className="p-0.5 rounded-full hover:bg-slate-200 text-slate-400 hover:text-slate-700 transition"
+                className="p-0.5 rounded-full hover:bg-slate-200 text-slate-400 hover:text-slate-700 transition ml-0.5"
                 title="프로젝트 닫기"
               >
                 <X className="w-3 h-3" />
