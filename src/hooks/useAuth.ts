@@ -17,6 +17,9 @@ export function useAuth() {
 
   // 🌟 서버로부터 최신 사용자 프로필(플랜, 잔여 토큰 등)을 실시간 동기화
   const syncLatestUserProfile = async (phoneNumber: string) => {
+    if (typeof window !== 'undefined' && localStorage.getItem('filetosheet_logged_out') === 'true') {
+      return;
+    }
     try {
       const cleanPhone = phoneNumber.replace(/[^0-9]/g, '');
       if (!cleanPhone) return;
@@ -59,7 +62,8 @@ export function useAuth() {
       console.error('세션 복원 실패:', e);
     }
 
-    if (!phoneToSync && process.env.NODE_ENV === 'development') {
+    const isExplicitlyLoggedOut = typeof window !== 'undefined' && localStorage.getItem('filetosheet_logged_out') === 'true';
+    if (!phoneToSync && process.env.NODE_ENV === 'development' && !isExplicitlyLoggedOut) {
       phoneToSync = '010-7216-5884';
       const devSuperAdmin: UserSession = {
         id: 1,
@@ -79,8 +83,15 @@ export function useAuth() {
 
     // 창 포커스 복귀 시 최신 플랜 재검증 (관리자 탭에서 플랜 변경 후 돌아왔을 때 즉시 반영)
     const handleWindowFocus = () => {
-      if (phoneToSync) {
-        syncLatestUserProfile(phoneToSync);
+      const isLoggedOut = typeof window !== 'undefined' && localStorage.getItem('filetosheet_logged_out') === 'true';
+      const savedUser = typeof window !== 'undefined' ? localStorage.getItem('filetosheet_user') : null;
+      if (!isLoggedOut && savedUser) {
+        try {
+          const parsed = JSON.parse(savedUser);
+          if (parsed?.phoneNumber) {
+            syncLatestUserProfile(parsed.phoneNumber);
+          }
+        } catch (e) {}
       }
     };
     window.addEventListener('focus', handleWindowFocus);
@@ -156,6 +167,7 @@ export function useAuth() {
       }
 
       setCurrentUser(data.user);
+      localStorage.removeItem('filetosheet_logged_out');
       localStorage.setItem('filetosheet_user', JSON.stringify(data.user));
       if (data.user?.phoneNumber) {
         document.cookie = `fts_user_phone=${data.user.phoneNumber}; path=/; max-age=2592000; SameSite=Lax`;
@@ -176,9 +188,14 @@ export function useAuth() {
   // 로그아웃
   const handleLogout = () => {
     if (confirm('로그아웃 하시겠습니까?')) {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('filetosheet_logged_out', 'true');
+        localStorage.removeItem('filetosheet_user');
+        localStorage.removeItem('filetosheet_guest_projects');
+        document.cookie = 'fts_user_phone=; path=/; max-age=0; SameSite=Lax';
+      }
       setCurrentUser(null);
-      localStorage.removeItem('filetosheet_user');
-      document.cookie = 'fts_user_phone=; path=/; max-age=0; SameSite=Lax';
+      window.location.reload();
     }
   };
 
@@ -191,7 +208,9 @@ export function useAuth() {
         document.cookie = `fts_user_phone=${newUser.phoneNumber}; path=/; max-age=2592000; SameSite=Lax`;
       }
     } else {
+      localStorage.setItem('filetosheet_logged_out', 'true');
       localStorage.removeItem('filetosheet_user');
+        localStorage.removeItem('filetosheet_guest_projects');
       document.cookie = 'fts_user_phone=; path=/; max-age=0; SameSite=Lax';
     }
   };

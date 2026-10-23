@@ -33,18 +33,28 @@ export function useWorkspace({ phoneNumber, plan, onPlanLimit }: UseWorkspaceOpt
   useEffect(() => {
     isLoadedRef.current = false;
 
-    // 새로고침(F5) 시 즉시 로컬 캐시에서 프로젝트를 복원하여 화면 깜빡임 및 증발 방지
-    try {
-      const guestSaved = localStorage.getItem('filetosheet_guest_projects');
-      if (guestSaved) {
-        const parsed = JSON.parse(guestSaved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setProjects(parsed);
-          setActiveProjectIndex(0);
+    const isExplicitlyLoggedOut = typeof window !== 'undefined' && localStorage.getItem('filetosheet_logged_out') === 'true';
+
+    if (isExplicitlyLoggedOut && !phoneNumber) {
+      setProjects([]);
+      setActiveProjectIndex(0);
+      isLoadedRef.current = true;
+      return;
+    }
+
+    if (!phoneNumber) {
+      try {
+        const guestSaved = localStorage.getItem('filetosheet_guest_projects');
+        if (guestSaved) {
+          const parsed = JSON.parse(guestSaved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setProjects(parsed);
+            setActiveProjectIndex(0);
+          }
         }
+      } catch (e) {
+        console.warn('로컬 프로젝트 캐시 복원 실패:', e);
       }
-    } catch (e) {
-      console.warn('로컬 프로젝트 캐시 복원 실패:', e);
     }
     if (phoneNumber) {
       fetchUserProjectsFromDb(phoneNumber).then((dbProjects) => {
@@ -95,18 +105,21 @@ export function useWorkspace({ phoneNumber, plan, onPlanLimit }: UseWorkspaceOpt
         isLoadedRef.current = true;
       });
     } else {
-      // 미로그인(게스트) 상태일 경우 로컬 스토리지에서 이전 시트/프로젝트 복원 (F5 새로고침 증발 방지)
-      try {
-        const guestSaved = localStorage.getItem('filetosheet_guest_projects');
-        if (guestSaved) {
-          const parsed = JSON.parse(guestSaved);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setProjects(parsed);
-            setActiveProjectIndex(0);
+      const isLoggedOut = typeof window !== 'undefined' && localStorage.getItem('filetosheet_logged_out') === 'true';
+      if (isLoggedOut) {
+        setProjects([]);
+        setActiveProjectIndex(0);
+      } else {
+        try {
+          const guestSaved = localStorage.getItem('filetosheet_guest_projects');
+          if (guestSaved) {
+            const parsed = JSON.parse(guestSaved);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setProjects(parsed);
+              setActiveProjectIndex(0);
+            }
           }
-        }
-      } catch (e) {
-        console.warn('게스트 프로젝트 복원 실패:', e);
+        } catch (e) {}
       }
       isLoadedRef.current = true;
     }
@@ -116,20 +129,22 @@ export function useWorkspace({ phoneNumber, plan, onPlanLimit }: UseWorkspaceOpt
   useEffect(() => {
     if (!isLoadedRef.current || !currentProject) return;
 
-    // 모든 상태(게스트 및 로그인 공통)에 대해 로컬 스토리지에 즉시 안전 보존 (Base64 제거로 5MB 한도 초과 방지)
-    try {
-      const sanitized = projects.map((proj) => ({
-        ...proj,
-        originalFiles: (proj.originalFiles || []).map((f) => {
-          const { dataUrl, ...rest } = f;
-          return rest;
-        }),
-      }));
-      localStorage.setItem('filetosheet_guest_projects', JSON.stringify(sanitized));
-    } catch (e) {
-      console.warn('로컬 프로젝트 캐시 저장 실패:', e);
+    if (!phoneNumber) {
+      const isLoggedOut = typeof window !== 'undefined' && localStorage.getItem('filetosheet_logged_out') === 'true';
+      if (!isLoggedOut) {
+        try {
+          const sanitized = projects.map((proj) => ({
+            ...proj,
+            originalFiles: (proj.originalFiles || []).map((f) => {
+              const { dataUrl, ...rest } = f;
+              return rest;
+            }),
+          }));
+          localStorage.setItem('filetosheet_guest_projects', JSON.stringify(sanitized));
+        } catch (e) {}
+      }
+      return;
     }
-    if (!phoneNumber) return;
 
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
 
@@ -391,22 +406,47 @@ export function useWorkspace({ phoneNumber, plan, onPlanLimit }: UseWorkspaceOpt
     const target = targetDoc || files[fileIdx];
     if (!target) return;
 
-    setProjects((prev) => prev.map((proj, pIdx) => {
-      if (pIdx !== activeProjectIndex) return proj;
-      const isTargetFile = (f: OriginalDocFile) => target.uid ? f.uid === target.uid : (target.id ? f.id === target.id : f.name === target.name);
-      const isTargetRow = (r: any) => target.uid ? r._fileUid === target.uid : (target.id && r._fileId ? r._fileId === target.id : r._fileName === target.name);
+    let updatedProject: ProjectWorkspace | null = null;
 
-      const sheets = proj.sheets.map((s) => ({
-        ...s,
-        originalFiles: s.originalFiles?.filter((f) => !isTargetFile(f)),
-        rows: deleteDataRows
-          ? s.rows.filter((r) => !isTargetRow(r)).map((r, i) => ({ ...r, 일련번호: i + 1 }))
-          : s.rows,
-      }));
-      const nextFiles = files.filter((f) => !isTargetFile(f));
-      return { ...proj, sheets, originalFiles: nextFiles, originalFileUrl: nextFiles[0]?.url, originalFileType: nextFiles[0]?.type, originalFileSize: nextFiles[0]?.size };
-    }));
-    if (target.id && !isNaN(Number(target.id))) deleteUploadedFile(Number(target.id)).catch((e) => console.warn('스토리지 파일 삭제 무시:', e));
+    setProjects((prev) => {
+      return prev.map((proj) => {
+        // 정확한 프로젝트 ID 매칭 (activeProjectIndex 불일치 방어)
+        const isTargetProj = currentProject.id ? proj.id === currentProject.id : proj.name === currentProject.name;
+        if (!isTargetProj) return proj;
+
+        const isTargetFile = (f: OriginalDocFile) => target.uid ? f.uid === target.uid : (target.id ? f.id === target.id : f.name === target.name);
+        const isTargetRow = (r: any) => target.uid ? r._fileUid === target.uid : (target.id && r._fileId ? r._fileId === target.id : r._fileName === target.name);
+
+        const sheets = proj.sheets.map((s) => ({
+          ...s,
+          originalFiles: s.originalFiles?.filter((f) => !isTargetFile(f)),
+          rows: deleteDataRows
+            ? s.rows.filter((r) => !isTargetRow(r)).map((r, i) => ({ ...r, 일련번호: i + 1 }))
+            : s.rows,
+        }));
+        const nextFiles = (proj.originalFiles || files).filter((f) => !isTargetFile(f));
+        updatedProject = {
+          ...proj,
+          sheets,
+          originalFiles: nextFiles,
+          originalFileUrl: nextFiles[0]?.url,
+          originalFileType: nextFiles[0]?.type,
+          originalFileSize: nextFiles[0]?.size,
+        };
+        return updatedProject;
+      });
+    });
+
+    // 🌟 즉시 소유자 DB(user_projects)에 영구 동기화 반영
+    if (phoneNumber && updatedProject) {
+      saveUserProjectToDb(phoneNumber, updatedProject).catch((err) =>
+        console.warn('파일 삭제 후 소유자 DB 즉각 영구 저장 오류:', err)
+      );
+    }
+
+    if (target.id && !isNaN(Number(target.id))) {
+      deleteUploadedFile(Number(target.id)).catch((e) => console.warn('스토리지 파일 삭제 무시:', e));
+    }
   };
 
   const handleApplyCorrection = async (

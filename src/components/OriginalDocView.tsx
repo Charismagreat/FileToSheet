@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { FileText, ExternalLink, Download, AlertCircle, FileSpreadsheet, Layers, Maximize2, Minimize2, Trash2, Sparkles, Loader2, Database, ChevronUp, ChevronDown, ArrowRight, Table as TableIcon } from 'lucide-react';
+import { FileText, ExternalLink, Download, AlertCircle, FileSpreadsheet, Layers, Maximize2, Minimize2, Trash2, Sparkles, Loader2, Database, ChevronUp, ChevronDown, ArrowRight, Table as TableIcon, Lock } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { ReexamineModal } from './ReexamineModal';
 import { ProjectWorkspace, OriginalDocFile } from '@/types/workspace';
@@ -28,11 +28,39 @@ interface OriginalDocViewProps {
   targetFile?: { name?: string; id?: string | number; uid?: string } | null;
   filteredRows?: Record<string, any>[];
   isFiltered?: boolean;
+  isTeamMember?: boolean;
+  currentUserPhone?: string;
+  canDeleteOwnOriginal?: boolean;
+  canExportData?: boolean;
+  currentSheet?: any;
 }
 
-export function OriginalDocView({ project, onDeleteFile, onGoToTableTab, onApplyCorrection, onUpdateCell, targetFile, filteredRows, isFiltered = false }: OriginalDocViewProps) {
-  const currentSheet = project.sheets[project.activeSheetIndex] || null;
+export function OriginalDocView({
+  project,
+  onDeleteFile,
+  onGoToTableTab,
+  onApplyCorrection,
+  onUpdateCell,
+  targetFile,
+  filteredRows,
+  isFiltered = false,
+  isTeamMember = false,
+  currentUserPhone,
+  canDeleteOwnOriginal = true,
+  canExportData = true,
+  currentSheet: propsCurrentSheet,
+}: OriginalDocViewProps) {
+    const currentSheet = propsCurrentSheet || project.sheets[project.activeSheetIndex] || null;
   const files: OriginalDocFile[] = getSheetOriginalFiles(project, currentSheet);
+
+  // 🛡️ 팀원 모드 증빙 파일 삭제 권한 가드 (본인 업로드 파일만 삭제 허용)
+  const canDeleteFile = (file: OriginalDocFile) => {
+    if (!isTeamMember) return true;
+    if (canDeleteOwnOriginal === false) return false;
+    const myClean = (currentUserPhone || '').replace(/[^0-9]/g, '');
+    const fileClean = (file.uploaderPhone || '').replace(/[^0-9]/g, '');
+    return Boolean(fileClean) && fileClean === myClean;
+  };
 
   const [selectedIdx, setSelectedIdx] = useState<number>(0);
   const [isZoomFit, setIsZoomFit] = useState<boolean>(true);
@@ -405,13 +433,22 @@ export function OriginalDocView({ project, onDeleteFile, onGoToTableTab, onApply
                     <span className="text-xs font-bold truncate" title={file.name}>{file.name}</span>
                   </div>
                   {onDeleteFile && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setDeletingIdx(idx); }}
-                      className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition shrink-0"
-                      title="증빙 삭제"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    canDeleteFile(file) ? (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setDeletingIdx(idx); }}
+                        className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition shrink-0"
+                        title="증빙 삭제"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    ) : (
+                      <div
+                        className="p-1 text-slate-400 rounded shrink-0 cursor-not-allowed"
+                        title="작성자(본인)만 삭제할 수 있습니다"
+                      >
+                        <Lock className="w-3.5 h-3.5 text-slate-400" />
+                      </div>
+                    )
                   )}
                 </div>
                 <div className="flex items-center justify-between text-[11px] text-slate-400 pl-0.5 pt-0.5">
@@ -518,9 +555,15 @@ export function OriginalDocView({ project, onDeleteFile, onGoToTableTab, onApply
               <Download className="w-3.5 h-3.5" /><span>다운로드</span>
             </a>
             {onDeleteFile && (
-              <button onClick={() => setDeletingIdx(selectedIdx)} className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition" title="삭제">
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
+              canDeleteFile(currentFile) ? (
+                <button onClick={() => setDeletingIdx(selectedIdx)} className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition" title="삭제">
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              ) : (
+                <div className="p-1 rounded-lg text-slate-400 cursor-not-allowed" title="작성자(본인)만 삭제할 수 있습니다">
+                  <Lock className="w-3.5 h-3.5 text-slate-400" />
+                </div>
+              )
             )}
           </div>
         </div>

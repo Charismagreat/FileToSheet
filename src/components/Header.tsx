@@ -6,9 +6,10 @@ import {
   FileSpreadsheet, Download, Share2, RefreshCw, Smartphone, LogOut,
   User, Database, Crown, UploadCloud, Zap, ChevronDown, Building2, BarChart3,
   Send, Inbox, Globe, Sparkles, Link as LinkIcon, ShieldCheck, Lightbulb, Clock,
-  LifeBuoy, Wrench
+  LifeBuoy, Wrench, Users
 } from 'lucide-react';
-import { UserSession, ProjectWorkspace } from '@/types/workspace';
+import { UserSession, ProjectWorkspace, WorkspaceContextInfo } from '@/types/workspace';
+import { WorkspaceSwitcher } from './WorkspaceSwitcher';
 import { UserUsagePopover } from './UserUsagePopover';
 import { getPlanLimits } from '@/lib/plan-limits';
 import { getBonusCredits } from '@/lib/coupon-helpers';
@@ -17,6 +18,9 @@ import { isPhoneNumberAdmin } from '@/lib/admin-auth';
 interface HeaderProps {
   currentUser: UserSession | null;
   currentProject?: ProjectWorkspace | null;
+  activeContext?: WorkspaceContextInfo;
+  onSwitchContext?: (context: WorkspaceContextInfo) => void;
+  onOpenTeamModal?: () => void;
   onOpenLoginModal: () => void;
   onLogout: () => void;
   onDownloadXlsx: () => void;
@@ -47,6 +51,9 @@ interface HeaderProps {
 export function Header({
   currentUser,
   currentProject = null,
+  activeContext,
+  onSwitchContext,
+  onOpenTeamModal,
   onOpenLoginModal,
   onLogout,
   onDownloadXlsx,
@@ -169,6 +176,15 @@ export function Header({
             <ShieldCheck className="w-3.5 h-3.5 text-indigo-600" />
             <span className="hidden sm:inline">관리자</span>
           </Link>
+        )}
+
+        {/* 🏢 작업공간(워크스페이스) 스위처 */}
+        {currentUser && activeContext && onSwitchContext && (
+          <WorkspaceSwitcher
+            currentUser={currentUser}
+            activeContext={activeContext}
+            onSwitchContext={onSwitchContext}
+          />
         )}
       </div>
 
@@ -551,6 +567,26 @@ export function Header({
                   <div>
                     <div className="font-bold text-slate-800">웹 링크 공유 관리</div>
                     <div className="text-[10px] text-slate-400">공유 링크 회수 및 만료 설정 관리</div>
+                  </div>
+                </button>
+              )}
+
+              {/* 5. 👥 팀 협업 & 멤버 초대 (소유자 모드일 때) */}
+              {onOpenTeamModal && currentUser && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsShareOpen(false);
+                    onOpenTeamModal();
+                  }}
+                  className="w-full px-3 py-2 text-left hover:bg-blue-50 hover:text-blue-900 border-t border-slate-100 flex items-center gap-2 transition"
+                >
+                  <div className="w-6 h-6 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center shrink-0">
+                    <Users className="w-3.5 h-3.5" />
+                  </div>
+                  <div>
+                    <div className="font-bold text-slate-800">팀 협업 & 멤버 초대</div>
+                    <div className="text-[10px] text-slate-400">전화번호로 팀원 초대 및 시트별 권한 제어</div>
                   </div>
                 </button>
               )}

@@ -28,6 +28,8 @@ interface SheetBarProps {
   onOpenSheetRule?: (idx: number) => void;
   onReorderSheets?: (fromIdx: number, toIdx: number) => void;
   plan?: string;
+  allowedSheets?: string[]; // RBAC: 접근 허용 시트 필터
+  isTeamMember?: boolean; // 팀원 모드 여부
 }
 
 export function SheetBar({
@@ -45,6 +47,8 @@ export function SheetBar({
   onOpenSheetRule,
   onReorderSheets,
   plan,
+  allowedSheets,
+  isTeamMember = false,
 }: SheetBarProps) {
   const isPro = plan === 'pro' || plan === 'enterprise';
   const maxSheets = isPro ? 30 : 5;
@@ -90,6 +94,11 @@ export function SheetBar({
         </div>
 
         {sheets.map((sheet, idx) => {
+          // RBAC: 접근 허용된 시트만 노출
+          if (allowedSheets && allowedSheets.length > 0 && !allowedSheets.includes(sheet.name)) {
+            return null;
+          }
+
           const isCurrent = activeSheetIndex === idx;
           const isRenaming = editingSheetIdx === idx;
           const hasRule = Boolean(sheet.customPrompt?.trim());
@@ -98,13 +107,15 @@ export function SheetBar({
             <div
               key={idx}
               ref={isCurrent ? activeTabRef : null}
-              draggable={!isRenaming}
+              draggable={!isRenaming && !isTeamMember}
               onDragStart={(e) => {
+                if (isTeamMember) return;
                 e.dataTransfer.setData('text/plain', String(idx));
                 e.dataTransfer.effectAllowed = 'move';
                 setDraggingIdx(idx);
               }}
               onDragOver={(e) => {
+                if (isTeamMember) return;
                 e.preventDefault();
                 e.dataTransfer.dropEffect = 'move';
                 if (dragOverIdx !== idx) setDragOverIdx(idx);
@@ -113,6 +124,7 @@ export function SheetBar({
                 if (dragOverIdx === idx) setDragOverIdx(null);
               }}
               onDrop={(e) => {
+                if (isTeamMember) return;
                 e.preventDefault();
                 const fromIdx = Number(e.dataTransfer.getData('text/plain'));
                 if (!isNaN(fromIdx) && fromIdx !== idx && onReorderSheets) {
@@ -133,10 +145,10 @@ export function SheetBar({
               } ${draggingIdx === idx ? 'opacity-40 scale-95 border-dashed border-blue-400' : ''} ${
                 dragOverIdx === idx && draggingIdx !== idx ? 'ring-2 ring-blue-500 ring-offset-1 bg-blue-50/90' : ''
               }`}
-              title={hasRule ? `[AI 규칙 적용 중]\n${sheet.customPrompt}` : '더블클릭: 이름 변경 / 드래그: 순서 이동'}
+              title={hasRule ? `[AI 규칙 적용 중]\n${sheet.customPrompt}` : isTeamMember ? sheet.name : '더블클릭: 이름 변경 / 드래그: 순서 이동'}
             >
               {/* 드래그 힌트 아이콘 (호버 시 표시) */}
-              {sheets.length > 1 && !isRenaming && (
+              {sheets.length > 1 && !isRenaming && !isTeamMember && (
                 <GripVertical
                   className={`w-2.5 h-2.5 opacity-0 group-hover:opacity-60 cursor-grab shrink-0 -ml-1 transition ${
                     isCurrent ? 'text-white' : 'text-slate-400'
@@ -169,12 +181,13 @@ export function SheetBar({
               ) : (
                 <span
                   onDoubleClick={(e) => {
+                    if (isTeamMember) return;
                     e.stopPropagation();
                     setEditingSheetIdx(idx);
                     setEditingSheetName(sheet.name);
                   }}
                   className="truncate max-w-[140px] inline-block"
-                  title={`${sheet.name} (더블클릭하여 시트 이름 변경)`}
+                  title={isTeamMember ? sheet.name : `${sheet.name} (더블클릭하여 시트 이름 변경)`}
                 >
                   {sheet.name}
                 </span>
@@ -184,7 +197,7 @@ export function SheetBar({
                 ({sheet.rows?.length || 0})
               </span>
 
-              {!isRenaming && (
+              {!isRenaming && !isTeamMember && (
                 <button
                   type="button"
                   onClick={(e) => {
@@ -202,7 +215,7 @@ export function SheetBar({
               )}
 
               {/* 시트 전용 AI 규칙 열기 버튼 */}
-              {onOpenSheetRule && !isRenaming && (
+              {onOpenSheetRule && !isRenaming && !isTeamMember && (
                 <button
                   type="button"
                   onClick={(e) => {
@@ -222,7 +235,7 @@ export function SheetBar({
                 </button>
               )}
 
-              {sheets.length > 1 && (
+              {sheets.length > 1 && !isTeamMember && (
                 <button
                   type="button"
                   onClick={(e) => onDeleteSheet(idx, e)}
@@ -238,22 +251,24 @@ export function SheetBar({
           );
         })}
 
-        {/* 🌟 신규 시트 추가 버튼 (한 줄 유지 및 명확한 상태 피드백) */}
-        <button
-          type="button"
-          onClick={onAddNewSheet}
-          disabled={isLimitReached}
-          className={`flex items-center gap-1.5 text-xs px-3 h-8 rounded-lg transition font-medium shadow-2xs border shrink-0 whitespace-nowrap ${
-            isLimitReached
-              ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
-              : 'bg-white hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 text-slate-700 border-slate-200 cursor-pointer active:scale-95'
-          }`}
-          title={isLimitReached ? `시트 생성 한도 도달 (${sheets.length}/${maxSheets})` : `새 빈 시트 추가 (${sheets.length}/${maxSheets})`}
-        >
-          <Plus className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-          <span>시트 추가</span>
-          <span className="text-[10px] text-slate-400 font-mono">({sheets.length}/{maxSheets})</span>
-        </button>
+        {/* 🌟 신규 시트 추가 버튼 (팀원이 아닐 때만 허용) */}
+        {!isTeamMember && (
+          <button
+            type="button"
+            onClick={onAddNewSheet}
+            disabled={isLimitReached}
+            className={`flex items-center gap-1.5 text-xs px-3 h-8 rounded-lg transition font-medium shadow-2xs border shrink-0 whitespace-nowrap ${
+              isLimitReached
+                ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
+                : 'bg-white hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 text-slate-700 border-slate-200 cursor-pointer active:scale-95'
+            }`}
+            title={isLimitReached ? `시트 생성 한도 도달 (${sheets.length}/${maxSheets})` : `새 빈 시트 추가 (${sheets.length}/${maxSheets})`}
+          >
+            <Plus className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+            <span>시트 추가</span>
+            <span className="text-[10px] text-slate-400 font-mono">({sheets.length}/{maxSheets})</span>
+          </button>
+        )}
       </div>
 
       {/* 🌟 우측: 현재 활성 시트 AI 적재 규칙 원클릭 제어 버튼 (한 줄 고정) */}

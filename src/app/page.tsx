@@ -3,7 +3,7 @@
 import { DeleteSheetModal } from '@/components/DeleteSheetModal';
 import { SmartSheetRoutingModal } from '@/components/SmartSheetRoutingModal';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Header } from '@/components/Header';
 import { WelcomeDropzone } from '@/components/WelcomeDropzone';
 import { ProjectBar } from '@/components/ProjectBar';
@@ -28,6 +28,8 @@ import { DailyAuditReportModal } from '@/components/DailyAuditReportModal';
 import { InteractiveAppBuilderModal } from '@/components/InteractiveAppBuilderModal';
 import { StandalonePortalView } from '@/components/StandalonePortalView';
 import FdeSupportModal from '@/components/FdeSupportModal';
+import { TeamManagementModal } from '@/components/TeamManagementModal';
+import { WorkspaceContextInfo } from '@/types/workspace';
 import { Sparkles, Upload } from 'lucide-react';
 import { ExportTargetType } from '@/components/ExportScopeModal';
 import { FilterState } from '@/components/DataFilterPopover';
@@ -55,6 +57,14 @@ export default function FileToSheetApp() {
   const [showDailyAuditModal, setShowDailyAuditModal] = useState<boolean>(false);
   const [showAppBuilderModal, setShowAppBuilderModal] = useState<boolean>(false);
   const [showFdeModal, setShowFdeModal] = useState<boolean>(false);
+  const [showTeamModal, setShowTeamModal] = useState<boolean>(false);
+  const [activeContext, setActiveContext] = useState<WorkspaceContextInfo>({
+    type: 'personal',
+    ownerPhone: '',
+    ownerName: '나',
+    isOwner: true,
+    memberRole: 'owner',
+  });
   const [activePortalConfig, setActivePortalConfig] = useState<any | null>(null);
   const [showAiChatDrawer, setShowAiChatDrawer] = useState<boolean>(false);
   const [aiChatInitialScope, setAiChatInitialScope] = useState<ChatScope>('current_sheet');
@@ -62,8 +72,28 @@ export default function FileToSheetApp() {
   const fabFileInputRef = useRef<HTMLInputElement>(null);
   const handlePlanLimit = (title: string, reason: string) => setLimitNotice({ title, reason });
 
+  useEffect(() => {
+    if (!auth.currentUser) {
+      setActiveContext({
+        type: 'personal',
+        ownerPhone: '',
+        ownerName: '나',
+        isOwner: true,
+        memberRole: 'owner',
+      });
+    } else if (activeContext.isOwner) {
+      setActiveContext((prev) => ({
+        ...prev,
+        ownerPhone: auth.currentUser!.phoneNumber,
+        ownerName: auth.currentUser!.nickname || '나',
+      }));
+    }
+  }, [auth.currentUser?.phoneNumber, auth.currentUser?.nickname, activeContext.isOwner]);
+
+  const targetWorkspacePhone = activeContext.ownerPhone || auth.currentUser?.phoneNumber;
+
   const ws = useWorkspace({
-    phoneNumber: auth.currentUser?.phoneNumber,
+    phoneNumber: targetWorkspacePhone,
     plan: auth.currentUser?.plan, onPlanLimit: handlePlanLimit,
   });
   const upload = useFileUpload({
@@ -194,12 +224,33 @@ export default function FileToSheetApp() {
   const [exportScopeTarget, setExportScopeTarget] = useState<ExportTargetType>('xlsx');
   const [pendingScopeChoice, setPendingScopeChoice] = useState<'filtered' | 'all'>('all');
 
-  const currentProject = ws.currentProject;
-  const currentSheet = ws.currentSheet;
+    const isTeamMember = !activeContext.isOwner;
+  const allowedSheets = activeContext.permissions?.allowedSheets || [];
+
+  // 🛡️ RBAC 안전 격리: 팀원 모드일 때 허용된 시트가 있는 프로젝트만 필터링
+  const visibleProjects = React.useMemo(() => {
+    if (!isTeamMember || allowedSheets.length === 0) return ws.projects;
+    return ws.projects.filter((p) =>
+      (p.sheets || []).some((s) => allowedSheets.includes(s.name))
+    );
+  }, [isTeamMember, allowedSheets, ws.projects]);
+
+  const currentProject = visibleProjects[ws.activeProjectIndex] || visibleProjects[0] || null;
+
+  // 🛡️ RBAC 안전 격리: 허용된 시트만 필터링
+  const visibleSheets = React.useMemo(() => {
+    if (!currentProject) return [];
+    if (!isTeamMember || allowedSheets.length === 0) return currentProject.sheets || [];
+    return (currentProject.sheets || []).filter((s) => allowedSheets.includes(s.name));
+  }, [currentProject, isTeamMember, allowedSheets]);
+
+  const currentSheet = visibleSheets[currentProject?.activeSheetIndex || 0] || visibleSheets[0] || null;
   const sheetOriginalFiles = getSheetOriginalFiles(currentProject, currentSheet);
 
-  // 1. 원본 행 데이터 (고유 index 보존)
-  const rawRowsWithOrigin = currentSheet ? currentSheet.rows.map((r, i) => ({ ...r, _originIdx: i })) : [];
+  // 1. 원본 행 데이터 (고유 index 보존 및 안전 널체크)
+  const rawRowsWithOrigin = currentSheet && Array.isArray(currentSheet.rows)
+    ? currentSheet.rows.map((r, i) => ({ ...r, _originIdx: i }))
+    : [];
 
   // 2. 실시간 텍스트 검색 필터
   const searchedRows = rawRowsWithOrigin.filter((row) =>
@@ -210,7 +261,7 @@ export default function FileToSheetApp() {
   const dateFilteredRows = searchedRows.filter((row) => {
     const { column, startDate, endDate } = filterState.dateConfig;
     if (!startDate && !endDate) return true;
-    const colKey = column || (currentSheet?.headers[0] ?? '');
+    const colKey = column || (currentSheet?.headers?.[0] ?? '');
     const colVal = String(row[colKey] ?? '');
     const match = colVal.match(/\d{4}[-./]\d{1,2}[-./]\d{1,2}/);
     if (!match) return true;
@@ -571,6 +622,9 @@ export default function FileToSheetApp() {
       <Header
         currentUser={auth.currentUser}
         currentProject={currentProject}
+        activeContext={activeContext}
+        onSwitchContext={setActiveContext}
+        onOpenTeamModal={() => setShowTeamModal(true)}
         onOpenLoginModal={() => auth.setShowPhoneAuthModal(true)}
         onLogout={auth.handleLogout}
         onUploadFile={upload.handleFileDropOrSelect}
@@ -612,7 +666,7 @@ export default function FileToSheetApp() {
         ) : (
           <>
             <ProjectBar
-              projects={ws.projects}
+              projects={visibleProjects}
               activeProjectIndex={ws.activeProjectIndex}
               setActiveProjectIndex={ws.setActiveProjectIndex}
               editingProjectIdx={ws.editingProjectIdx}
@@ -623,12 +677,14 @@ export default function FileToSheetApp() {
               onAddNewProject={ws.handleAddNewProject}
               onCloseProject={ws.handleCloseProject}
               onReorderProjects={ws.handleReorderProjects}
+              isTeamMember={!activeContext.isOwner}
+              allowedSheets={activeContext.permissions?.allowedSheets}
             />
 
             {currentProject && currentSheet && (
               <div className="flex-1 flex flex-col bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
                 <SheetBar
-                  sheets={currentProject.sheets}
+                  sheets={visibleSheets}
                   activeSheetIndex={currentProject.activeSheetIndex}
                   category={currentProject.category}
                   editingSheetIdx={ws.editingSheetIdx}
@@ -642,6 +698,8 @@ export default function FileToSheetApp() {
                   onOpenSheetRule={(idx) => setRuleModalSheetIdx(idx)}
                   onReorderSheets={ws.handleReorderSheets}
                   plan={auth.currentUser?.plan}
+                  allowedSheets={activeContext.permissions?.allowedSheets}
+                  isTeamMember={!activeContext.isOwner}
                 />
 
                 <SubTabBar
@@ -676,6 +734,9 @@ export default function FileToSheetApp() {
                   activeFilterCount={activeFilterCount}
                   onDeduplicateRows={ws.handleDeduplicateRows}
                   onAutoFitAllColumns={() => setAutoFitTrigger((prev) => prev + 1)}
+                  canAccessOriginal={activeContext.isOwner || (activeContext.permissions?.canAccessOriginal ?? true)}
+                  canAccessSummary={activeContext.isOwner || (activeContext.permissions?.canAccessSummary ?? true)}
+                  canAddRow={activeContext.isOwner || (activeContext.permissions?.canUpload ?? true)}
                 />
 
                 {activeSubTab === 'table' && (
@@ -717,6 +778,9 @@ export default function FileToSheetApp() {
                     setIsJoinViewActive={ws.setIsJoinViewActive}
                     onJumpToOriginalDoc={handleJumpToOriginalDoc}
                     autoFitTrigger={autoFitTrigger}
+                    currentUserPhone={auth.currentUser?.phoneNumber}
+                    isTeamMember={!activeContext.isOwner}
+                    rowEditScope={activeContext.permissions?.rowEditScope ?? 'own_only'}
                   />
                 )}
 
@@ -730,6 +794,11 @@ export default function FileToSheetApp() {
                     targetFile={targetOriginalDoc}
                     filteredRows={filteredRows}
                     isFiltered={filteredRows.length !== rawRowsWithOrigin.length}
+                                      isTeamMember={!activeContext.isOwner}
+                    currentUserPhone={auth.currentUser?.phoneNumber}
+                    canDeleteOwnOriginal={activeContext.permissions?.canDeleteOwnOriginal ?? true}
+                    canExportData={activeContext.permissions?.canExportData ?? true}
+                    currentSheet={currentSheet}
                   />
                 )}
                 {activeSubTab === 'summary' && (
@@ -1142,6 +1211,15 @@ export default function FileToSheetApp() {
         }))}
         activeProjectId={currentProject?.id ? String(currentProject.id) : undefined}
         onApplyPatch={handleApplyFdePatch}
+      />
+
+      {/* 29. 팀 협업 및 권한 관리 모달 */}
+      <TeamManagementModal
+        isOpen={showTeamModal}
+        onClose={() => setShowTeamModal(false)}
+        currentUser={auth.currentUser}
+        projects={ws.projects}
+        activeProjectIndex={ws.activeProjectIndex}
       />
     </div>
   );

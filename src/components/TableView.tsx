@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Trash2, UploadCloud, RefreshCw, FileText, Link2, Check, ExternalLink, AlertCircle, Sparkles } from 'lucide-react';
+import { Trash2, UploadCloud, RefreshCw, FileText, Link2, Check, ExternalLink, AlertCircle, Sparkles, Lock } from 'lucide-react';
 import { ParsedSheet, SheetRelation } from '@/lib/parser';
 import { TableHeader } from './TableHeader';
 import { getSmartColumnWidth, renderFormattedNumber, isNumericColumn } from '@/lib/formatters';
@@ -47,6 +47,9 @@ interface TableViewProps {
   setIsJoinViewActive?: (v: boolean) => void;
   onJumpToOriginalDoc?: (fileName?: string, fileId?: string | number, fileUid?: string) => void;
   autoFitTrigger?: number;
+  currentUserPhone?: string;
+  isTeamMember?: boolean;
+  rowEditScope?: 'own_only' | 'all' | 'none';
 }
 
 export function TableView({
@@ -79,6 +82,9 @@ export function TableView({
   projectSheets,
   isJoinViewActive = false,
   setIsJoinViewActive,
+  currentUserPhone,
+  isTeamMember = false,
+  rowEditScope = 'own_only',
   onJumpToOriginalDoc,
   autoFitTrigger,
 }: TableViewProps) {
@@ -392,6 +398,10 @@ export function TableView({
               const rowUploadTime = row.등록일시 ? ` (${row.등록일시} 적재)` : '';
               const isSame = hoveredFileKey && rowFileKey && rowFileKey === hoveredFileKey;
 
+              const cleanMyPhone = (currentUserPhone || '').replace(/[^0-9]/g, '');
+              const cleanRowPhone = (row._createdByPhone || '').replace(/[^0-9]/g, '');
+              const canEditThisRow = !isTeamMember || (rowEditScope === 'all') || (rowEditScope === 'own_only' && Boolean(cleanRowPhone) && cleanRowPhone === cleanMyPhone);
+
               return (
                 <tr
                   key={rowIdx}
@@ -455,6 +465,7 @@ export function TableView({
                         }}
                         title={cellError ? cellError.message : undefined}
                         onDoubleClick={() => {
+                          if (!canEditThisRow) return;
                           setEditingCell({ rowIdx: actualIdx, colKey: header });
                           setEditValue(String(cellVal));
                         }}
@@ -557,13 +568,22 @@ export function TableView({
                     })}
 
                   <td className="px-2 py-2 text-center border-l border-slate-200">
-                    <button
-                      onClick={() => onDeleteRow(actualIdx)}
-                      className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500 transition"
-                      title="행 삭제"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    {canEditThisRow ? (
+                      <button
+                        onClick={() => onDeleteRow(actualIdx)}
+                        className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500 transition"
+                        title="행 삭제"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    ) : (
+                      <span
+                        className="inline-flex items-center justify-center text-slate-300 group-hover:text-amber-500 transition cursor-not-allowed"
+                        title={`🔒 본인이 등록한 데이터가 아니므로 수정 및 삭제가 제한됩니다\n(등록자: ${row._createdByPhone || '소유자/타인'})`}
+                      >
+                        <Lock className="w-3.5 h-3.5" />
+                      </span>
+                    )}
                   </td>
                 </tr>
               );

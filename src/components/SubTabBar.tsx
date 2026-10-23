@@ -26,6 +26,9 @@ interface SubTabBarProps {
   activeFilterCount?: number;
   onDeduplicateRows?: () => void;
   onAutoFitAllColumns?: () => void;
+  canAccessOriginal?: boolean;
+  canAccessSummary?: boolean;
+  canAddRow?: boolean;
 }
 
 export function SubTabBar({
@@ -50,6 +53,9 @@ export function SubTabBar({
   activeFilterCount = 0,
   onDeduplicateRows,
   onAutoFitAllColumns,
+  canAccessOriginal = true,
+  canAccessSummary = true,
+  canAddRow = true,
 }: SubTabBarProps) {
   const isFiltered = (totalRowsCount !== undefined && rowsCount !== totalRowsCount) || Boolean(searchQuery.trim()) || isFilterActive;
 
@@ -72,30 +78,36 @@ export function SubTabBar({
           )}
         </button>
 
-        <button
-          onClick={() => setActiveSubTab('original')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-            activeSubTab === 'original' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-2xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-          }`}
-        >
-          <Eye className="w-3.5 h-3.5" />
-          <span>원본 증빙 대조 {originalFilesCount > 0 ? `(${originalFilesCount}개)` : hasOriginalFile ? '✓' : ''}</span>
-        </button>
+        {/* 2. 원본 증빙 대조 탭 (권한 제어) */}
+        {canAccessOriginal && (
+          <button
+            onClick={() => setActiveSubTab('original')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+              activeSubTab === 'original' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-2xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+            }`}
+          >
+            <Eye className="w-3.5 h-3.5" />
+            <span>원본 증빙 대조 {originalFilesCount > 0 ? `(${originalFilesCount}개)` : hasOriginalFile ? '✓' : ''}</span>
+          </button>
+        )}
 
-        <button
-          onClick={() => setActiveSubTab('summary')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-            activeSubTab === 'summary' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-          }`}
-        >
-          <BarChart3 className="w-3.5 h-3.5" />
-          <span>요약 및 통계</span>
-          {isFiltered && (
-            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/90 px-1.5 py-0.2 rounded ml-0.5">
-              필터 연동
-            </span>
-          )}
-        </button>
+        {/* 3. 요약 및 통계 탭 (권한 제어) */}
+        {canAccessSummary && (
+          <button
+            onClick={() => setActiveSubTab('summary')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+              activeSubTab === 'summary' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+            }`}
+          >
+            <BarChart3 className="w-3.5 h-3.5" />
+            <span>요약 및 통계</span>
+            {isFiltered && (
+              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/90 px-1.5 py-0.2 rounded ml-0.5">
+                필터 연동
+              </span>
+            )}
+          </button>
+        )}
       </div>
 
       {activeSubTab === 'table' && (
@@ -148,15 +160,19 @@ export function SubTabBar({
             )}
           </div>
 
-          <button onClick={onAddRow} className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg transition" title="새 데이터 행 추가">
-            <Plus className="w-3.5 h-3.5 text-blue-600" />
-            <span>행 추가</span>
-          </button>
+          {canAddRow && (
+            <>
+              <button onClick={onAddRow} className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg transition" title="새 데이터 행 추가">
+                <Plus className="w-3.5 h-3.5 text-blue-600" />
+                <span>행 추가</span>
+              </button>
 
-          <button onClick={onOpenAddColumn} className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg transition" title="새 열(Header) 추가">
-            <Columns className="w-3.5 h-3.5 text-indigo-600" />
-            <span>열 추가</span>
-          </button>
+              <button onClick={onOpenAddColumn} className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg transition" title="새 열(Header) 추가">
+                <Columns className="w-3.5 h-3.5 text-indigo-600" />
+                <span>열 추가</span>
+              </button>
+            </>
+          )}
 
           {/* 🌟 전체 열 너비 자동 최적 맞춤 버튼 */}
           {onAutoFitAllColumns && (
@@ -172,7 +188,7 @@ export function SubTabBar({
           )}
 
           {/* 중복 데이터 행 정리 버튼 */}
-          {onDeduplicateRows && (
+          {onDeduplicateRows && canAddRow && (
             <button
               type="button"
               onClick={onDeduplicateRows}

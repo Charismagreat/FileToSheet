@@ -27,12 +27,15 @@ export async function sendOtpOrFail(opts: {
   });
   if (result.success) return null;
 
-  try {
-    await deleteRows('phone_verifications', {
-      filters: { phone_number: opts.phone, code: opts.code },
-    });
-  } catch (e: any) {
-    console.error('[OTP] failed to invalidate code:', e?.message);
+  // ⚡ 개발 환경에서는 테스트 로그인을 위해 DB의 인증번호를 삭제하지 않고 보존
+  if (!isDevEnv()) {
+    try {
+      await deleteRows('phone_verifications', {
+        filters: { phone_number: opts.phone, code: opts.code },
+      });
+    } catch (e: any) {
+      console.error('[OTP] failed to invalidate code:', e?.message);
+    }
   }
 
   if (result.code === 'NO_MANAGER_ONLINE') {

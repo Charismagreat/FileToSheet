@@ -16,6 +16,8 @@ interface ProjectBarProps {
   onAddNewProject: () => void;
   onCloseProject: (idx: number, e: React.MouseEvent) => void;
   onReorderProjects?: (fromIdx: number, toIdx: number) => void;
+  isTeamMember?: boolean;
+  allowedSheets?: string[];
 }
 
 export function ProjectBar({
@@ -30,6 +32,8 @@ export function ProjectBar({
   onAddNewProject,
   onCloseProject,
   onReorderProjects,
+  isTeamMember = false,
+  allowedSheets,
 }: ProjectBarProps) {
   if (projects.length === 0) return null;
 
@@ -73,6 +77,14 @@ export function ProjectBar({
         </div>
 
         {projects.map((proj, idx) => {
+          // RBAC: 팀원 모드일 때 허용된 시트가 포함되지 않은 타 프로젝트는 완전히 숨김
+          if (isTeamMember && allowedSheets && allowedSheets.length > 0) {
+            const hasAllowedSheet = (proj.sheets || []).some((s) => allowedSheets.includes(s.name));
+            if (!hasAllowedSheet) {
+              return null;
+            }
+          }
+
           const isActive = activeProjectIndex === idx;
           const isRenaming = editingProjectIdx === idx;
           const displayName = proj.name || '새 프로젝트';
@@ -81,13 +93,15 @@ export function ProjectBar({
             <div
               key={idx}
               ref={isActive ? activeTabRef : null}
-              draggable={!isRenaming}
+              draggable={!isRenaming && !isTeamMember}
               onDragStart={(e) => {
+                if (isTeamMember) return;
                 e.dataTransfer.setData('text/plain', String(idx));
                 e.dataTransfer.effectAllowed = 'move';
                 setDraggingIdx(idx);
               }}
               onDragOver={(e) => {
+                if (isTeamMember) return;
                 e.preventDefault();
                 e.dataTransfer.dropEffect = 'move';
                 if (dragOverIdx !== idx) setDragOverIdx(idx);
@@ -96,6 +110,7 @@ export function ProjectBar({
                 if (dragOverIdx === idx) setDragOverIdx(null);
               }}
               onDrop={(e) => {
+                if (isTeamMember) return;
                 e.preventDefault();
                 const fromIdx = Number(e.dataTransfer.getData('text/plain'));
                 if (!isNaN(fromIdx) && fromIdx !== idx && onReorderProjects) {
@@ -109,17 +124,16 @@ export function ProjectBar({
                 setDragOverIdx(null);
               }}
               onClick={() => setActiveProjectIndex(idx)}
-              className={`group flex items-center gap-1.5 px-3 h-8 rounded-t-xl text-xs font-semibold cursor-pointer border transition shrink-0 whitespace-nowrap ${
+              className={`group flex items-center gap-1 px-3 h-8 rounded-lg text-xs font-bold cursor-pointer transition shrink-0 whitespace-nowrap border ${
                 isActive
-                  ? 'bg-white border-slate-300 border-b-transparent text-blue-700 shadow-xs'
-                  : 'bg-slate-100/70 hover:bg-slate-200/70 border-slate-200 text-slate-600'
+                  ? 'bg-blue-50 text-blue-700 border-blue-300 shadow-2xs'
+                  : 'bg-slate-100 hover:bg-slate-200/80 text-slate-600 border-transparent'
               } ${draggingIdx === idx ? 'opacity-40 scale-95 border-dashed border-blue-400' : ''} ${
-                dragOverIdx === idx && draggingIdx !== idx ? 'ring-2 ring-blue-500 ring-offset-1 bg-blue-50/90' : ''
+                dragOverIdx === idx && draggingIdx !== idx ? 'ring-2 ring-blue-500 ring-offset-1 bg-blue-100/90' : ''
               }`}
-              title="더블클릭: 이름 변경 / 드래그: 순서 이동"
             >
-              {/* 드래그 힌트 그립 아이콘 */}
-              {projects.length > 1 && !isRenaming && (
+              {/* 드래그 힌트 그립 아이콘 (소유자만) */}
+              {projects.length > 1 && !isRenaming && !isTeamMember && (
                 <GripVertical
                   className={`w-2.5 h-2.5 opacity-0 group-hover:opacity-60 cursor-grab shrink-0 -ml-1 transition ${
                     isActive ? 'text-blue-600' : 'text-slate-400'
@@ -129,7 +143,7 @@ export function ProjectBar({
 
               <FolderOpen className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-blue-600' : 'text-slate-400'}`} />
 
-              {isRenaming ? (
+              {isRenaming && !isTeamMember ? (
                 <input
                   autoFocus
                   type="text"
@@ -145,18 +159,20 @@ export function ProjectBar({
               ) : (
                 <span
                   onDoubleClick={(e) => {
+                    if (isTeamMember) return;
                     e.stopPropagation();
                     setEditingProjectIdx(idx);
                     setEditingProjectName(displayName);
                   }}
-                  title={`${displayName} (더블클릭하여 프로젝트 이름 변경)`}
+                  title={isTeamMember ? displayName : `${displayName} (더블클릭하여 프로젝트 이름 변경)`}
                   className="max-w-[160px] truncate inline-block"
                 >
                   {displayName}
                 </span>
               )}
 
-              {projects.length > 1 && (
+              {/* 닫기 버튼 (팀원은 삭제 불가) */}
+              {projects.length > 1 && !isTeamMember && (
                 <button
                   type="button"
                   onClick={(e) => onCloseProject(idx, e)}
@@ -171,16 +187,18 @@ export function ProjectBar({
         })}
       </div>
 
-      {/* 🌟 우측: 새 프로젝트 추가 버튼 (한 줄 고정) */}
-      <button
-        type="button"
-        onClick={onAddNewProject}
-        className="flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-blue-600 px-2.5 h-8 rounded-lg hover:bg-slate-100 border border-slate-200 shrink-0 whitespace-nowrap transition cursor-pointer active:scale-95"
-        title="새 빈 프로젝트 추가"
-      >
-        <FolderPlus className="w-3.5 h-3.5" />
-        <span>새 프로젝트</span>
-      </button>
+      {/* 🌟 우측: 새 프로젝트 추가 버튼 (팀원은 프로젝트 추가 불가) */}
+      {!isTeamMember && (
+        <button
+          type="button"
+          onClick={onAddNewProject}
+          className="flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-blue-600 px-2.5 h-8 rounded-lg hover:bg-slate-100 border border-slate-200 shrink-0 whitespace-nowrap transition cursor-pointer active:scale-95"
+          title="새 빈 프로젝트 추가"
+        >
+          <FolderPlus className="w-3.5 h-3.5" />
+          <span>새 프로젝트</span>
+        </button>
+      )}
     </div>
   );
 }

@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
 
     const verificationRecord = verificationRes?.rows?.[0];
 
-    const isDevAdmin = process.env.NODE_ENV === 'development' && cleanNumber === '01072165884';
+    const isDevAdmin = process.env.NODE_ENV === 'development';
 
     if (!isDevAdmin) {
       if (!verificationRecord) {
