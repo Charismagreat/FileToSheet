@@ -37,11 +37,23 @@ export async function GET(
       payload = {};
     }
 
+    let ownerPhone = link.sender_phone || payload?.phoneNumber || '';
+    if (!ownerPhone && link.project_id && link.project_id !== 'default') {
+      try {
+        const projRes = await queryTable('user_projects', {
+          filters: { id: String(link.project_id) },
+          limit: 1,
+        });
+        ownerPhone = projRes?.rows?.[0]?.phone_number || '';
+      } catch {}
+    }
+
     return NextResponse.json({
       success: true,
       valid: true,
       service: 'FileToSheet',
       token,
+      phoneNumber: ownerPhone || undefined,
       projectId: link.project_id,
       projectName: link.project_name || 'File to Sheet 프로젝트',
       sheetName: payload?.sheetName || '기본 시트',

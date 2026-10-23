@@ -87,8 +87,35 @@ export function useWorkspace({ phoneNumber, plan, onPlanLimit }: UseWorkspaceOpt
               }),
             })),
           }));
+          const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+          const targetProjId = params?.get('projectId')?.trim() || '';
+          const targetSheetName = params?.get('sheet')?.trim() || '';
+
+          let targetProjIdx = 0;
+          if (targetProjId) {
+            const byIdIdx = sanitized.findIndex((p) => String(p.id) === targetProjId);
+            if (byIdIdx >= 0) targetProjIdx = byIdIdx;
+          } else if (targetSheetName) {
+            const bySheetIdx = sanitized.findIndex((p) =>
+              p.sheets.some((s) => s.name === targetSheetName)
+            );
+            if (bySheetIdx >= 0) targetProjIdx = bySheetIdx;
+          }
+
+          if (targetSheetName && sanitized[targetProjIdx]) {
+            const sheetIdx = sanitized[targetProjIdx].sheets.findIndex(
+              (s) => s.name === targetSheetName
+            );
+            if (sheetIdx >= 0) {
+              sanitized[targetProjIdx] = {
+                ...sanitized[targetProjIdx],
+                activeSheetIndex: sheetIdx,
+              };
+            }
+          }
+
           setProjects(sanitized);
-          setActiveProjectIndex(0);
+          setActiveProjectIndex(targetProjIdx);
         } else {
           try {
             const guestSaved = localStorage.getItem('filetosheet_guest_projects');

@@ -45,21 +45,72 @@ export function useAuth() {
     }
   };
 
-  // 로컬 세션 복원 및 서버 최신 상태 즉각 재검증(Revalidate)
+  // 로컬 세션 복원, 모바일 앱 URL 핸드오프(?phone= / ?token=) 자동 로그인 및 서버 최신 상태 즉각 재검증(Revalidate)
   useEffect(() => {
     let phoneToSync = '';
-    try {
-      const savedUser = localStorage.getItem('filetosheet_user');
-      if (savedUser) {
-        const parsed = JSON.parse(savedUser);
-        if (parsed?.phoneNumber) {
-          setCurrentUser(parsed);
-          document.cookie = `fts_user_phone=${parsed.phoneNumber}; path=/; max-age=2592000; SameSite=Lax`;
-          phoneToSync = parsed.phoneNumber;
+    const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+    const urlPhone = (params?.get('phone') || '').replace(/[^0-9]/g, '');
+    const urlToken = (params?.get('token') || '').trim();
+
+    if (urlPhone.length >= 10 && urlPhone.startsWith('010')) {
+      try {
+        localStorage.removeItem('filetosheet_logged_out');
+        const handoffUser: UserSession = {
+          id: 1,
+          phoneNumber: urlPhone,
+          nickname: urlPhone,
+          plan: 'free',
+        };
+        const savedUser = localStorage.getItem('filetosheet_user');
+        if (savedUser) {
+          const parsed = JSON.parse(savedUser);
+          if (parsed?.phoneNumber?.replace(/[^0-9]/g, '') === urlPhone) {
+            Object.assign(handoffUser, parsed, { phoneNumber: urlPhone });
+          }
         }
+        setCurrentUser(handoffUser);
+        localStorage.setItem('filetosheet_user', JSON.stringify(handoffUser));
+        document.cookie = `fts_user_phone=${urlPhone}; path=/; max-age=2592000; SameSite=Lax`;
+        phoneToSync = urlPhone;
+      } catch (e) {
+        console.error('URL 핸드오프 세션 설정 실패:', e);
       }
-    } catch (e) {
-      console.error('세션 복원 실패:', e);
+    } else {
+      try {
+        const savedUser = localStorage.getItem('filetosheet_user');
+        if (savedUser) {
+          const parsed = JSON.parse(savedUser);
+          if (parsed?.phoneNumber) {
+            setCurrentUser(parsed);
+            document.cookie = `fts_user_phone=${parsed.phoneNumber}; path=/; max-age=2592000; SameSite=Lax`;
+            phoneToSync = parsed.phoneNumber;
+          }
+        }
+      } catch (e) {
+        console.error('세션 복원 실패:', e);
+      }
+    }
+
+    if (!phoneToSync && urlToken) {
+      apiFetch(`/api/inbox/${encodeURIComponent(urlToken)}`)
+        .then((res) => res.json())
+        .then((data) => {
+          const tokenPhone = (data?.phoneNumber || '').replace(/[^0-9]/g, '');
+          if (data?.success && tokenPhone.length >= 10) {
+            localStorage.removeItem('filetosheet_logged_out');
+            const tokenUser: UserSession = {
+              id: 1,
+              phoneNumber: tokenPhone,
+              nickname: tokenPhone,
+              plan: 'free',
+            };
+            setCurrentUser(tokenUser);
+            localStorage.setItem('filetosheet_user', JSON.stringify(tokenUser));
+            document.cookie = `fts_user_phone=${tokenPhone}; path=/; max-age=2592000; SameSite=Lax`;
+            syncLatestUserProfile(tokenPhone);
+          }
+        })
+        .catch(() => {});
     }
 
     const isExplicitlyLoggedOut = typeof window !== 'undefined' && localStorage.getItem('filetosheet_logged_out') === 'true';
