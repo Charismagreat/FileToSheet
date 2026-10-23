@@ -32,6 +32,7 @@ interface HeaderProps {
   onOpenRemoteDbModal?: () => void;
   onOpenScheduleModal?: () => void;
   onOpenMobileIngestModal?: () => void;
+  onOpenGoogleSheetImportModal?: () => void;
   onOpenShareToManagerModal?: () => void;
   onOpenConsolidatedModal?: () => void;
   onOpenShareManagementModal?: () => void;
@@ -65,6 +66,7 @@ export function Header({
   onOpenRemoteDbModal,
   onOpenScheduleModal,
   onOpenMobileIngestModal,
+  onOpenGoogleSheetImportModal,
   onOpenShareToManagerModal,
   onOpenConsolidatedModal,
   onOpenShareManagementModal,
@@ -373,6 +375,29 @@ export function Header({
                       <span className="text-[9px] font-bold bg-blue-100 text-blue-700 px-1 py-0.1 rounded-md">App</span>
                     </div>
                     <div className="text-[10px] text-slate-400">QR코드 및 실시간 모바일앱 페어링</div>
+                  </div>
+                </button>
+              )}
+
+              {/* 4. 내 구글 시트 연결 & 가져오기 */}
+              {onOpenGoogleSheetImportModal && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSyncHubOpen(false);
+                    onOpenGoogleSheetImportModal();
+                  }}
+                  className="w-full px-3 py-2 text-left hover:bg-emerald-50 hover:text-emerald-900 flex items-center gap-2.5 transition border-t border-slate-100"
+                >
+                  <div className="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                    <FileSpreadsheet className="w-3.5 h-3.5" />
+                  </div>
+                  <div>
+                    <div className="font-bold text-slate-800 flex items-center gap-1.5">
+                      <span>내 구글 시트 연결</span>
+                      <span className="text-[9px] font-bold bg-emerald-100 text-emerald-800 px-1 py-0.1 rounded-md">양방향</span>
+                    </div>
+                    <div className="text-[10px] text-slate-400">구글 시트 탭 가져오기 & 원클릭 동기화</div>
                   </div>
                 </button>
               )}

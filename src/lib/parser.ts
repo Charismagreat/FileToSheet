@@ -9,6 +9,13 @@ export interface SheetRelation {
   displayColumns?: string[]; // 조인 시 함께 가져와 표시할 대상 시트의 열 목록 (예: ["대표자", "연락처", "여신한도"])
 }
 
+export interface ConnectedGoogleSheetInfo {
+  spreadsheetId: string;
+  sheetTabName: string;
+  syncToken: string;
+  lastSyncedAt?: string;
+}
+
 export interface ParsedSheet {
   name: string;
   headers: string[];
@@ -17,6 +24,7 @@ export interface ParsedSheet {
   originalFiles?: OriginalDocFile[];
   customPrompt?: string; // 🌟 시트별 전용 자연어 분석/적재 규칙
   relations?: SheetRelation[]; // 🔗 다른 시트와의 외래키(FK) 조인 매핑 정보
+  connectedGoogleSheet?: ConnectedGoogleSheetInfo; // 🔗 연결된 Google 스프레드시트 정보
 }
 
 export interface ParseResult {

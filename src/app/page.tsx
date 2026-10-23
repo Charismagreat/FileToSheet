@@ -2,6 +2,7 @@
 
 import { DeleteSheetModal } from '@/components/DeleteSheetModal';
 import { SmartSheetRoutingModal } from '@/components/SmartSheetRoutingModal';
+import { GoogleSheetImportModal } from '@/components/GoogleSheetImportModal';
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Header } from '@/components/Header';
@@ -205,6 +206,7 @@ export default function FileToSheetApp() {
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc'); // 최신순 기본값
   const [isTableDragging, setIsTableDragging] = useState<boolean>(false);
   const [showOriginalModal, setShowOriginalModal] = useState<boolean>(false);
+  const [showGoogleSheetImportModal, setShowGoogleSheetImportModal] = useState<boolean>(false);
   const [showShareModal, setShowShareModal] = useState<boolean>(false);
   const [showScheduleModal, setShowScheduleModal] = useState<boolean>(false);
   const [showMobileIngestModal, setShowMobileIngestModal] = useState<boolean>(false);
@@ -572,6 +574,45 @@ export default function FileToSheetApp() {
     });
   };
 
+  
+  // 🌟 구글 시트 탭 가져오기 완료 핸들러
+  const handleGoogleSheetImportComplete = (newSheets: any[], spreadsheetId: string) => {
+    if (!currentProject) {
+      const newProj = {
+        id: Date.now(),
+        name: '구글 시트 연동 장부',
+        filename: 'Google_Spreadsheet',
+        category: '일반',
+        sheets: newSheets,
+        activeSheetIndex: 0,
+        googleSpreadsheetId: spreadsheetId,
+        googleSpreadsheetUrl: 'https://docs.google.com/spreadsheets/d/' + spreadsheetId + '/edit',
+        originalFiles: [],
+      };
+      ws.setProjects([newProj]);
+      return;
+    }
+
+    ws.setProjects((prev) => {
+      const next = [...prev];
+      if (!next[ws.activeProjectIndex]) return prev;
+      const proj = { ...next[ws.activeProjectIndex] };
+      proj.googleSpreadsheetId = spreadsheetId;
+      proj.googleSpreadsheetUrl = 'https://docs.google.com/spreadsheets/d/' + spreadsheetId + '/edit';
+
+      const existingSheetNames = new Set(proj.sheets.map((s) => s.name));
+      const filteredNewSheets = newSheets.filter((s) => !existingSheetNames.has(s.name));
+      const updatedExistingSheets = proj.sheets.map((s) => {
+        const matched = newSheets.find((ns) => ns.name === s.name);
+        return matched || s;
+      });
+
+      proj.sheets = [...updatedExistingSheets, ...filteredNewSheets];
+      next[ws.activeProjectIndex] = proj;
+      return next;
+    });
+  };
+
   // 🌟 FDE 솔루션 패치 원클릭 병합 핸들러
   const handleApplyFdePatch = (patch: {
     targetSheetName: string;
@@ -635,6 +676,7 @@ export default function FileToSheetApp() {
         onOpenRemoteDbModal={() => setShowRemoteDbModal(true)}
         onOpenScheduleModal={() => setShowScheduleModal(true)}
         onOpenMobileIngestModal={() => setShowMobileIngestModal(true)}
+        onOpenGoogleSheetImportModal={() => setShowGoogleSheetImportModal(true)}
         onOpenTransferModal={() => setShowTransferModal(true)}
         onOpenShareToManagerModal={() => setShowShareToManagerModal(true)}
         onOpenConsolidatedModal={() => setShowConsolidatedModal(true)}
@@ -817,6 +859,18 @@ export default function FileToSheetApp() {
           </>
         )}
       </main>
+
+      
+      {/* 🌟 구글 시트 연결 & 가져오기 모달 */}
+      {showGoogleSheetImportModal && (
+        <GoogleSheetImportModal
+          isOpen={true}
+          onClose={() => setShowGoogleSheetImportModal(false)}
+          currentProject={currentProject}
+          onImportComplete={handleGoogleSheetImportComplete}
+          currentUserPhone={auth.currentUser?.phoneNumber}
+        />
+      )}
 
       {/* 1. 휴대폰 간편 인증 모달 */}
       <PhoneAuthModal

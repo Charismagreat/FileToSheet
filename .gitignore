@@ -47,3 +47,7 @@ next-env.d.ts
 *.sqlite3
 *.db
 /data/sqlite/
+
+# uploads
+/public/uploads/*
+!/public/uploads/.gitkeep
