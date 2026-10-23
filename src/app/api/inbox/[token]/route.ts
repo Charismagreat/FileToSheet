@@ -152,15 +152,27 @@ export async function POST(
 
     // 3. user_projects 테이블의 대상 시트에 실제 행 적재 (물리 DB 영구 반영)
     let projectUpdated = false;
-    if (projectId && projectId !== 'default') {
+    if ((projectId && projectId !== 'default') || link.sender_phone) {
       try {
-        const projRes = await queryTable('user_projects', {
-          filters: { id: String(projectId) },
-          limit: 1,
-        });
+        let projRow: any = null;
+        if (projectId && projectId !== 'default') {
+          const projRes = await queryTable('user_projects', {
+            filters: { id: String(projectId) },
+            limit: 1,
+          });
+          projRow = projRes?.rows?.[0];
+        }
+        if (!projRow && link.sender_phone) {
+          const fallbackRes = await queryTable('user_projects', {
+            filters: { phone_number: String(link.sender_phone).replace(/[^0-9]/g, '') },
+            orderBy: 'id',
+            orderDirection: 'DESC',
+            limit: 1,
+          });
+          projRow = fallbackRes?.rows?.[0];
+        }
 
-        if (projRes?.rows && projRes.rows.length > 0) {
-          const projRow = projRes.rows[0];
+        if (projRow) {
           let sheets: any[] = [];
           try {
             sheets = typeof projRow.sheets_data === 'string' ? JSON.parse(projRow.sheets_data) : (projRow.sheets_data || []);

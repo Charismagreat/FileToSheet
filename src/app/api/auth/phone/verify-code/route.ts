@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
     const pRes = await queryTable('user_projects', {
       filters: { phone_number: cleanNumber },
       orderBy: 'id',
-      orderDirection: 'ASC',
+      orderDirection: 'DESC',
       limit: 1,
     });
     projectRow = pRes?.rows?.[0];
@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
       }));
 
       const newProjName = '내 비즈니스 장부';
-      const insertRes = await insertRows('user_projects', [
+      await insertRows('user_projects', [
         {
           phone_number: cleanNumber,
           project_name: newProjName,
@@ -129,13 +129,51 @@ export async function POST(request: NextRequest) {
         },
       ]);
 
-      const newId = insertRes?.ids?.[0] || 1;
-      projectRow = {
-        id: newId,
+      const latestRes = await queryTable('user_projects', {
+        filters: { phone_number: cleanNumber },
+        orderBy: 'id',
+        orderDirection: 'DESC',
+        limit: 1,
+      });
+      projectRow = latestRes?.rows?.[0] || {
+        id: 1,
         phone_number: cleanNumber,
         project_name: newProjName,
         sheets_data: JSON.stringify(initialSheets),
       };
+    } else {
+      // 기존 프로젝트가 있더라도 2대 핵심 시트(영수증대장, 명함관리)가 누락되어 있으면 자동 보강
+      let existingSheets: any[] = [];
+      try {
+        existingSheets = typeof projectRow.sheets_data === 'string'
+          ? JSON.parse(projectRow.sheets_data)
+          : (projectRow.sheets_data || []);
+      } catch {
+        existingSheets = [];
+      }
+      let addedCoreSheet = false;
+      for (const coreDef of CORE_2_SHEETS) {
+        if (!existingSheets.some((s: any) => s.name === coreDef.sheetName)) {
+          existingSheets.push({
+            name: coreDef.sheetName,
+            headers: coreDef.headers,
+            rows: [],
+            rawRows: [],
+          });
+          addedCoreSheet = true;
+        }
+      }
+      if (addedCoreSheet) {
+        projectRow.sheets_data = JSON.stringify(existingSheets);
+        await updateRows(
+          'user_projects',
+          {
+            sheets_data: projectRow.sheets_data,
+            updated_at: todayDateStr,
+          },
+          { ids: [Number(projectRow.id)] }
+        );
+      }
     }
 
     // 2대 기본 시트에 대한 모바일 수신 토큰 조회/발급

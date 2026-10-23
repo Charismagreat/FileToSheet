@@ -42,15 +42,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 1. 프로젝트 조회 (projectId 우선, 없으면 phoneNumber로 최신 프로젝트 조회)
+    // 1. 프로젝트 조회 (projectId 우선, 없거나 삭제된 ID이면 phoneNumber로 최신 프로젝트 폴백 조회)
     let projectRow: any = null;
     if (reqProjectId && reqProjectId !== 'default') {
       const pRes = await queryTable('user_projects', {
         filters: { id: String(reqProjectId) },
         limit: 1,
       });
-      projectRow = pRes?.rows?.[0];
-    } else if (cleanNumber) {
+      const candidate = pRes?.rows?.[0];
+      if (candidate && (!cleanNumber || candidate.phone_number === cleanNumber)) {
+        projectRow = candidate;
+      }
+    }
+    if (!projectRow && cleanNumber) {
       const pRes = await queryTable('user_projects', {
         filters: { phone_number: cleanNumber },
         orderBy: 'id',
@@ -62,7 +66,7 @@ export async function POST(request: NextRequest) {
 
     const now = new Intl.DateTimeFormat('ko-KR', { dateStyle: 'short', timeStyle: 'medium' }).format(new Date());
 
-    // 2. 만약 프로젝트가 아예 없으면 기본 프로젝트 자동 생성
+    // 2. 만약 프로젝트가 아예 없으면 기본 프로젝트 자동 생성 후 실제 DB ID 조회
     if (!projectRow) {
       const initialSheets = CORE_2_SHEETS.map((t) => ({
         name: t.sheetName,
@@ -72,9 +76,10 @@ export async function POST(request: NextRequest) {
       }));
 
       const newProjName = '내 비즈니스 장부';
-      const insertRes = await insertRows('user_projects', [
+      const targetPhone = cleanNumber || '01000000000';
+      await insertRows('user_projects', [
         {
-          phone_number: cleanNumber || '01000000000',
+          phone_number: targetPhone,
           project_name: newProjName,
           category: category || '기본',
           sheets_data: JSON.stringify(initialSheets),
@@ -84,10 +89,15 @@ export async function POST(request: NextRequest) {
         },
       ]);
 
-      const newId = insertRes?.ids?.[0] || 1;
-      projectRow = {
-        id: newId,
-        phone_number: cleanNumber,
+      const latestRes = await queryTable('user_projects', {
+        filters: { phone_number: targetPhone },
+        orderBy: 'id',
+        orderDirection: 'DESC',
+        limit: 1,
+      });
+      projectRow = latestRes?.rows?.[0] || {
+        id: 1,
+        phone_number: targetPhone,
         project_name: newProjName,
         sheets_data: JSON.stringify(initialSheets),
       };

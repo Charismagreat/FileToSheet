@@ -109,15 +109,37 @@ export async function saveUserProjectToDb(
   });
 
   if (project.id) {
-    // 기존 프로젝트 업데이트 시도
+    // 기존 프로젝트 업데이트 시도 (모바일 ensure-sheet / inbox로 백엔드에서 추가된 시트가 유실되지 않도록 병합)
     try {
+      let mergedSheets = [...(project.sheets || [])];
+      const existingRes = await queryTable('user_projects', {
+        filters: { id: String(project.id) },
+        limit: 1,
+      });
+      const existingRow = existingRes?.rows?.[0];
+      if (existingRow?.sheets_data) {
+        try {
+          const dbSheets = typeof existingRow.sheets_data === 'string'
+            ? JSON.parse(existingRow.sheets_data)
+            : existingRow.sheets_data;
+          if (Array.isArray(dbSheets)) {
+            const clientNames = new Set(mergedSheets.map((s: any) => s.name));
+            for (const dbSheet of dbSheets) {
+              if (dbSheet?.name && !clientNames.has(dbSheet.name)) {
+                mergedSheets.push(dbSheet);
+              }
+            }
+          }
+        } catch {}
+      }
+
       const updateRes = await updateRows(
         'user_projects',
         {
           phone_number: cleanNumber,
           project_name: project.name,
           category: project.category || '기본',
-          sheets_data: sheetsJson,
+          sheets_data: JSON.stringify(mergedSheets),
           original_files: originalFilesJson,
           updated_at: now,
         },
@@ -132,7 +154,7 @@ export async function saveUserProjectToDb(
   }
 
   // 신규 프로젝트 DB 생성
-  const res = await insertRows('user_projects', [
+  await insertRows('user_projects', [
     {
       phone_number: cleanNumber,
       project_name: project.name,
@@ -144,7 +166,13 @@ export async function saveUserProjectToDb(
     },
   ]);
 
-  return res?.ids?.[0] ?? null;
+  const latestRes = await queryTable('user_projects', {
+    filters: { phone_number: cleanNumber },
+    orderBy: 'id',
+    orderDirection: 'DESC',
+    limit: 1,
+  });
+  return latestRes?.rows?.[0]?.id ?? null;
 }
 
 /**
