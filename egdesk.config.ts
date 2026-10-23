@@ -1,6 +1,6 @@
 /**
  * EGDesk User Data Configuration
- * Generated at: 2026-10-22T00:35:42.700Z
+ * Generated at: 2026-10-23T01:54:56.288Z
  *
  * This file contains type-safe definitions for your EGDesk tables.
  */
@@ -106,7 +106,7 @@ export const TABLES = {
     name: 'data_change_logs',
     displayName: '데이터 변경 및 삭제 감사 이력',
     description: '시트 데이터 셀 수정, 행 추가, 행 삭제 등의 세부 감사 추적(Audit Trail) 및 변경 이력 관리 테이블',
-    rowCount: 3,
+    rowCount: 4,
     columnCount: 11,
     columns: ['id', '_version', 'project_id', 'sheet_name', 'change_type', 'target_row', 'column_name', 'before_value', 'after_value', 'operator', 'created_at']
   } as TableDefinition,
@@ -122,7 +122,7 @@ export const TABLES = {
     name: 'ai_call_logs',
     displayName: 'AI 호출 및 사용량 감사 로그',
     description: 'AI 문서 파싱 및 질의응답 시 호출된 모델명, 토큰 소모량, 응답시간, 성공여부 감사 로그 테이블',
-    rowCount: 19,
+    rowCount: 23,
     columnCount: 12,
     columns: ['id', '_version', 'phone_number', 'call_type', 'model_name', 'prompt_tokens', 'completion_tokens', 'total_tokens', 'latency_ms', 'status', 'error_message', 'created_at']
   } as TableDefinition,
@@ -154,7 +154,7 @@ export const TABLES = {
     name: 'user_projects',
     displayName: '사용자 프로젝트 목록',
     description: '사용자별 작업 프로젝트 워크스페이스(시트, 헤더, 데이터 행, 원본 증빙 파일 메타데이터) 영구 관리 테이블',
-    rowCount: 1,
+    rowCount: 3,
     columnCount: 9,
     columns: ['id', '_version', 'phone_number', 'project_name', 'category', 'sheets_data', 'original_files', 'created_at', 'updated_at']
   } as TableDefinition,
@@ -186,7 +186,7 @@ export const TABLES = {
     name: 'sheet_rows',
     displayName: '시트 데이터 행 목록',
     description: '파싱된 시트 행별 데이터 테이블',
-    rowCount: 2,
+    rowCount: 1,
     columnCount: 8,
     columns: ['id', '_version', 'file_id', 'sheet_name', 'row_index', 'row_data', 'category', 'created_at']
   } as TableDefinition,
@@ -194,7 +194,7 @@ export const TABLES = {
     name: 'uploaded_files',
     displayName: '업로드 파일 목록',
     description: '업로드된 원본 파일 및 스토리지 연동 관리 테이블',
-    rowCount: 10,
+    rowCount: 27,
     columnCount: 12,
     columns: ['id', '_version', 'filename', 'file_type', 'file_size', 'file_data', 'status', 'category', 'sheet_names', 'row_count', 'error_message', 'created_at']
   } as TableDefinition

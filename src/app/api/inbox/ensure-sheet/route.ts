@@ -9,22 +9,38 @@ import {
 
 /**
  * POST /api/inbox/ensure-sheet
- * 모바일앱에서 보관함 카드를 홈에 꺼내거나 기능을 활성화할 때
- * 해당 전용 시트가 없으면 FTS 프로젝트에 온디맨드로 자동 생성하고 인박스 토큰을 반환
+ * 시트봇 모바일앱의 각 기능 카드에서 구글시트 대신 파일투시트를 선택했을 때 호출됨.
+ * 모바일앱이 내장한 시트 명칭, 헤더 컬럼 배열, 데이터 규격을 전달받아
+ * 프로젝트 내에 해당 시트를 멱등(Idempotent)하게 보장(신규 생성 또는 기존 시트 매핑/확장)하고
+ * 전용 수신 토큰(Inbox Token) 및 Webhook URL을 즉시 반환합니다.
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { phoneNumber, projectId: reqProjectId, sheetType, customSheetName } = body;
+    const {
+      phoneNumber: rawPhone,
+      userPhone,
+      projectId: reqProjectId,
+      cardId,
+      sheetType,
+      sheetName,
+      customSheetName,
+      headers: incomingHeaders,
+      columnTypes,
+      category,
+    } = body;
 
-    if (!phoneNumber && !reqProjectId) {
+    const cookiePhone = request.cookies.get('fts_user_phone')?.value;
+    const headerPhone = request.headers.get('x-user-phone');
+    const inputPhone = rawPhone || userPhone || headerPhone || cookiePhone || '';
+    const cleanNumber = inputPhone.replace(/[^0-9]/g, '');
+
+    if (!cleanNumber && !reqProjectId) {
       return NextResponse.json(
         { success: false, error: 'phoneNumber 또는 projectId가 필요합니다.' },
         { status: 400 }
       );
     }
-
-    const cleanNumber = phoneNumber ? phoneNumber.replace(/[^0-9]/g, '') : '';
 
     // 1. 프로젝트 조회 (projectId 우선, 없으면 phoneNumber로 최신 프로젝트 조회)
     let projectRow: any = null;
@@ -46,7 +62,7 @@ export async function POST(request: NextRequest) {
 
     const now = new Intl.DateTimeFormat('ko-KR', { dateStyle: 'short', timeStyle: 'medium' }).format(new Date());
 
-    // 2. 만약 프로젝트가 아예 없으면 기본 프로젝트 생성
+    // 2. 만약 프로젝트가 아예 없으면 기본 프로젝트 자동 생성
     if (!projectRow) {
       const initialSheets = CORE_2_SHEETS.map((t) => ({
         name: t.sheetName,
@@ -60,7 +76,7 @@ export async function POST(request: NextRequest) {
         {
           phone_number: cleanNumber || '01000000000',
           project_name: newProjName,
-          category: '기본',
+          category: category || '기본',
           sheets_data: JSON.stringify(initialSheets),
           original_files: JSON.stringify({ files: [] }),
           created_at: now,
@@ -77,21 +93,32 @@ export async function POST(request: NextRequest) {
       };
     }
 
-    // 3. 대상 시트 템플릿 결정
-    let targetSheetName = customSheetName;
-    let targetHeaders: string[] = ['일련번호', '등록일시', '내용', '금액', '비고'];
+    // 3. 대상 시트 명칭 및 헤더 결정
+    // 🌟 모바일앱이 직접 제공한 sheetName과 headers를 최우선 적용 (Client-Provided Schema)
+    const cardIdentifier = cardId || sheetType;
+    const coreMatch = CORE_2_SHEETS.find((s) => s.type === cardIdentifier);
+    const onDemandMatch = ON_DEMAND_SHEETS[cardIdentifier];
 
-    const coreMatch = CORE_2_SHEETS.find((s) => s.type === sheetType);
-    const onDemandMatch = ON_DEMAND_SHEETS[sheetType];
+    let targetSheetName = (
+      sheetName ||
+      customSheetName ||
+      coreMatch?.sheetName ||
+      onDemandMatch?.sheetName ||
+      cardIdentifier ||
+      '기본 시트'
+    ).trim();
 
-    if (coreMatch) {
-      targetSheetName = targetSheetName || coreMatch.sheetName;
+    let targetHeaders: string[] = [];
+    if (Array.isArray(incomingHeaders) && incomingHeaders.length > 0) {
+      // 모바일앱이 내장 헤더 규격을 보낸 경우
+      targetHeaders = incomingHeaders.map((h) => String(h).trim()).filter(Boolean);
+    } else if (coreMatch) {
       targetHeaders = coreMatch.headers;
     } else if (onDemandMatch) {
-      targetSheetName = targetSheetName || onDemandMatch.sheetName;
       targetHeaders = onDemandMatch.headers;
     } else {
-      targetSheetName = targetSheetName || '기본 시트';
+      // 완전 기본 fallback
+      targetHeaders = ['일련번호', '등록일시', '내용', '금액', '비고'];
     }
 
     // 4. 프로젝트 내 시트 목록 파싱
@@ -105,10 +132,11 @@ export async function POST(request: NextRequest) {
     }
 
     let isNew = false;
+    let sheetUpdated = false;
     let sheet = sheets.find((s: any) => s.name === targetSheetName);
 
     if (!sheet) {
-      // 🌟 신규 시트 온디맨드 생성
+      // 🌟 신규 시트 온디맨드 자동 생성
       isNew = true;
       sheet = {
         name: targetSheetName,
@@ -117,8 +145,19 @@ export async function POST(request: NextRequest) {
         rawRows: [],
       };
       sheets.push(sheet);
+      sheetUpdated = true;
+    } else {
+      // 🌟 기존 시트가 이미 존재하는 경우: 모바일의 새 헤더 컬럼이 누락되어 있다면 자동 확장 (Schema Evolution)
+      const existingHeaderSet = new Set(sheet.headers || []);
+      const newColsToAdd = targetHeaders.filter((h) => !existingHeaderSet.has(h));
+      if (newColsToAdd.length > 0) {
+        sheet.headers = [...(sheet.headers || []), ...newColsToAdd];
+        sheetUpdated = true;
+      }
+    }
 
-      // 물리 DB에 업데이트 커밋
+    // 물리 DB에 업데이트 영구 반영
+    if (sheetUpdated) {
       await updateRows(
         'user_projects',
         {
@@ -129,7 +168,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 5. 해당 시트의 인박스 토큰 발급/조회
+    // 5. 해당 시트의 모바일 수신 토큰(Inbox Token) 발급 및 조회
     const tokenInfo = await getOrCreateInboxToken(
       projectRow.id,
       projectRow.project_name || '내 프로젝트',
@@ -142,11 +181,13 @@ export async function POST(request: NextRequest) {
       isNew,
       projectId: projectRow.id,
       projectName: projectRow.project_name,
-      sheetType,
+      cardId: cardIdentifier,
       sheetName: targetSheetName,
       headers: sheet.headers,
+      columnTypes: columnTypes || undefined,
       token: tokenInfo.token,
       webhookUrl: tokenInfo.webhookUrl,
+      directIngestUrl: tokenInfo.webhookUrl,
       message: isNew
         ? `[${targetSheetName}] 시트가 성공적으로 신규 생성 및 연결되었습니다.`
         : `[${targetSheetName}] 기존 시트와 연결되었습니다.`,
