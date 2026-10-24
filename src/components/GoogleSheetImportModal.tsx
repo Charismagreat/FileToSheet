@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import {
   X, Check, ExternalLink, Copy, CheckCheck, Loader2,
   FileSpreadsheet, ArrowRight, ShieldAlert, Sparkles, Layers,
-  Terminal, AlertCircle, RefreshCw, Paperclip
+  Terminal, AlertCircle, RefreshCw, Paperclip, Download
 } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { ParsedSheet, ProjectWorkspace } from '@/types/workspace';
@@ -279,6 +279,18 @@ function openFileToSheetWeb() {
     setTimeout(() => setCopiedCode(false), 2500);
   };
 
+  const handleDownloadGsFile = () => {
+    const blob = new Blob([generatedScriptCode], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'Code.gs';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
       <div className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
@@ -495,13 +507,25 @@ function openFileToSheetWeb() {
                     <Terminal className="w-3.5 h-3.5 text-slate-600" />
                     자동 생성된 Apps Script 코드
                   </label>
-                  <button
-                    onClick={handleCopyCode}
-                    className="flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition shadow-2xs"
-                  >
-                    {copiedCode ? <CheckCheck className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                    <span>{copiedCode ? '복사 완료!' : '코드 복사'}</span>
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={handleDownloadGsFile}
+                      className="flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-lg bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 transition shadow-2xs"
+                      title="Apps Script 파일(Code.gs)로 직접 다운로드"
+                    >
+                      <Download className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>.gs 파일 다운로드</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCopyCode}
+                      className="flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition shadow-2xs"
+                    >
+                      {copiedCode ? <CheckCheck className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                      <span>{copiedCode ? '복사 완료!' : '코드 복사'}</span>
+                    </button>
+                  </div>
                 </div>
                 <pre className="p-3 rounded-xl bg-slate-900 text-slate-100 text-[11px] font-mono max-h-52 overflow-y-auto leading-relaxed border border-slate-800 select-all">
                   {generatedScriptCode}
