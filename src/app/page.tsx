@@ -3,6 +3,7 @@
 import { DeleteSheetModal } from '@/components/DeleteSheetModal';
 import { SmartSheetRoutingModal } from '@/components/SmartSheetRoutingModal';
 import { GoogleSheetImportModal } from '@/components/GoogleSheetImportModal';
+import { AntigravitySkillModal } from '@/components/AntigravitySkillModal';
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Header } from '@/components/Header';
@@ -207,6 +208,7 @@ export default function FileToSheetApp() {
   const [isTableDragging, setIsTableDragging] = useState<boolean>(false);
   const [showOriginalModal, setShowOriginalModal] = useState<boolean>(false);
   const [showGoogleSheetImportModal, setShowGoogleSheetImportModal] = useState<boolean>(false);
+  const [showAntigravitySkillModal, setShowAntigravitySkillModal] = useState<boolean>(false);
   const [showShareModal, setShowShareModal] = useState<boolean>(false);
   const [showScheduleModal, setShowScheduleModal] = useState<boolean>(false);
   const [showMobileIngestModal, setShowMobileIngestModal] = useState<boolean>(false);
@@ -677,6 +679,7 @@ export default function FileToSheetApp() {
         onOpenScheduleModal={() => setShowScheduleModal(true)}
         onOpenMobileIngestModal={() => setShowMobileIngestModal(true)}
         onOpenGoogleSheetImportModal={() => setShowGoogleSheetImportModal(true)}
+        onOpenAntigravitySkillModal={() => setShowAntigravitySkillModal(true)}
         onOpenTransferModal={() => setShowTransferModal(true)}
         onOpenShareToManagerModal={() => setShowShareToManagerModal(true)}
         onOpenConsolidatedModal={() => setShowConsolidatedModal(true)}
@@ -871,6 +874,15 @@ export default function FileToSheetApp() {
           currentUserPhone={auth.currentUser?.phoneNumber}
         />
       )}
+
+      {/* 🌟 안티그라비티 AI 스킬 연결 모달 */}
+      <AntigravitySkillModal
+        isOpen={showAntigravitySkillModal}
+        onClose={() => setShowAntigravitySkillModal(false)}
+        userPhone={auth.currentUser?.phoneNumber}
+        projectId={currentProject?.id}
+        projectName={currentProject?.name}
+      />
 
       {/* 1. 휴대폰 간편 인증 모달 */}
       <PhoneAuthModal

@@ -33,6 +33,7 @@ interface HeaderProps {
   onOpenScheduleModal?: () => void;
   onOpenMobileIngestModal?: () => void;
   onOpenGoogleSheetImportModal?: () => void;
+  onOpenAntigravitySkillModal?: () => void;
   onOpenShareToManagerModal?: () => void;
   onOpenConsolidatedModal?: () => void;
   onOpenShareManagementModal?: () => void;
@@ -67,6 +68,7 @@ export function Header({
   onOpenScheduleModal,
   onOpenMobileIngestModal,
   onOpenGoogleSheetImportModal,
+  onOpenAntigravitySkillModal,
   onOpenShareToManagerModal,
   onOpenConsolidatedModal,
   onOpenShareManagementModal,
@@ -398,6 +400,29 @@ export function Header({
                       <span className="text-[9px] font-bold bg-emerald-100 text-emerald-800 px-1 py-0.1 rounded-md">양방향</span>
                     </div>
                     <div className="text-[10px] text-slate-400">구글 시트 탭 가져오기 & 원클릭 동기화</div>
+                  </div>
+                </button>
+              )}
+
+              {/* 5. 안티그라비티(Antigravity) AI 스킬 연결 */}
+              {onOpenAntigravitySkillModal && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSyncHubOpen(false);
+                    onOpenAntigravitySkillModal();
+                  }}
+                  className="w-full px-3 py-2 text-left hover:bg-purple-50 hover:text-purple-950 flex items-center gap-2.5 transition border-t border-slate-100"
+                >
+                  <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                  </div>
+                  <div>
+                    <div className="font-bold text-slate-800 flex items-center gap-1.5">
+                      <span>안티그라비티 AI 스킬</span>
+                      <span className="text-[9px] font-bold bg-purple-100 text-purple-800 px-1 py-0.1 rounded-md">SQL</span>
+                    </div>
+                    <div className="text-[10px] text-slate-400">자연어 질의 & SQLite 쿼리 스킬 내려받기</div>
                   </div>
                 </button>
               )}
