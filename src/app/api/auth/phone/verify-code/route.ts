@@ -108,20 +108,22 @@ export async function POST(request: NextRequest) {
     const todayDateStr = new Intl.DateTimeFormat('ko-KR', { dateStyle: 'short', timeStyle: 'medium' }).format(new Date());
 
     if (!projectRow) {
-      // 🌟 신규 회원 기본 프로젝트 및 2대 핵심 시트(영수증대장, 명함관리) 자동 생성
-      const initialSheets = CORE_2_SHEETS.map((t) => ({
-        name: t.sheetName,
-        headers: t.headers,
-        rows: [],
-        rawRows: [],
-      }));
+      // 🌟 신규 회원 클린 워크스페이스 생성 (기본 시트 1개)
+      const initialSheets = [
+        {
+          name: '시트1',
+          headers: ['일련번호', '등록일시', '내용', '비고'],
+          rows: [],
+          rawRows: [],
+        },
+      ];
 
-      const newProjName = '내 비즈니스 장부';
+      const newProjName = '내 워크스페이스';
       await insertRows('user_projects', [
         {
           phone_number: cleanNumber,
           project_name: newProjName,
-          category: '기본',
+          category: '일반',
           sheets_data: JSON.stringify(initialSheets),
           original_files: JSON.stringify({ files: [] }),
           created_at: todayDateStr,
@@ -141,64 +143,9 @@ export async function POST(request: NextRequest) {
         project_name: newProjName,
         sheets_data: JSON.stringify(initialSheets),
       };
-    } else {
-      // 기존 프로젝트가 있더라도 2대 핵심 시트(영수증대장, 명함관리)가 누락되어 있으면 자동 보강
-      let existingSheets: any[] = [];
-      try {
-        existingSheets = typeof projectRow.sheets_data === 'string'
-          ? JSON.parse(projectRow.sheets_data)
-          : (projectRow.sheets_data || []);
-      } catch {
-        existingSheets = [];
-      }
-      let addedCoreSheet = false;
-      for (const coreDef of CORE_2_SHEETS) {
-        if (!existingSheets.some((s: any) => s.name === coreDef.sheetName)) {
-          existingSheets.push({
-            name: coreDef.sheetName,
-            headers: coreDef.headers,
-            rows: [],
-            rawRows: [],
-          });
-          addedCoreSheet = true;
-        }
-      }
-      if (addedCoreSheet) {
-        projectRow.sheets_data = JSON.stringify(existingSheets);
-        await updateRows(
-          'user_projects',
-          {
-            sheets_data: projectRow.sheets_data,
-            updated_at: todayDateStr,
-          },
-          { ids: [Number(projectRow.id)] }
-        );
-      }
     }
 
-    // 2대 기본 시트에 대한 모바일 수신 토큰 조회/발급
     const defaultSheetsTokens: any[] = [];
-    if (projectRow) {
-      for (const sheetDef of CORE_2_SHEETS) {
-        try {
-          const tInfo = await getOrCreateInboxToken(
-            projectRow.id,
-            projectRow.project_name || '내 비즈니스 장부',
-            sheetDef.sheetName,
-            cleanNumber
-          );
-          defaultSheetsTokens.push({
-            type: sheetDef.type,
-            sheetName: sheetDef.sheetName,
-            headers: sheetDef.headers,
-            token: tInfo.token,
-            webhookUrl: tInfo.webhookUrl,
-          });
-        } catch (tErr) {
-          console.warn(`Failed to resolve token for ${sheetDef.sheetName}:`, tErr);
-        }
-      }
-    }
 
     return NextResponse.json({
       success: true,

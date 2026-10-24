@@ -2,25 +2,26 @@
 import { insertRows, queryTable } from '@/egdesk-helpers';
 
 export interface DefaultSheetTemplate {
-  type: 'receipt' | 'business_card' | 'payment_sms' | 'call_recording';
+  type: string;
   sheetName: string;
   headers: string[];
 }
 
-export const CORE_2_SHEETS: DefaultSheetTemplate[] = [
-  {
+export const SHEETBOT_INBOX_PROJECT_NAME = '시트봇 연동 장부';
+export const SHEETBOT_INBOX_CATEGORY = 'sheetbot_inbox';
+
+// 🌟 온디맨드 템플릿 카탈로그 (영수증, 명함, 결제문자, 통화녹음 등 모든 카드를 동등한 온디맨드 템플릿으로 관리)
+export const ALL_TEMPLATE_SHEETS: Record<string, DefaultSheetTemplate> = {
+  receipt: {
     type: 'receipt',
     sheetName: '영수증대장',
     headers: ['일련번호', '거래일자', '상호', '품목', '공급가액', '부가가치세', '합계금액', '결제수단', '증빙서등록일시'],
   },
-  {
+  business_card: {
     type: 'business_card',
     sheetName: '명함관리',
     headers: ['일련번호', '등록일시', '성명', '회사명', '부서직책', '휴대폰번호', '이메일', '회사주소', '비고'],
   },
-];
-
-export const ON_DEMAND_SHEETS: Record<string, DefaultSheetTemplate> = {
   payment_sms: {
     type: 'payment_sms',
     sheetName: '결제입금내역',
@@ -32,6 +33,14 @@ export const ON_DEMAND_SHEETS: Record<string, DefaultSheetTemplate> = {
     headers: ['일련번호', '통화일시', '상대방번호', '상대방이름', '통화시간', '통화구분', 'AI요약', '핵심키워드', '녹취파일'],
   },
 };
+
+// 하위 호환성 유지용 별칭
+export const CORE_2_SHEETS: DefaultSheetTemplate[] = [
+  ALL_TEMPLATE_SHEETS.receipt,
+  ALL_TEMPLATE_SHEETS.business_card,
+];
+
+export const ON_DEMAND_SHEETS: Record<string, DefaultSheetTemplate> = ALL_TEMPLATE_SHEETS;
 
 export function generateInboxToken(): string {
   const chars = 'abcdefghjkmnpqrstuvwxyz23456789';
@@ -100,8 +109,9 @@ export async function getOrCreateInboxToken(
       sender_phone: userPhone || null,
       sender_branch: 'SheetBot Mobile Agent',
       allowed_sheets: JSON.stringify([sheetName]),
-      payload_data: JSON.stringify(payloadData),
+      permission: 'write_rows',
       status: 'active',
+      payload_data: JSON.stringify(payloadData),
       created_at: nowIso,
     },
   ]);
